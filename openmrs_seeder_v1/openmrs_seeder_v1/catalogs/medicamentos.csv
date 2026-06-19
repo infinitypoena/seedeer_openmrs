@@ -1,0 +1,11 @@
+drug_uuid,nombre_generico,strength,via_uuid,aplica_respiratorio,aplica_cardiovascular,aplica_diabetes,aplica_digestivo,aplica_osteomuscular,aplica_urologico,aplica_infeccioso,aplica_endocrino
+SAMPLE_amoxicilina,Amoxicilina,500mg,SAMPLE_oral,true,false,false,false,false,false,true,false
+SAMPLE_enalapril,Enalapril,10mg,SAMPLE_oral,false,true,false,false,false,false,false,false
+SAMPLE_metformina,Metformina,850mg,SAMPLE_oral,false,false,true,false,false,false,false,false
+SAMPLE_omeprazol,Omeprazol,20mg,SAMPLE_oral,false,false,false,true,false,false,false,false
+SAMPLE_ibuprofeno,Ibuprofeno,400mg,SAMPLE_oral,false,false,false,false,true,false,false,false
+SAMPLE_nitrofurantoina,Nitrofurantoína,100mg,SAMPLE_oral,false,false,false,false,false,true,true,false
+SAMPLE_azitromicina,Azitromicina,500mg,SAMPLE_oral,true,false,false,false,false,false,true,false
+SAMPLE_losartan,Losartán,50mg,SAMPLE_oral,false,true,false,false,false,false,false,false
+SAMPLE_levotiroxina,Levotiroxina,50mcg,SAMPLE_oral,false,false,false,false,false,false,false,true
+SAMPLE_salbutamol,Salbutamol,100mcg,SAMPLE_inhalado,true,false,false,false,false,false,false,false

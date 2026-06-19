@@ -1,22 +1,54 @@
 [
   {
-    "ContainingType": "openmrs_seeder_v1.Controllers.WeatherForecastController",
-    "Method": "Get",
-    "RelativePath": "WeatherForecast",
+    "ContainingType": "OpenmrsSeeder.Controllers.SeedController",
+    "Method": "Clear",
+    "RelativePath": "api/seed/clear",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "OpenmrsSeeder.Controllers.SeedController",
+    "Method": "Progress",
+    "RelativePath": "api/seed/progress/{runId}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "runId",
+        "Type": "System.Guid",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "OpenmrsSeeder.Controllers.SeedController",
+    "Method": "Run",
+    "RelativePath": "api/seed/run",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "OpenmrsSeeder.Controllers.RunRequest",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "OpenmrsSeeder.Controllers.SeedController",
+    "Method": "Status",
+    "RelativePath": "api/seed/status",
     "HttpMethod": "GET",
     "IsController": true,
     "Order": 0,
     "Parameters": [],
-    "ReturnTypes": [
-      {
-        "Type": "openmrs_seeder_v1.WeatherForecast[]",
-        "MediaTypes": [
-          "text/plain",
-          "application/json",
-          "text/json"
-        ],
-        "StatusCode": 200
-      }
-    ]
+    "ReturnTypes": []
   }
 ]
