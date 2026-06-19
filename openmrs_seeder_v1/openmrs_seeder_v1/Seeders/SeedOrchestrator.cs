@@ -96,6 +96,9 @@ public class SeedOrchestrator
 
                 patient.Categoria   = _epiSelector.SelectCategoria(patient.AgeGroup, patient.Gender);
                 patient.Diagnostico = _epiSelector.SelectDiagnostico(patient.Categoria, patient.AgeGroup, patient.Gender);
+                patient.Comorbilidades = patient.Diagnostico is null
+                    ? []
+                    : _epiSelector.SelectComorbilidades(patient.Diagnostico, patient.AgeGroup, patient.Gender);
                 patient.VisitDatetime = _schedule.GenerateVisitTime(day.Date);
 
                 await ProcesarVisitaAsync(patient, day.Date, tracker, runId, ct);
@@ -141,6 +144,9 @@ public class SeedOrchestrator
                 };
                 recurrente.Diagnostico = _epiSelector.SelectDiagnostico(
                     recurrente.Categoria, recurrente.AgeGroup, recurrente.Gender);
+                recurrente.Comorbilidades = recurrente.Diagnostico is null
+                    ? []
+                    : _epiSelector.SelectComorbilidades(recurrente.Diagnostico, recurrente.AgeGroup, recurrente.Gender);
 
                 await ProcesarVisitaAsync(recurrente, day.Date, tracker, runId, ct);
             }

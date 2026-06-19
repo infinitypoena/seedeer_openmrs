@@ -66,6 +66,20 @@ Todo el comportamiento del simulador se controla desde aquí.
     "WeekdayWeights": {
       "Monday": 1.20, "Tuesday": 1.20, "Wednesday": 1.00,
       "Thursday": 1.00, "Friday": 0.90, "Saturday": 0.50, "Sunday": 0.00
+    },
+    "Comorbidity": {
+      "BaseProbability": 0.20,
+      "MaxAdditional": 2,
+      "SecondExtraProbability": 0.25,
+      "AffinityBoost": 4.0,
+      "AgeScaling": { "0-14": 0.3, "15-29": 0.5, "30-44": 0.8, "45-64": 1.3, "65+": 1.8 },
+      "Affinities": {
+        "diabetes": [ "cardiovascular", "endocrino" ],
+        "cardiovascular": [ "diabetes", "endocrino" ],
+        "endocrino": [ "diabetes", "cardiovascular" ],
+        "respiratorio": [ "infeccioso" ],
+        "infeccioso": [ "respiratorio" ]
+      }
     }
   }
 }
@@ -91,6 +105,14 @@ Todo el comportamiento del simulador se controla desde aquí.
 | `ReferralProbabilities.FollowUp` | float (0-1) | Probabilidad de nota de seguimiento. |
 | `ReferralProbabilities.AllergyOnNew` | float (0-1) | Probabilidad de que un paciente **nuevo** tenga alergias registradas. |
 | `WeekdayWeights` | objeto | Multiplicador de volumen por día. `1.0` = promedio, `0.0` = sin atención. |
+| `Comorbidity.BaseProbability` | float (0-1) | Probabilidad base de que un paciente tenga ≥1 diagnóstico adicional (comorbilidad) en la misma visita. |
+| `Comorbidity.MaxAdditional` | int | Tope de diagnósticos adicionales además del primario. |
+| `Comorbidity.SecondExtraProbability` | float (0-1) | Dado que ya hay una comorbilidad, probabilidad de añadir una segunda. |
+| `Comorbidity.AffinityBoost` | float | Multiplicador del peso de las categorías clínicamente afines al elegir la enfermedad adicional. |
+| `Comorbidity.AgeScaling` | objeto | Multiplicador de `BaseProbability` por grupo de edad (la multimorbilidad crece con la edad). El producto se limita a 0.95. |
+| `Comorbidity.Affinities` | objeto | Clusters de comorbilidad: por cada categoría, lista de categorías clínicamente asociadas que reciben `AffinityBoost`. |
+
+> **Comorbilidad en una sola visita:** el primario se elige como antes; luego, con probabilidad `BaseProbability × AgeScaling[grupo]`, se añaden 1..`MaxAdditional` diagnósticos de **otras** categorías (priorizando las afines). Todos se registran en el mismo encounter (`rank=1` primario, `rank=2` secundarios) y las órdenes de laboratorio y prescripciones cubren las categorías de **todas** las enfermedades del paciente.
 
 ### Referencia de parámetros — sección OpenMRS.Defaults
 

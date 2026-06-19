@@ -57,15 +57,24 @@ public class ConsultaSeeder
         if (debeExamen)
             await SeedExamenClinicoAsync(patient, encounterUuid, ct);
 
-        _logger.LogInformation("[Consulta] Encounter {Uuid} para {Id} | Dx: {Dx}",
-            encounterUuid, patient.Identifier, patient.Diagnostico?.NombreEs ?? "—");
+        _logger.LogInformation("[Consulta] Encounter {Uuid} para {Id} | Dx: {Dx} | +{Comorb} comorbilidad(es)",
+            encounterUuid, patient.Identifier, patient.Diagnostico?.NombreEs ?? "—", patient.Comorbilidades.Count);
     }
 
     // ── Helpers privados ──────────────────────────────────────────────────────
 
     private async Task<string?> CreateEncounterAsync(SimulatedPatient patient, CancellationToken ct)
     {
-        var certainty = _rng.NextDouble() < 0.70 ? "CONFIRMED" : "PROVISIONAL";
+        // Primario rank=1, comorbilidades rank=2; cada Dx con su propia certeza.
+        var diagnoses = patient.TodosDiagnosticos
+            .Select((dx, i) => (object)new
+            {
+                rank      = i == 0 ? 1 : 2,
+                certainty = _rng.NextDouble() < 0.70 ? "CONFIRMED" : "PROVISIONAL",
+                diagnosis = new { coded = dx.CielUuid }
+            })
+            .ToArray();
+
         var payload = new
         {
             encounterType      = _settings.Defaults.ConsultaEncounterTypeUuid,
@@ -81,15 +90,7 @@ public class ConsultaSeeder
                     encounterRole = _settings.Defaults.EncounterRoleUuid
                 }
             },
-            diagnoses = patient.Diagnostico is null ? null : new object[]
-            {
-                new
-                {
-                    rank = 1,
-                    certainty,
-                    diagnosis = new { coded = patient.Diagnostico.CielUuid }
-                }
-            }
+            diagnoses = diagnoses.Length == 0 ? null : diagnoses
         };
 
         try

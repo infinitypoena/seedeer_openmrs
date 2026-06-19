@@ -40,14 +40,14 @@ public class LabOrderSeeder
             return;
         }
 
-        var debeOrden = patient.Diagnostico?.RequiereLab == true
+        var debeOrden = patient.TodosDiagnosticos.Any(d => d.RequiereLab)
             ? _rng.NextDouble() < 0.80
             : _rng.NextDouble() < _labOrderProb;
 
         if (!debeOrden) return;
 
         var candidatos = _catalogs.Laboratorios
-            .Where(l => AplicaCategoria(l, patient.Categoria))
+            .Where(l => patient.Categorias.Any(c => AplicaCategoria(l, c)))
             .ToList();
 
         if (candidatos.Count == 0) return;
@@ -58,7 +58,7 @@ public class LabOrderSeeder
         int ordenesOk = 0;
         foreach (var lab in elegidos)
         {
-            var esUrgente = patient.Diagnostico?.Severidad == "grave"
+            var esUrgente = patient.TodosDiagnosticos.Any(d => d.Severidad == "grave")
                 ? _rng.NextDouble() < 0.50
                 : _rng.NextDouble() < _urgentProb;
 

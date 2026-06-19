@@ -28,6 +28,7 @@ Key architectural decisions:
 - **Idempotency**: all seeded patients have identifier prefix `SIM-`; visits/encounters have `SEEDED_BY_SIMULATOR` in description. `DELETE /api/seed/clear` voids them all.
 - **Dual identifier**: patients get an OpenMRS ID (Luhn Mod-30 valid) + "Old Identification Number" with `SIM-` prefix for tracking.
 - **Same-day deduplication**: `SeedOrchestrator` uses a `HashSet<string>` of OpenMrsUuids per day so a patient cannot appear as both new and recurring on the same day.
+- **Comorbidity (multimorbidity per visit)**: after the primary diagnosis, `EpidemiologySelector.SelectComorbilidades` may add 1..N extra diagnoses (config `Simulation.Comorbidity`). Probability scales with age (`AgeScaling`) and the extra category is weighted toward clinically-related clusters (`Affinities` × `AffinityBoost`). All diagnoses land in one encounter; `LabOrderSeeder`/`PrescriptionSeeder` filter catalogs by `patient.Categorias` (union of all diagnoses' categories) so labs/meds stay coherent across comorbidities.
 
 ## Infrastructure
 
@@ -55,6 +56,11 @@ See `parametrizacion_archivos.md` for full parameter reference. Key sections in 
     "ReferralProbabilities": {
       "LabOrder": 0.40, "ClinicalExam": 0.35, "DrugOrder": 0.65,
       "Urgent": 0.20, "FollowUp": 0.30, "AllergyOnNew": 0.15
+    },
+    "Comorbidity": {
+      "BaseProbability": 0.20, "MaxAdditional": 2, "SecondExtraProbability": 0.25, "AffinityBoost": 4.0,
+      "AgeScaling": { "0-14": 0.3, "15-29": 0.5, "30-44": 0.8, "45-64": 1.3, "65+": 1.8 },
+      "Affinities": { "diabetes": ["cardiovascular","endocrino"], "cardiovascular": ["diabetes","endocrino"], "respiratorio": ["infeccioso"] }
     }
   }
 }
@@ -105,7 +111,7 @@ These were confirmed via `GET /ws/rest/v1/concept?q=...` against this specific i
 
 ## OpenMRS REST API Constraints (Learned from Validation)
 
-- **Diagnoses**: must go in `encounter.diagnoses[]` field, NOT as separate obs. Fields required: `rank` (int, NOT NULL — always 1 for primary), `certainty` (`CONFIRMED` or `PROVISIONAL`, NOT `PRESUMED`), `diagnosis.coded` (concept UUID).
+- **Diagnoses**: must go in `encounter.diagnoses[]` field, NOT as separate obs. Fields required: `rank` (int, NOT NULL — `1` for primary, `2` for secondary/comorbidities), `certainty` (`CONFIRMED` or `PROVISIONAL`, NOT `PRESUMED`), `diagnosis.coded` (concept UUID). A single encounter may carry multiple diagnoses (comorbidity) — `ConsultaSeeder` emits `patient.TodosDiagnosticos` (primary rank=1 + each comorbidity rank=2).
 - **Order urgency**: valid values are `ROUTINE`, `STAT`, `ON_SCHEDULED_DATE`. `URGENT` is NOT valid.
 - **DrugOrder (dosing type "simple")**: must send `concept` (concept UUID, separate from `drug`), `quantity`, `quantityUnits`, `frequency`, `route`, `dose`, `doseUnits`.
 - **Visit overlap**: if `visitCannotOverlapAnother` is returned, fetch existing active visit via `GET visit?patient={uuid}&includeInactive=false` and reuse its UUID.

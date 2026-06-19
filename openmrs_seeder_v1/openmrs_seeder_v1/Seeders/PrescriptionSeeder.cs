@@ -39,14 +39,14 @@ public class PrescriptionSeeder
             return;
         }
 
-        var debeRx = patient.Diagnostico?.RequiereRx == true
+        var debeRx = patient.TodosDiagnosticos.Any(d => d.RequiereRx)
             ? _rng.NextDouble() < 0.90
             : _rng.NextDouble() < _drugOrderProb;
 
         if (!debeRx) return;
 
         var candidatos = _catalogs.Medicamentos
-            .Where(m => AplicaCategoria(m, patient.Categoria))
+            .Where(m => patient.Categorias.Any(c => AplicaCategoria(m, c)))
             .ToList();
 
         if (candidatos.Count == 0) return;

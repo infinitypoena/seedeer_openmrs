@@ -7,7 +7,8 @@ namespace openmrs_seeder_v1.Tests;
 
 public class EpidemiologySelectorTests
 {
-    private static (CatalogLoader catalogs, EpidemiologySelector selector) CreateSelector()
+    private static (CatalogLoader catalogs, EpidemiologySelector selector) CreateSelector(
+        SimulationSettings? settings = null)
     {
         var catalogs = new CatalogLoader();
 
@@ -20,6 +21,7 @@ public class EpidemiologySelectorTests
             new() { Categoria = "cardiovascular", GrupoEdad = "45-64", Genero = "M",     Peso = 28 },
             new() { Categoria = "cardiovascular", GrupoEdad = "45-64", Genero = "F",     Peso = 22 },
             new() { Categoria = "diabetes",       GrupoEdad = "45-64", Genero = "Ambos", Peso = 20 },
+            new() { Categoria = "osteomuscular",  GrupoEdad = "45-64", Genero = "Ambos", Peso = 18 },
         };
 
         var diagnosticos = new List<DiagnosticoEntry>
@@ -38,11 +40,25 @@ public class EpidemiologySelectorTests
                 Aplica45_64 = true, PesoM = 28, PesoF = 22,
                 RequiereLab = true, RequiereRx = true
             },
+            new()
+            {
+                CielUuid  = "uuid-dm2", NombreEs = "Diabetes mellitus tipo 2",
+                Categoria = "diabetes", Severidad = "moderado",
+                Aplica45_64 = true, PesoM = 20, PesoF = 20,
+                RequiereLab = true, RequiereRx = true
+            },
+            new()
+            {
+                CielUuid  = "uuid-lumbalgia", NombreEs = "Lumbalgia",
+                Categoria = "osteomuscular", Severidad = "leve",
+                Aplica45_64 = true, PesoM = 18, PesoF = 18,
+                RequiereLab = false, RequiereRx = true
+            },
         };
 
         catalogs.LoadFromLists(epidemiology, diagnosticos, [], [], [], [], []);
 
-        var settings = new SimulationSettings { RandomSeed = 42 };
+        settings ??= new SimulationSettings { RandomSeed = 42 };
         var selector = new EpidemiologySelector(catalogs, settings);
         return (catalogs, selector);
     }
@@ -98,5 +114,59 @@ public class EpidemiologySelectorTests
             Assert.NotNull(dx);
             Assert.Equal("uuid-hta", dx!.CielUuid);
         }
+    }
+
+    [Fact]
+    public void SelectComorbilidades_ConProbabilidadCero_DevuelveVacio()
+    {
+        var settings = new SimulationSettings
+        {
+            RandomSeed = 42,
+            Comorbidity = new ComorbiditySettings { BaseProbability = 0.0 }
+        };
+        var (_, selector) = CreateSelector(settings);
+        var primario = selector.SelectDiagnostico("diabetes", "45-64", "M");
+        Assert.NotNull(primario);
+
+        for (int i = 0; i < 20; i++)
+            Assert.Empty(selector.SelectComorbilidades(primario!, "45-64", "M"));
+    }
+
+    [Fact]
+    public void SelectComorbilidades_RespetaAfinidad_EligeCategoriaAsociada()
+    {
+        var settings = new SimulationSettings
+        {
+            RandomSeed = 42,
+            Comorbidity = new ComorbiditySettings
+            {
+                BaseProbability = 1.0,
+                MaxAdditional = 1,
+                AffinityBoost = 50.0
+            }
+        };
+        var (_, selector) = CreateSelector(settings);
+        var primario = selector.SelectDiagnostico("diabetes", "45-64", "M");
+        Assert.NotNull(primario);
+
+        int conComorbilidad = 0, afines = 0;
+        for (int i = 0; i < 200; i++)
+        {
+            var comorb = selector.SelectComorbilidades(primario!, "45-64", "M");
+            foreach (var dx in comorb)
+            {
+                conComorbilidad++;
+                // Nunca duplica la categoría del primario
+                Assert.NotEqual("diabetes", dx.Categoria);
+                // cardiovascular es afín a diabetes en los settings por defecto
+                if (dx.Categoria == "cardiovascular") afines++;
+            }
+        }
+
+        Assert.True(conComorbilidad > 0, "Debería generar comorbilidades con probabilidad 1.0");
+        // Con un boost de afinidad alto, la mayoría deben ser de la categoría afín (cardiovascular)
+        // frente a la alternativa no afín disponible (osteomuscular).
+        Assert.True(afines > conComorbilidad * 0.7,
+            $"Esperaba mayoría de comorbilidades afines; afines={afines}, total={conComorbilidad}");
     }
 }

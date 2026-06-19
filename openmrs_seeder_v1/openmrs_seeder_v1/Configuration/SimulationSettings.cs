@@ -13,6 +13,33 @@ public class SimulationSettings
     public DemographicProfileSettings DemographicProfile { get; set; } = new();
     public ReferralProbabilitiesSettings ReferralProbabilities { get; set; } = new();
     public WeekdayWeightsSettings WeekdayWeights { get; set; } = new();
+    public ComorbiditySettings Comorbidity { get; set; } = new();
+}
+
+public class ComorbiditySettings
+{
+    /// <summary>Probabilidad base de que un paciente tenga ≥1 comorbilidad.</summary>
+    public double BaseProbability { get; set; } = 0.20;
+    /// <summary>Tope de diagnósticos adicionales (además del primario).</summary>
+    public int MaxAdditional { get; set; } = 2;
+    /// <summary>Probabilidad de añadir una 2ª comorbilidad cuando ya hay una.</summary>
+    public double SecondExtraProbability { get; set; } = 0.25;
+    /// <summary>Multiplicador de peso aplicado a categorías clínicamente afines.</summary>
+    public double AffinityBoost { get; set; } = 4.0;
+    /// <summary>Multiplicador de la probabilidad base por grupo de edad.</summary>
+    public Dictionary<string, double> AgeScaling { get; set; } = new()
+    {
+        ["0-14"] = 0.3, ["15-29"] = 0.5, ["30-44"] = 0.8, ["45-64"] = 1.3, ["65+"] = 1.8
+    };
+    /// <summary>Categorías clínicamente asociadas (clusters de comorbilidad).</summary>
+    public Dictionary<string, List<string>> Affinities { get; set; } = new()
+    {
+        ["diabetes"]       = ["cardiovascular", "endocrino"],
+        ["cardiovascular"] = ["diabetes", "endocrino"],
+        ["endocrino"]      = ["diabetes", "cardiovascular"],
+        ["respiratorio"]   = ["infeccioso"],
+        ["infeccioso"]     = ["respiratorio"],
+    };
 }
 
 public class HorarioAtencionSettings

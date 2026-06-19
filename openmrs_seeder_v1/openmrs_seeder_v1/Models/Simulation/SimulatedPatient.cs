@@ -17,6 +17,18 @@ public class SimulatedPatient
     public string Categoria { get; set; } = "";
     /// <summary>Diagnóstico elegido del catálogo — disponible tras EpidemiologySelector</summary>
     public DiagnosticoEntry? Diagnostico { get; set; }
+    /// <summary>Diagnósticos adicionales (comorbilidad) detectados en la misma visita.</summary>
+    public List<DiagnosticoEntry> Comorbilidades { get; set; } = [];
+
+    /// <summary>Primario (si existe) + comorbilidades.</summary>
+    public IEnumerable<DiagnosticoEntry> TodosDiagnosticos =>
+        Diagnostico is null ? Comorbilidades : new[] { Diagnostico }.Concat(Comorbilidades);
+
+    /// <summary>Categorías distintas que cubren todos los Dx; cae a Categoria si no hay Dx.</summary>
+    public IReadOnlyList<string> Categorias =>
+        TodosDiagnosticos.Any()
+            ? TodosDiagnosticos.Select(d => d.Categoria).Distinct().ToList()
+            : (string.IsNullOrEmpty(Categoria) ? [] : [Categoria]);
     public string Address1 { get; set; } = "";
     public string City { get; set; } = "";
     public bool EsNuevo { get; set; } = true;
