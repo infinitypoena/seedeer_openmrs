@@ -26,13 +26,15 @@ Key architectural decisions:
 - **Seeder pipeline**: each domain is a self-contained seeder (`PatientSeeder`, `AllergySeeder`, `VitalsSeeder`, `ConsultaSeeder`, `LabOrderSeeder`, `PrescriptionSeeder`, `VisitCloseSeeder`) coordinated by `SeedOrchestrator`.
 - **Background execution**: `POST /api/seed/run` returns 202 immediately; simulation runs in a background task tracked by `SeedProgressTracker` (in-memory, keyed by runId GUID).
 - **Idempotency**: all seeded patients have identifier prefix `SIM-`; visits/encounters have `SEEDED_BY_SIMULATOR` in description. `DELETE /api/seed/clear` voids them all.
+- **Dual identifier**: patients get an OpenMRS ID (Luhn Mod-30 valid) + "Old Identification Number" with `SIM-` prefix for tracking.
+- **Same-day deduplication**: `SeedOrchestrator` uses a `HashSet<string>` of OpenMrsUuids per day so a patient cannot appear as both new and recurring on the same day.
 
 ## Infrastructure
 
 - Docker compose path: `C:\Users\Moises Molina\Documents\Estudios\Especializacion\PruebaOpenMRS1\open-omrs36-prod\openmrs-distro-referenceapplication-3.6.0`
 - OpenMRS 3.6.0 Reference Application (O3)
 - MariaDB 10.11 — port 3306 does NOT need to be exposed (REST API mode)
-- Default credentials: `admin / Admin123`
+- Credentials: `admin / Prueba01$$xD`
 
 ## Configuration
 
@@ -42,7 +44,7 @@ See `parametrizacion_archivos.md` for full parameter reference. Key sections in 
 {
   "OpenMRS": {
     "SeedMode": "RestApi",
-    "RestApi": { "BaseUrl": "http://localhost/openmrs/ws/rest/v1", "Username": "admin", "Password": "Admin123" }
+    "RestApi": { "BaseUrl": "http://localhost/openmrs/ws/rest/v1", "Username": "admin", "Password": "Prueba01$$xD" }
   },
   "Simulation": {
     "StartDate": "2023-01-01",
@@ -58,19 +60,56 @@ See `parametrizacion_archivos.md` for full parameter reference. Key sections in 
 }
 ```
 
+**Validation mode** (1 week, low volume): `EndDate: "2023-01-08"`, `PacientesPorDiaMedio: 8`  
+**Production mode**: `EndDate: "2024-12-31"`, `PacientesPorDiaMedio: 40`
+
 ## Catalog Files
 
 All under `catalogs/`. See `parametrizacion_archivos.md` for column schemas.
 
-| File | Source | Purpose |
-|------|--------|---------|
-| `epidemiology-profile.csv` | Manual | Category weights by age/gender |
-| `diagnosticos.csv` | Query DB + manual | CIEL diagnoses + boolean age group columns |
-| `medicamentos.csv` | Query DB + manual | Drugs + boolean category columns |
-| `laboratorios.csv` | Query DB + manual | Lab tests + boolean category columns |
-| `examenes_clinicos.csv` | Manual | In-clinic exams recorded as obs |
-| `alergenos.csv` | Manual | Allergens (DRUG/FOOD/ENVIRONMENT) |
-| `motivos_consulta.csv` | Manual | Consultation reason phrases in Spanish |
+| File | Source | Purpose | Notes |
+|------|--------|---------|-------|
+| `epidemiology-profile.csv` | Manual | Category weights by age/gender | |
+| `diagnosticos.csv` | Query DB + manual | CIEL diagnoses + boolean age group columns | |
+| `medicamentos.csv` | Query DB + manual | Drugs + boolean category columns | Has `drug_uuid` + `concept_uuid` columns |
+| `laboratorios.csv` | Query DB + manual | Lab tests + boolean category columns | 7 entries with verified UUIDs |
+| `examenes_clinicos.csv` | Manual | In-clinic exams recorded as obs | **Empty** — all UUIDs wrong in this instance |
+| `alergenos.csv` | Manual | Allergens (DRUG/FOOD/ENVIRONMENT) | 15 entries with verified UUIDs |
+| `motivos_consulta.csv` | Manual | Consultation reason phrases in Spanish | |
+
+## Verified UUID Mappings (this OpenMRS instance)
+
+These were confirmed via `GET /ws/rest/v1/concept?q=...` against this specific installation. Do NOT assume standard CIEL UUIDs without verifying — this instance has different mappings.
+
+### Encounter types / visit / location (appsettings.json → Defaults)
+| Key | UUID | Name |
+|-----|------|------|
+| `VitalsEncounterTypeUuid` | `67a71486-1a54-468f-ac3e-7091a9a79584` | Vitals |
+| `ConsultaEncounterTypeUuid` | `dd528487-82a5-4082-9c72-ed246bd49591` | Consultation |
+| `VisitTypeUuid` | `7b0f5697-27e3-40c4-8bae-f4049abfb4ed` | Outpatient |
+| `LocationUuid` | `44c3efb0-2583-4c80-a79e-1f756a03c0a1` | |
+| `OnceDailyFrequencyUuid` | `136ebdb7-e989-47cf-8ec2-4e8b2ffe0ab3` | Una vez por día |
+| `TabletConceptUuid` | `1513AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA` | Tablet |
+| `DaysConceptUuid` | `1072AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA` | Days |
+
+### Vitals concepts (VitalsSeeder hardcoded constants)
+| Concept | UUID | Note |
+|---------|------|------|
+| Weight | `5089AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA` | |
+| Height | `5090AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA` | |
+| Systolic BP | `5085AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA` | |
+| Diastolic BP | `5086AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA` | |
+| Temperature | `5088AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA` | |
+| Pulse | `5087AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA` | |
+| SpO2 | `5242AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA` | hiAbsolute=99 in this instance — max value to send: 98 |
+
+## OpenMRS REST API Constraints (Learned from Validation)
+
+- **Diagnoses**: must go in `encounter.diagnoses[]` field, NOT as separate obs. Fields required: `rank` (int, NOT NULL — always 1 for primary), `certainty` (`CONFIRMED` or `PROVISIONAL`, NOT `PRESUMED`), `diagnosis.coded` (concept UUID).
+- **Order urgency**: valid values are `ROUTINE`, `STAT`, `ON_SCHEDULED_DATE`. `URGENT` is NOT valid.
+- **DrugOrder (dosing type "simple")**: must send `concept` (concept UUID, separate from `drug`), `quantity`, `quantityUnits`, `frequency`, `route`, `dose`, `doseUnits`.
+- **Visit overlap**: if `visitCannotOverlapAnother` is returned, fetch existing active visit via `GET visit?patient={uuid}&includeInactive=false` and reuse its UUID.
+- **Allergen format**: `POST /patient/{uuid}/allergy` body must use `allergen.codedAllergen.uuid` (not just the UUID string). Concept UUID must exist in this instance.
 
 ## Key Design Docs
 

@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using OpenmrsSeeder.Clients;
 using OpenmrsSeeder.Configuration;
 using OpenmrsSeeder.Models.Simulation;
@@ -14,22 +15,29 @@ public class PrescriptionSeeder
     private readonly CatalogLoader _catalogs;
     private readonly double _drugOrderProb;
     private readonly Random _rng = new();
+    private readonly ILogger<PrescriptionSeeder> _logger;
 
     public PrescriptionSeeder(
         OpenMrsRestClient client,
         OpenMrsSettings settings,
         CatalogLoader catalogs,
-        SimulationSettings simSettings)
+        SimulationSettings simSettings,
+        ILogger<PrescriptionSeeder> logger)
     {
-        _client       = client;
-        _settings     = settings;
-        _catalogs     = catalogs;
+        _client        = client;
+        _settings      = settings;
+        _catalogs      = catalogs;
         _drugOrderProb = simSettings.ReferralProbabilities.DrugOrder;
+        _logger        = logger;
     }
 
     public async Task SeedAsync(SimulatedPatient patient, CancellationToken ct)
     {
-        if (string.IsNullOrEmpty(patient.ConsultaEncounterUuid)) return;
+        if (string.IsNullOrEmpty(patient.ConsultaEncounterUuid))
+        {
+            _logger.LogWarning("[Prescription] Skip: sin encounter de consulta para {Id}", patient.Identifier);
+            return;
+        }
 
         var debeRx = patient.Diagnostico?.RequiereRx == true
             ? _rng.NextDouble() < 0.90
@@ -43,15 +51,20 @@ public class PrescriptionSeeder
 
         if (candidatos.Count == 0) return;
 
-        // 1-3 medicamentos por visita
         var cantidad = _rng.Next(1, Math.Min(4, candidatos.Count + 1));
         var elegidos = candidatos.OrderBy(_ => _rng.Next()).Take(cantidad).ToList();
 
+        int rxOk = 0;
         foreach (var med in elegidos)
-            await PostDrugOrderAsync(patient, med, ct);
+        {
+            var ok = await PostDrugOrderAsync(patient, med, ct);
+            if (ok) rxOk++;
+        }
+        _logger.LogInformation("[Prescription] {N}/{Total} prescripciones para {Id}",
+            rxOk, elegidos.Count, patient.Identifier);
     }
 
-    private async Task PostDrugOrderAsync(
+    private async Task<bool> PostDrugOrderAsync(
         SimulatedPatient patient,
         Models.Catalogs.MedicamentoEntry med,
         CancellationToken ct)
@@ -62,6 +75,7 @@ public class PrescriptionSeeder
         {
             type          = "drugorder",
             patient       = patient.OpenMrsUuid,
+            concept       = med.ConceptUuid,
             drug          = med.DrugUuid,
             encounter     = patient.ConsultaEncounterUuid,
             orderer       = _settings.Defaults.ProviderUuid,
@@ -71,12 +85,22 @@ public class PrescriptionSeeder
             route         = med.ViaUuid,
             frequency     = _settings.Defaults.OnceDailyFrequencyUuid,
             numRefills    = 0,
+            quantity      = (double)duracion,
+            quantityUnits = _settings.Defaults.TabletConceptUuid,
             duration      = duracion,
             durationUnits = _settings.Defaults.DaysConceptUuid
         };
 
-        try { await _client.PostAsync("order", payload, ct); }
-        catch (Exception ex) { Console.Error.WriteLine($"[PrescriptionSeeder] {patient.Identifier}: {ex.Message}"); }
+        try
+        {
+            await _client.PostAsync("order", payload, ct);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("[Prescription] Error en prescripción para {Id}: {Msg}", patient.Identifier, ex.Message);
+            return false;
+        }
     }
 
     private static bool AplicaCategoria(Models.Catalogs.MedicamentoEntry m, string cat) => cat switch

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using OpenmrsSeeder.Clients;
 using OpenmrsSeeder.Configuration;
 using OpenmrsSeeder.Models.Simulation;
@@ -7,35 +8,44 @@ namespace OpenmrsSeeder.Seeders;
 
 public class VitalsSeeder
 {
-    // UUIDs CIEL estándar para signos vitales en OpenMRS Reference App
-    private const string WeightUuid   = "5089AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
-    private const string HeightUuid   = "5090AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
-    private const string SystolicUuid = "5085AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
-    private const string DiastolicUuid= "5086AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
-    private const string TempUuid     = "5088AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
-    private const string PulseUuid    = "5087AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
-    private const string SpO2Uuid     = "5242AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+    private const string WeightUuid    = "5089AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+    private const string HeightUuid    = "5090AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+    private const string SystolicUuid  = "5085AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+    private const string DiastolicUuid = "5086AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+    private const string TempUuid      = "5088AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+    private const string PulseUuid     = "5087AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+    private const string SpO2Uuid      = "5242AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 
     private readonly OpenMrsRestClient _client;
     private readonly OpenMrsSettings _settings;
     private readonly Random _rng = new();
+    private readonly ILogger<VitalsSeeder> _logger;
 
-    public VitalsSeeder(OpenMrsRestClient client, OpenMrsSettings settings)
+    public VitalsSeeder(OpenMrsRestClient client, OpenMrsSettings settings, ILogger<VitalsSeeder> logger)
     {
-        _client = client;
+        _client   = client;
         _settings = settings;
+        _logger   = logger;
     }
 
     public async Task SeedAsync(SimulatedPatient patient, CancellationToken ct)
     {
         var encounterUuid = await CreateEncounterAsync(patient, ct);
-        if (encounterUuid is null) return;
+        if (encounterUuid is null)
+        {
+            _logger.LogWarning("[Vitals] Skip obs: encounter no creado para {Id}", patient.Identifier);
+            return;
+        }
 
-        var vitals = GenerateVitals(patient);
+        var vitals  = GenerateVitals(patient);
+        int obsOk   = 0;
         foreach (var (conceptUuid, value) in vitals)
         {
-            await CreateObsAsync(patient.OpenMrsUuid, encounterUuid, conceptUuid, value, patient.VisitDatetime, ct);
+            var ok = await CreateObsAsync(patient.Identifier, patient.OpenMrsUuid, encounterUuid, conceptUuid, value, patient.VisitDatetime, ct);
+            if (ok) obsOk++;
         }
+        _logger.LogInformation("[Vitals] Encounter {Uuid} + {N}/{Total} obs para {Id}",
+            encounterUuid, obsOk, vitals.Count, patient.Identifier);
     }
 
     private async Task<string?> CreateEncounterAsync(SimulatedPatient patient, CancellationToken ct)
@@ -62,30 +72,36 @@ public class VitalsSeeder
             var json = await _client.PostAsync("encounter", payload, ct);
             var doc  = JsonSerializer.Deserialize<JsonElement>(json);
             if (doc.TryGetProperty("uuid", out var uuid)) return uuid.GetString();
+            _logger.LogWarning("[Vitals] Encounter sin uuid para {Id}", patient.Identifier);
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"[VitalsSeeder] encounter {patient.Identifier}: {ex.Message}");
+            _logger.LogError("[Vitals] Error creando encounter para {Id}: {Msg}", patient.Identifier, ex.Message);
         }
         return null;
     }
 
-    private async Task CreateObsAsync(string personUuid, string encounterUuid,
+    private async Task<bool> CreateObsAsync(string identifier, string personUuid, string encounterUuid,
         string conceptUuid, double value, DateTime obsDatetime, CancellationToken ct)
     {
         var payload = new
         {
-            concept      = conceptUuid,
-            person       = personUuid,
-            encounter    = encounterUuid,
-            obsDatetime  = VisitSeeder.FormatDatetime(obsDatetime),
-            value        = value
+            concept     = conceptUuid,
+            person      = personUuid,
+            encounter   = encounterUuid,
+            obsDatetime = VisitSeeder.FormatDatetime(obsDatetime),
+            value
         };
 
-        try { await _client.PostAsync("obs", payload, ct); }
+        try
+        {
+            await _client.PostAsync("obs", payload, ct);
+            return true;
+        }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"[VitalsSeeder] obs {conceptUuid}: {ex.Message}");
+            _logger.LogError("[Vitals] Error en obs {Concept} para {Id}: {Msg}", conceptUuid, identifier, ex.Message);
+            return false;
         }
     }
 
@@ -116,8 +132,8 @@ public class VitalsSeeder
         var (pMin, pMax) = cat == "infeccioso" ? (90.0, 115.0) : (60.0, 100.0);
         var pulse = Math.Round(_rng.NextDouble() * (pMax - pMin) + pMin);
 
-        // SpO2 — baja solo en respiratorio grave
-        var (sMin, sMax) = (cat == "respiratorio" && sev == "grave") ? (88.0, 94.0) : (96.0, 100.0);
+        // SpO2 — baja solo en respiratorio grave (hiAbsolute=99 en esta instancia)
+        var (sMin, sMax) = (cat == "respiratorio" && sev == "grave") ? (88.0, 93.0) : (95.0, 98.0);
         var spo2 = Math.Round(_rng.NextDouble() * (sMax - sMin) + sMin);
 
         return new Dictionary<string, double>

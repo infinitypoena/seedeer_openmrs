@@ -26,8 +26,10 @@ public class DirectDbSettings
 
 public class DefaultsSettings
 {
-    /// <summary>UUID del tipo de identificador "OpenMRS ID" — verificar en tu instancia via GET /idgen/identifiertype</summary>
+    /// <summary>UUID del tipo "OpenMRS ID" (required, con validador Luhn — idgen lo auto-genera al omitir identifier)</summary>
     public string PatientIdentifierTypeUuid { get; set; } = "05a29f94-c0ed-11e2-94be-8c13b969e334";
+    /// <summary>UUID del tipo "Old Identification Number" (sin validador) — usado para el prefijo SIM- de tracking</summary>
+    public string TrackingIdentifierTypeUuid { get; set; } = "8d79403a-c2cc-11de-8d13-0010c6dffd0f";
     /// <summary>UUID de la ubicación por defecto — verificar en tu instancia via GET /location</summary>
     public string LocationUuid { get; set; } = "44c3efb0-2583-4c80-a79e-1f756a03c0a1";
     /// <summary>UUID del tipo de visita "Outpatient" para visitas ambulatorias</summary>

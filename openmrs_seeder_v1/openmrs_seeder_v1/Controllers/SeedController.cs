@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using OpenmrsSeeder.Clients;
 using OpenmrsSeeder.Configuration;
 using OpenmrsSeeder.Seeders;
@@ -17,6 +18,7 @@ public class SeedController : ControllerBase
     private readonly SeedProgressTracker _tracker;
     private readonly CatalogLoader _catalogs;
     private readonly SeedOrchestrator _orchestrator;
+    private readonly ILogger<SeedController> _logger;
 
     public SeedController(
         OpenMrsRestClient client,
@@ -24,7 +26,8 @@ public class SeedController : ControllerBase
         SimulationSettings simSettings,
         SeedProgressTracker tracker,
         CatalogLoader catalogs,
-        SeedOrchestrator orchestrator)
+        SeedOrchestrator orchestrator,
+        ILogger<SeedController> logger)
     {
         _client       = client;
         _omrsSettings = omrsSettings;
@@ -32,6 +35,7 @@ public class SeedController : ControllerBase
         _tracker      = tracker;
         _catalogs     = catalogs;
         _orchestrator = orchestrator;
+        _logger       = logger;
     }
 
     [HttpGet("status")]
@@ -172,22 +176,32 @@ public class SeedController : ControllerBase
                                         $"visit/{vUuid.GetString()}?reason=SEEDED_BY_SIMULATOR", ct);
                                     visitasVoided++;
                                 }
-                                catch { /* continúa con la siguiente visita */ }
-                                // Pequeña pausa para no saturar el backend
+                                catch (Exception exV)
+                                {
+                                    _logger.LogWarning("[Clear] No se pudo borrar visita {VUuid}: {Msg}",
+                                        vUuid.GetString(), exV.Message);
+                                }
                                 await Task.Delay(100, ct);
                             }
                         }
                     }
-                    catch { /* si no hay visitas o falla, continúa */ }
+                    catch (Exception exVL)
+                    {
+                        _logger.LogWarning("[Clear] Error obteniendo visitas de paciente {PUuid}: {Msg}",
+                            patientUuid, exVL.Message);
+                    }
 
-                    // Void paciente
                     try
                     {
                         await _client.DeleteAsync(
                             $"patient/{patientUuid}?reason=SEEDED_BY_SIMULATOR", ct);
                         pacientesVoided++;
                     }
-                    catch { /* continúa con el siguiente */ }
+                    catch (Exception exP)
+                    {
+                        _logger.LogWarning("[Clear] No se pudo borrar paciente {PUuid}: {Msg}",
+                            patientUuid, exP.Message);
+                    }
 
                     await Task.Delay(200, ct);
                 }

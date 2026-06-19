@@ -3,6 +3,7 @@ namespace OpenmrsSeeder.Models.Catalogs;
 public class MedicamentoEntry
 {
     public string DrugUuid { get; set; } = "";
+    public string ConceptUuid { get; set; } = "";
     public string NombreGenerico { get; set; } = "";
     public string Strength { get; set; } = "";
     public string ViaUuid { get; set; } = "";

@@ -18,7 +18,13 @@ public class OpenMrsRestClient
     public async Task<string> GetAsync(string path, CancellationToken ct = default)
     {
         var response = await _http.GetAsync(path, ct);
-        response.EnsureSuccessStatusCode();
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorBody = await response.Content.ReadAsStringAsync(ct);
+            throw new HttpRequestException(
+                $"GET {path} → {(int)response.StatusCode} {response.ReasonPhrase}: {errorBody}",
+                null, response.StatusCode);
+        }
         return await response.Content.ReadAsStringAsync(ct);
     }
 
@@ -33,7 +39,13 @@ public class OpenMrsRestClient
         var json = JsonSerializer.Serialize(body, JsonOpts);
         var content = new StringContent(json, Encoding.UTF8, "application/json");
         var response = await _http.PostAsync(path, content, ct);
-        response.EnsureSuccessStatusCode();
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorBody = await response.Content.ReadAsStringAsync(ct);
+            throw new HttpRequestException(
+                $"POST {path} → {(int)response.StatusCode} {response.ReasonPhrase}: {errorBody}",
+                null, response.StatusCode);
+        }
         return await response.Content.ReadAsStringAsync(ct);
     }
 
@@ -46,7 +58,13 @@ public class OpenMrsRestClient
     public async Task DeleteAsync(string path, CancellationToken ct = default)
     {
         var response = await _http.DeleteAsync(path, ct);
-        response.EnsureSuccessStatusCode();
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorBody = await response.Content.ReadAsStringAsync(ct);
+            throw new HttpRequestException(
+                $"DELETE {path} → {(int)response.StatusCode} {response.ReasonPhrase}: {errorBody}",
+                null, response.StatusCode);
+        }
     }
 
     public async Task<bool> PingAsync(CancellationToken ct = default)

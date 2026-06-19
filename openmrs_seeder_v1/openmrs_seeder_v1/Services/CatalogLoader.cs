@@ -119,6 +119,7 @@ public class CatalogLoader
     private static MedicamentoEntry ParseMedicamento(Dictionary<string, string> row) => new()
     {
         DrugUuid            = S(row, "drug_uuid"),
+        ConceptUuid         = S(row, "concept_uuid"),
         NombreGenerico      = S(row, "nombre_generico"),
         Strength            = S(row, "strength"),
         ViaUuid             = S(row, "via_uuid"),

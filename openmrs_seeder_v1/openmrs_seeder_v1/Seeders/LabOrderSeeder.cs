@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using OpenmrsSeeder.Clients;
 using OpenmrsSeeder.Configuration;
 using OpenmrsSeeder.Models.Simulation;
@@ -14,23 +15,30 @@ public class LabOrderSeeder
     private readonly double _labOrderProb;
     private readonly double _urgentProb;
     private readonly Random _rng = new();
+    private readonly ILogger<LabOrderSeeder> _logger;
 
     public LabOrderSeeder(
         OpenMrsRestClient client,
         OpenMrsSettings settings,
         CatalogLoader catalogs,
-        SimulationSettings simSettings)
+        SimulationSettings simSettings,
+        ILogger<LabOrderSeeder> logger)
     {
         _client       = client;
         _settings     = settings;
         _catalogs     = catalogs;
         _labOrderProb = simSettings.ReferralProbabilities.LabOrder;
         _urgentProb   = simSettings.ReferralProbabilities.Urgent;
+        _logger       = logger;
     }
 
     public async Task SeedAsync(SimulatedPatient patient, CancellationToken ct)
     {
-        if (string.IsNullOrEmpty(patient.ConsultaEncounterUuid)) return;
+        if (string.IsNullOrEmpty(patient.ConsultaEncounterUuid))
+        {
+            _logger.LogWarning("[LabOrder] Skip: sin encounter de consulta para {Id}", patient.Identifier);
+            return;
+        }
 
         var debeOrden = patient.Diagnostico?.RequiereLab == true
             ? _rng.NextDouble() < 0.80
@@ -44,21 +52,25 @@ public class LabOrderSeeder
 
         if (candidatos.Count == 0) return;
 
-        // 1 o 2 órdenes por visita
         var cantidad = _rng.NextDouble() < 0.40 ? 2 : 1;
         var elegidos = candidatos.OrderBy(_ => _rng.Next()).Take(cantidad).ToList();
 
+        int ordenesOk = 0;
         foreach (var lab in elegidos)
         {
             var esUrgente = patient.Diagnostico?.Severidad == "grave"
                 ? _rng.NextDouble() < 0.50
                 : _rng.NextDouble() < _urgentProb;
 
-            await PostOrderAsync(patient, lab.CielUuid, esUrgente ? "URGENT" : "ROUTINE", ct);
+            var ok = await PostOrderAsync(patient, lab.CielUuid, esUrgente ? "STAT" : "ROUTINE", ct);
+            if (ok) ordenesOk++;
         }
+
+        _logger.LogInformation("[LabOrder] {N}/{Total} órdenes de lab para {Id}",
+            ordenesOk, elegidos.Count, patient.Identifier);
     }
 
-    private async Task PostOrderAsync(SimulatedPatient patient, string conceptUuid, string urgency, CancellationToken ct)
+    private async Task<bool> PostOrderAsync(SimulatedPatient patient, string conceptUuid, string urgency, CancellationToken ct)
     {
         var payload = new
         {
@@ -71,8 +83,16 @@ public class LabOrderSeeder
             urgency
         };
 
-        try { await _client.PostAsync("order", payload, ct); }
-        catch (Exception ex) { Console.Error.WriteLine($"[LabOrderSeeder] {patient.Identifier}: {ex.Message}"); }
+        try
+        {
+            await _client.PostAsync("order", payload, ct);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("[LabOrder] Error en orden para {Id}: {Msg}", patient.Identifier, ex.Message);
+            return false;
+        }
     }
 
     private static bool AplicaCategoria(Models.Catalogs.LaboratorioEntry l, string cat) => cat switch

@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using OpenmrsSeeder.Models.Simulation;
 using OpenmrsSeeder.Services;
 
@@ -17,9 +18,9 @@ public class SeedOrchestrator
     private readonly PrescriptionSeeder _prescriptionSeeder;
     private readonly VisitCloseSeeder _visitCloseSeeder;
 
-    // Pool de pacientes creados en este run para reutilización como recurrentes
     private readonly List<SimulatedPatient> _patientPool = [];
     private readonly Lock _poolLock = new();
+    private readonly ILogger<SeedOrchestrator> _logger;
 
     public SeedOrchestrator(
         DailyScheduleGenerator schedule,
@@ -32,19 +33,21 @@ public class SeedOrchestrator
         ConsultaSeeder consultaSeeder,
         LabOrderSeeder labOrderSeeder,
         PrescriptionSeeder prescriptionSeeder,
-        VisitCloseSeeder visitCloseSeeder)
+        VisitCloseSeeder visitCloseSeeder,
+        ILogger<SeedOrchestrator> logger)
     {
-        _schedule          = schedule;
-        _profiler          = profiler;
-        _epiSelector       = epiSelector;
-        _patientSeeder     = patientSeeder;
-        _allergySeeder     = allergySeeder;
-        _visitSeeder       = visitSeeder;
-        _vitalsSeeder      = vitalsSeeder;
-        _consultaSeeder    = consultaSeeder;
-        _labOrderSeeder    = labOrderSeeder;
+        _schedule           = schedule;
+        _profiler           = profiler;
+        _epiSelector        = epiSelector;
+        _patientSeeder      = patientSeeder;
+        _allergySeeder      = allergySeeder;
+        _visitSeeder        = visitSeeder;
+        _vitalsSeeder       = vitalsSeeder;
+        _consultaSeeder     = consultaSeeder;
+        _labOrderSeeder     = labOrderSeeder;
         _prescriptionSeeder = prescriptionSeeder;
-        _visitCloseSeeder  = visitCloseSeeder;
+        _visitCloseSeeder   = visitCloseSeeder;
+        _logger             = logger;
     }
 
     public async Task RunAsync(Guid runId, SeedProgressTracker tracker, CancellationToken ct)
@@ -52,6 +55,9 @@ public class SeedOrchestrator
         var days             = _schedule.Generate();
         var diasConPacientes = days.Count(d => d.TotalPatients > 0);
         var rng              = new Random();
+
+        _logger.LogInformation("[Orchestrator] Iniciando run {RunId} — {Dias} días con pacientes",
+            runId, diasConPacientes);
 
         tracker.Update(runId, r =>
         {
@@ -66,15 +72,20 @@ public class SeedOrchestrator
             if (ct.IsCancellationRequested) break;
             if (day.TotalPatients == 0) continue;
 
+            _logger.LogInformation("[Orchestrator] ── {Date} | {Nuevos} nuevos, {Recurrentes} recurrentes ──",
+                day.Date.ToString("yyyy-MM-dd"), day.NuevosPacientes, day.PacientesRecurrentes);
+
             tracker.Update(runId, r => r.FechaActual = day.Date.ToString("yyyy-MM-dd"));
 
             // ── Pacientes nuevos ──────────────────────────────────────────────
             for (int i = 0; i < day.NuevosPacientes; i++)
             {
                 var patient = _profiler.GenerateNew();
-                var uuid    = await _patientSeeder.CreateAsync(patient, ct);
+                var uuid = await _patientSeeder.CreateAsync(patient, ct);
                 if (uuid is null)
                 {
+                    _logger.LogWarning("[Orchestrator] Paciente {Id} no creado el {Date}, se omite",
+                        patient.Identifier, day.Date.ToString("yyyy-MM-dd"));
                     tracker.Update(runId, r => r.Errores.Add(
                         $"[{day.Date}] No se pudo crear paciente {patient.Identifier}"));
                     continue;
@@ -97,11 +108,21 @@ public class SeedOrchestrator
             List<SimulatedPatient> poolSnapshot;
             lock (_poolLock) poolSnapshot = [.. _patientPool];
 
+            // Excluir pacientes ya visitados hoy (nuevos del mismo día)
+            var uuidsHoy = new HashSet<string>(
+                poolSnapshot
+                    .Where(p => p.VisitDatetime.Date == day.Date.ToDateTime(TimeOnly.MinValue).Date)
+                    .Select(p => p.OpenMrsUuid));
+
             for (int i = 0; i < day.PacientesRecurrentes; i++)
             {
                 if (poolSnapshot.Count == 0) break;
 
-                var base_ = poolSnapshot[rng.Next(poolSnapshot.Count)];
+                var disponibles = poolSnapshot.Where(p => !uuidsHoy.Contains(p.OpenMrsUuid)).ToList();
+                if (disponibles.Count == 0) break;
+
+                var base_ = disponibles[rng.Next(disponibles.Count)];
+                uuidsHoy.Add(base_.OpenMrsUuid);
                 var recurrente = new SimulatedPatient
                 {
                     Identifier    = base_.Identifier,
@@ -129,6 +150,11 @@ public class SeedOrchestrator
             tracker.Update(runId, r => { r.Porcentaje = pct; r.DiasProcesados = diasProcesados; });
         }
 
+        var run = tracker.GetRun(runId);
+        _logger.LogInformation(
+            "[Orchestrator] Run {RunId} completado — {Pacientes} pacientes creados, {Errores} errores",
+            runId, run?.PacientesCreados ?? 0, run?.Errores.Count ?? 0);
+
         tracker.Update(runId, r =>
         {
             r.Etapa      = "completado";
@@ -147,6 +173,8 @@ public class SeedOrchestrator
         var visitUuid = await _visitSeeder.CreateAsync(patient, ct);
         if (visitUuid is null)
         {
+            _logger.LogWarning("[Orchestrator] Visita no creada para {Id} el {Date}, se omite pipeline",
+                patient.Identifier, date.ToString("yyyy-MM-dd"));
             tracker.Update(runId, r => r.Errores.Add(
                 $"[{date}] No se pudo crear visita para {patient.Identifier}"));
             return;

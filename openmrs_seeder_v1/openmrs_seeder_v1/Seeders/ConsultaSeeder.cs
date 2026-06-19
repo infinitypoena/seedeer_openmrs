@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using OpenmrsSeeder.Clients;
 using OpenmrsSeeder.Configuration;
 using OpenmrsSeeder.Models.Simulation;
@@ -8,54 +9,45 @@ namespace OpenmrsSeeder.Seeders;
 
 public class ConsultaSeeder
 {
-    // CIEL concept UUIDs estándar para el encounter de consulta
-    private const string DiagnosisCodedUuid      = "1284AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
-    private const string ChiefComplaintUuid      = "162169AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
-    private const string DiagnosisCertaintyUuid  = "159946AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
-    private const string ConfirmedUuid           = "1065AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
-    private const string PresumptiveUuid         = "1066AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
-    private const string NormalUuid              = "1115AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
-    private const string AbnormalUuid            = "1116AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+    private const string ChiefComplaintUuid = "162169AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+    private const string NormalUuid         = "1115AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+    private const string AbnormalUuid       = "1116AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 
     private readonly OpenMrsRestClient _client;
     private readonly OpenMrsSettings _settings;
     private readonly CatalogLoader _catalogs;
     private readonly double _clinicalExamProb;
     private readonly Random _rng = new();
+    private readonly ILogger<ConsultaSeeder> _logger;
 
     public ConsultaSeeder(
         OpenMrsRestClient client,
         OpenMrsSettings settings,
         CatalogLoader catalogs,
-        SimulationSettings simSettings)
+        SimulationSettings simSettings,
+        ILogger<ConsultaSeeder> logger)
     {
-        _client          = client;
-        _settings        = settings;
-        _catalogs        = catalogs;
+        _client           = client;
+        _settings         = settings;
+        _catalogs         = catalogs;
         _clinicalExamProb = simSettings.ReferralProbabilities.ClinicalExam;
+        _logger           = logger;
     }
 
     public async Task SeedAsync(SimulatedPatient patient, CancellationToken ct)
     {
         var encounterUuid = await CreateEncounterAsync(patient, ct);
-        if (encounterUuid is null) return;
+        if (encounterUuid is null)
+        {
+            _logger.LogWarning("[Consulta] Encounter no creado para {Id} — LabOrder y Prescription se omitirán", patient.Identifier);
+            return;
+        }
         patient.ConsultaEncounterUuid = encounterUuid;
 
         // Motivo de consulta (texto libre)
         var motivo = PickMotivoConsulta(patient.Categoria);
         if (!string.IsNullOrEmpty(motivo))
-            await PostObsTextAsync(patient.OpenMrsUuid, encounterUuid, ChiefComplaintUuid, motivo, patient.VisitDatetime, ct);
-
-        // Diagnóstico codificado + certeza
-        if (patient.Diagnostico is not null)
-        {
-            await PostObsCodedAsync(patient.OpenMrsUuid, encounterUuid,
-                DiagnosisCodedUuid, patient.Diagnostico.CielUuid, patient.VisitDatetime, ct);
-
-            var confirmed = _rng.NextDouble() < 0.70;
-            await PostObsCodedAsync(patient.OpenMrsUuid, encounterUuid,
-                DiagnosisCertaintyUuid, confirmed ? ConfirmedUuid : PresumptiveUuid, patient.VisitDatetime, ct);
-        }
+            await PostObsTextAsync(patient.Identifier, patient.OpenMrsUuid, encounterUuid, ChiefComplaintUuid, motivo, patient.VisitDatetime, ct);
 
         // Examen en consultorio (si aplica)
         var debeExamen = patient.Diagnostico?.RequiereExamenClinico == true
@@ -64,25 +56,38 @@ public class ConsultaSeeder
 
         if (debeExamen)
             await SeedExamenClinicoAsync(patient, encounterUuid, ct);
+
+        _logger.LogInformation("[Consulta] Encounter {Uuid} para {Id} | Dx: {Dx}",
+            encounterUuid, patient.Identifier, patient.Diagnostico?.NombreEs ?? "—");
     }
 
     // ── Helpers privados ──────────────────────────────────────────────────────
 
     private async Task<string?> CreateEncounterAsync(SimulatedPatient patient, CancellationToken ct)
     {
+        var certainty = _rng.NextDouble() < 0.70 ? "CONFIRMED" : "PROVISIONAL";
         var payload = new
         {
-            encounterType     = _settings.Defaults.ConsultaEncounterTypeUuid,
-            patient           = patient.OpenMrsUuid,
-            visit             = patient.VisitUuid,
-            encounterDatetime = VisitSeeder.FormatDatetime(patient.VisitDatetime.AddMinutes(30)),
-            location          = _settings.Defaults.LocationUuid,
+            encounterType      = _settings.Defaults.ConsultaEncounterTypeUuid,
+            patient            = patient.OpenMrsUuid,
+            visit              = patient.VisitUuid,
+            encounterDatetime  = VisitSeeder.FormatDatetime(patient.VisitDatetime.AddMinutes(30)),
+            location           = _settings.Defaults.LocationUuid,
             encounterProviders = new[]
             {
                 new
                 {
                     provider      = _settings.Defaults.ProviderUuid,
                     encounterRole = _settings.Defaults.EncounterRoleUuid
+                }
+            },
+            diagnoses = patient.Diagnostico is null ? null : new object[]
+            {
+                new
+                {
+                    rank = 1,
+                    certainty,
+                    diagnosis = new { coded = patient.Diagnostico.CielUuid }
                 }
             }
         };
@@ -92,10 +97,11 @@ public class ConsultaSeeder
             var json = await _client.PostAsync("encounter", payload, ct);
             var doc  = JsonSerializer.Deserialize<JsonElement>(json);
             if (doc.TryGetProperty("uuid", out var uuid)) return uuid.GetString();
+            _logger.LogWarning("[Consulta] Encounter sin uuid para {Id}", patient.Identifier);
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"[ConsultaSeeder] encounter {patient.Identifier}: {ex.Message}");
+            _logger.LogError("[Consulta] Error creando encounter para {Id}: {Msg}", patient.Identifier, ex.Message);
         }
         return null;
     }
@@ -113,13 +119,13 @@ public class ConsultaSeeder
         if (examen.TipoResultado == "numerico")
         {
             var valor = GenerateNumericValue(examen.Unidad, patient.Categoria);
-            await PostObsNumericAsync(patient.OpenMrsUuid, encounterUuid,
+            await PostObsNumericAsync(patient.Identifier, patient.OpenMrsUuid, encounterUuid,
                 examen.CielUuid, valor, patient.VisitDatetime, ct);
         }
         else
         {
             var valorCoded = _rng.NextDouble() < 0.80 ? NormalUuid : AbnormalUuid;
-            await PostObsCodedAsync(patient.OpenMrsUuid, encounterUuid,
+            await PostObsCodedAsync(patient.Identifier, patient.OpenMrsUuid, encounterUuid,
                 examen.CielUuid, valorCoded, patient.VisitDatetime, ct);
         }
     }
@@ -158,7 +164,7 @@ public class ConsultaSeeder
         _      => Math.Round(_rng.NextDouble() * 0.7 + 0.6, 2) // 0.6-1.3 (ITB)
     };
 
-    private async Task PostObsTextAsync(string personUuid, string encounterUuid,
+    private async Task PostObsTextAsync(string identifier, string personUuid, string encounterUuid,
         string conceptUuid, string text, DateTime dt, CancellationToken ct)
     {
         var payload = new
@@ -170,10 +176,10 @@ public class ConsultaSeeder
             value       = text
         };
         try { await _client.PostAsync("obs", payload, ct); }
-        catch (Exception ex) { Console.Error.WriteLine($"[ConsultaSeeder] obs text: {ex.Message}"); }
+        catch (Exception ex) { _logger.LogError("[Consulta] Error obs texto para {Id}: {Msg}", identifier, ex.Message); }
     }
 
-    private async Task PostObsCodedAsync(string personUuid, string encounterUuid,
+    private async Task PostObsCodedAsync(string identifier, string personUuid, string encounterUuid,
         string conceptUuid, string valueConceptUuid, DateTime dt, CancellationToken ct)
     {
         var payload = new
@@ -185,10 +191,10 @@ public class ConsultaSeeder
             value       = valueConceptUuid
         };
         try { await _client.PostAsync("obs", payload, ct); }
-        catch (Exception ex) { Console.Error.WriteLine($"[ConsultaSeeder] obs coded: {ex.Message}"); }
+        catch (Exception ex) { _logger.LogError("[Consulta] Error obs coded para {Id}: {Msg}", identifier, ex.Message); }
     }
 
-    private async Task PostObsNumericAsync(string personUuid, string encounterUuid,
+    private async Task PostObsNumericAsync(string identifier, string personUuid, string encounterUuid,
         string conceptUuid, double value, DateTime dt, CancellationToken ct)
     {
         var payload = new
@@ -200,6 +206,6 @@ public class ConsultaSeeder
             value
         };
         try { await _client.PostAsync("obs", payload, ct); }
-        catch (Exception ex) { Console.Error.WriteLine($"[ConsultaSeeder] obs numeric: {ex.Message}"); }
+        catch (Exception ex) { _logger.LogError("[Consulta] Error obs numeric para {Id}: {Msg}", identifier, ex.Message); }
     }
 }

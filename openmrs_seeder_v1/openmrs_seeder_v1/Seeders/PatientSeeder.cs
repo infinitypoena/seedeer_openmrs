@@ -1,7 +1,9 @@
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using OpenmrsSeeder.Clients;
 using OpenmrsSeeder.Configuration;
 using OpenmrsSeeder.Models.Simulation;
+using OpenmrsSeeder.Services;
 
 namespace OpenmrsSeeder.Seeders;
 
@@ -9,11 +11,13 @@ public class PatientSeeder
 {
     private readonly OpenMrsRestClient _client;
     private readonly OpenMrsSettings _settings;
+    private readonly ILogger<PatientSeeder> _logger;
 
-    public PatientSeeder(OpenMrsRestClient client, OpenMrsSettings settings)
+    public PatientSeeder(OpenMrsRestClient client, OpenMrsSettings settings, ILogger<PatientSeeder> logger)
     {
-        _client = client;
+        _client   = client;
         _settings = settings;
+        _logger   = logger;
     }
 
     public async Task<string?> CreateAsync(SimulatedPatient patient, CancellationToken ct)
@@ -39,12 +43,21 @@ public class PatientSeeder
                     }
                 }
             },
-            identifiers = new[]
+            identifiers = new object[]
             {
+                // OpenMRS ID (required): ID válido generado con Luhn Mod-30
+                new
+                {
+                    identifier     = LuhnMod30Generator.Next(),
+                    identifierType = _settings.Defaults.PatientIdentifierTypeUuid,
+                    location       = _settings.Defaults.LocationUuid,
+                    preferred      = false
+                },
+                // Old Identification Number: prefijo SIM- para identificar y borrar datos simulados
                 new
                 {
                     identifier     = patient.Identifier,
-                    identifierType = _settings.Defaults.PatientIdentifierTypeUuid,
+                    identifierType = _settings.Defaults.TrackingIdentifierTypeUuid,
                     location       = _settings.Defaults.LocationUuid,
                     preferred      = true
                 }
@@ -54,14 +67,18 @@ public class PatientSeeder
         try
         {
             var json = await _client.PostAsync("patient", payload, ct);
-            var doc = JsonSerializer.Deserialize<JsonElement>(json);
+            var doc  = JsonSerializer.Deserialize<JsonElement>(json);
             if (doc.TryGetProperty("uuid", out var uuidProp))
-                return uuidProp.GetString();
+            {
+                var uuid = uuidProp.GetString();
+                _logger.LogInformation("[Patient] Creado {Id} → {Uuid}", patient.Identifier, uuid);
+                return uuid;
+            }
+            _logger.LogWarning("[Patient] Respuesta sin uuid para {Id}", patient.Identifier);
         }
         catch (Exception ex)
         {
-            // Log failure but don't crash the pipeline
-            Console.Error.WriteLine($"[PatientSeeder] Error creando {patient.Identifier}: {ex.Message}");
+            _logger.LogError("[Patient] Error creando {Id}: {Msg}", patient.Identifier, ex.Message);
         }
 
         return null;

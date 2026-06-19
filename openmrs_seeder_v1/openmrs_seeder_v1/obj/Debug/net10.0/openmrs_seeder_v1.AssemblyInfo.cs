@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("openmrs_seeder_v1")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+8e761756cc97ba7058b64c143afea17b1e2241ca")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+2d75b3f635b47bd74e73a616baf307eb590e8e79")]
 [assembly: System.Reflection.AssemblyProductAttribute("openmrs_seeder_v1")]
 [assembly: System.Reflection.AssemblyTitleAttribute("openmrs_seeder_v1")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
