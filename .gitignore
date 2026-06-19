@@ -1,0 +1,25 @@
+# ── .NET build output ─────────────────────────────────────────────────────────
+bin/
+obj/
+*.user
+*.suo
+
+# ── Visual Studio / Rider ─────────────────────────────────────────────────────
+.vs/
+.idea/
+*.sln.DotSettings.user
+
+# ── Configuración local con credenciales ──────────────────────────────────────
+appsettings.json
+appsettings.*.json
+!appsettings.example.json
+!appsettings.Development.json
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Publicación y NuGet ───────────────────────────────────────────────────────
+publish/
+*.nupkg
+*.snupkg

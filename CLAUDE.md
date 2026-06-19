@@ -109,7 +109,7 @@ These were confirmed via `GET /ws/rest/v1/concept?q=...` against this specific i
 - **Order urgency**: valid values are `ROUTINE`, `STAT`, `ON_SCHEDULED_DATE`. `URGENT` is NOT valid.
 - **DrugOrder (dosing type "simple")**: must send `concept` (concept UUID, separate from `drug`), `quantity`, `quantityUnits`, `frequency`, `route`, `dose`, `doseUnits`.
 - **Visit overlap**: if `visitCannotOverlapAnother` is returned, fetch existing active visit via `GET visit?patient={uuid}&includeInactive=false` and reuse its UUID.
-- **Allergen format**: `POST /patient/{uuid}/allergy` body must use `allergen.codedAllergen.uuid` (not just the UUID string). Concept UUID must exist in this instance.
+- **Allergen format**: `POST /patient/{uuid}/allergy` — `allergen.codedAllergen` must be a **plain UUID string** (e.g. `"codedAllergen": "uuid-here"`), NOT a nested object `{"uuid": "..."}`. Using an object triggers `ResourceDoesNotSupportOperationException` in `ConceptResource1_8`. `severity` and `reactions[].reaction` accept `{uuid: "..."}` normally.
 
 ## Key Design Docs
 

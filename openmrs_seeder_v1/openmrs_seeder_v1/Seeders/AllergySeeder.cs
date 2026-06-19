@@ -87,7 +87,7 @@ public class AllergySeeder
             allergen = new
             {
                 allergenType  = alergeno.TipoAlergeno,
-                codedAllergen = new { uuid = alergeno.ConceptUuid }
+                codedAllergen = alergeno.ConceptUuid
             },
             severity  = new { uuid = severityUuid },
             reactions = new[] { new { reaction = new { uuid = ReactionRashUuid } } }

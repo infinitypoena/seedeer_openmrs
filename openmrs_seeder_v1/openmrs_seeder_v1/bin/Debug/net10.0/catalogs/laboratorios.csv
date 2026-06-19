@@ -1,8 +1,0 @@
-ciel_uuid,nombre_es,clase,aplica_respiratorio,aplica_cardiovascular,aplica_diabetes,aplica_digestivo,aplica_osteomuscular,aplica_urologico,aplica_infeccioso,aplica_endocrino
-1019AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hemograma completo,Test,true,true,true,true,true,true,true,false
-6de2829f-03f2-4551-b84c-40bfc59b385e,Glucemia en ayunas,Test,false,true,true,false,false,false,false,true
-1006AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Perfil lipídico,Test,false,true,true,false,false,false,false,false
-3640a448-d390-43e3-a89a-a0fb7c7b1b15,Orina completa,Test,false,false,true,false,false,true,false,false
-86020bc3-3cbe-4b8d-8b8f-c587797db1b8,Hemoglobina glicosilada HbA1c,Test,false,false,true,false,false,false,false,true
-c5cb278c-c460-450e-bf11-db6052661b24,Creatinina sérica,Test,false,true,true,false,false,true,false,false
-f0091919-59a9-4b43-8fed-889cb5fd4bb4,Transaminasas AST ALT,Test,false,false,false,true,false,false,true,false
