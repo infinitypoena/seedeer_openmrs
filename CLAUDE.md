@@ -4,50 +4,76 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Purpose
 
-.NET Core 10 Web API that seeds and simulates realistic clinical operations for an [OpenMRS](https://github.com/openmrs/openmrs-core) database. The goal is to populate OpenMRS with believable patient records, visits, encounters, observations, and orders that reflect a real-world clinic workflow.
+.NET 10 Web API that acts as a **clinical simulator** for an OpenMRS instance. It generates realistic patient records, visits, encounters, observations, orders, and allergies that reflect a real-world clinic workflow — driven by a probabilistic epidemiological model parameterized by age, gender, and clinic type.
 
 ## Build & Run
 
 ```bash
-dotnet build
-dotnet run --project src/Seedeer.Api
+dotnet build openmrs_seeder_v1/openmrs_seeder_v1/openmrs_seeder_v1.csproj
+dotnet run --project openmrs_seeder_v1/openmrs_seeder_v1/openmrs_seeder_v1.csproj
 dotnet test
-dotnet test --filter "FullyQualifiedName~ClassName"   # run a single test class
 ```
+
+Swagger UI available at `http://localhost:5197/swagger` after running.
 
 ## Architecture
 
-The API targets the OpenMRS MySQL/MariaDB schema directly — it does not go through the OpenMRS REST API. Seeders write to OpenMRS tables using the OpenMRS data model conventions (UUIDs as PKs via `uuid()`, audit columns `creator`/`date_created`/`voided`, etc.).
+**The API connects to OpenMRS exclusively via REST API** (`/ws/rest/v1`). It does NOT write SQL directly. All data is inserted through OpenMRS REST endpoints (POST /patient, POST /visit, POST /encounter, POST /obs, POST /order, POST /patient/{uuid}/allergy).
 
 Key architectural decisions:
-- **Seeder pipeline**: each domain (patients, visits, encounters, observations) is a self-contained seeder class that receives a shared `SeedContext` (DB connection + randomization state).
-- **Realistic data generation**: use a faker library (e.g., Bogus) with locale `es` (Spanish-speaking clinic) to generate names, addresses, phone numbers, and dates.
-- **OpenMRS concept dependencies**: observations reference concept IDs that must exist in the target OpenMRS instance. The seeder validates required concepts at startup before writing any data.
-- **Idempotency**: all seeders check for existing seeded records (via a tag in `description`/`comment` fields) so re-running is safe.
+- **Simulator model**: daily patient volume is driven by `PacientesPorDiaMedio` + weekday weights + normal distribution. Each patient gets a diagnosis chosen from `epidemiology-profile.csv` weighted by age/gender.
+- **Catalog-driven coherence**: diagnoses, labs, medications, clinical exams, and allergies are selected from CSV catalogs using boolean columns (`aplica_CATEGORIA`, `aplica_GRUPO_EDAD`) — no hardcoded lists.
+- **Seeder pipeline**: each domain is a self-contained seeder (`PatientSeeder`, `AllergySeeder`, `VitalsSeeder`, `ConsultaSeeder`, `LabOrderSeeder`, `PrescriptionSeeder`, `VisitCloseSeeder`) coordinated by `SeedOrchestrator`.
+- **Background execution**: `POST /api/seed/run` returns 202 immediately; simulation runs in a background task tracked by `SeedProgressTracker` (in-memory, keyed by runId GUID).
+- **Idempotency**: all seeded patients have identifier prefix `SIM-`; visits/encounters have `SEEDED_BY_SIMULATOR` in description. `DELETE /api/seed/clear` voids them all.
 
-## OpenMRS Data Model Notes
+## Infrastructure
 
-- Every persisted entity requires: `uuid` (char 38), `creator` (FK → `users.user_id`), `date_created`, `voided` (tinyint, default 0).
-- `patient` extends `person` — insert `person` first, then `patient`.
-- Visit → Encounter → Obs hierarchy: a visit holds one or more encounters; each encounter holds observations.
-- Concept IDs vary by OpenMRS instance/distribution. Use `concept.uuid` lookups rather than hardcoded IDs; resolve at startup and cache.
-- Required reference data: at minimum one `Location`, one `Provider`, one admin `User` must exist before seeding.
+- Docker compose path: `C:\Users\Moises Molina\Documents\Estudios\Especializacion\PruebaOpenMRS1\open-omrs36-prod\openmrs-distro-referenceapplication-3.6.0`
+- OpenMRS 3.6.0 Reference Application (O3)
+- MariaDB 10.11 — port 3306 does NOT need to be exposed (REST API mode)
+- Default credentials: `admin / Admin123`
 
 ## Configuration
 
+See `parametrizacion_archivos.md` for full parameter reference. Key sections in `appsettings.json`:
+
 ```json
-// appsettings.json
 {
   "OpenMRS": {
-    "ConnectionString": "Server=localhost;Database=openmrs;User=root;Password=...",
-    "AdminUserId": 1,
-    "DefaultLocationUuid": "...",
-    "DefaultProviderUuid": "..."
+    "SeedMode": "RestApi",
+    "RestApi": { "BaseUrl": "http://localhost/openmrs/ws/rest/v1", "Username": "admin", "Password": "Admin123" }
   },
-  "Seed": {
-    "PatientCount": 100,
-    "VisitsPerPatient": 5,
-    "Locale": "es"
+  "Simulation": {
+    "StartDate": "2023-01-01",
+    "EndDate": "2024-12-31",
+    "PacientesPorDiaMedio": 40,
+    "PorcentajeRecurrentes": 30,
+    "ClinicType": "ConsultaExterna",
+    "ReferralProbabilities": {
+      "LabOrder": 0.40, "ClinicalExam": 0.35, "DrugOrder": 0.65,
+      "Urgent": 0.20, "FollowUp": 0.30, "AllergyOnNew": 0.15
+    }
   }
 }
 ```
+
+## Catalog Files
+
+All under `catalogs/`. See `parametrizacion_archivos.md` for column schemas.
+
+| File | Source | Purpose |
+|------|--------|---------|
+| `epidemiology-profile.csv` | Manual | Category weights by age/gender |
+| `diagnosticos.csv` | Query DB + manual | CIEL diagnoses + boolean age group columns |
+| `medicamentos.csv` | Query DB + manual | Drugs + boolean category columns |
+| `laboratorios.csv` | Query DB + manual | Lab tests + boolean category columns |
+| `examenes_clinicos.csv` | Manual | In-clinic exams recorded as obs |
+| `alergenos.csv` | Manual | Allergens (DRUG/FOOD/ENVIRONMENT) |
+| `motivos_consulta.csv` | Manual | Consultation reason phrases in Spanish |
+
+## Key Design Docs
+
+- `parametrizacion_archivos.md` — full parameter and CSV schema reference
+- `detalle-seeder.md` — project overview, stack, endpoints, data model
+- `fases_implementacion.md` — implementation phases with deliverables and verification steps
