@@ -1,0 +1,16 @@
+services:
+  seeder:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "5197:8080"
+    env_file:
+      - .env
+    environment:
+      OpenMRS__RestApi__BaseUrl:        ${OPENMRS_URL:-http://host.docker.internal/openmrs/ws/rest/v1}
+      OpenMRS__RestApi__Username:       ${OPENMRS_USERNAME:-admin}
+      OpenMRS__RestApi__Password:       ${OPENMRS_PASSWORD}
+      Simulation__StartDate:            ${SIM_START:-2023-01-01}
+      Simulation__EndDate:              ${SIM_END:-2024-12-31}
+      Simulation__PacientesPorDiaMedio: ${SIM_VOLUME:-40}

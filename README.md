@@ -61,7 +61,7 @@ En `appsettings.json`, sección `Simulation`:
 
 ---
 
-## Ejecutar el simulador
+## Opción A: ejecutar con .NET SDK
 
 ```bash
 # Compilar
@@ -73,6 +73,47 @@ dotnet run --project openmrs_seeder_v1/openmrs_seeder_v1/openmrs_seeder_v1.cspro
 
 La API queda disponible en `http://localhost:5197`.  
 Swagger UI en `http://localhost:5197/swagger`.
+
+---
+
+## Opción B: ejecutar con Docker
+
+Si no tienes el SDK de .NET instalado, puedes correr el simulador como contenedor. Requisito: [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Windows/Mac) o Docker Engine (Linux).
+
+### 1. Preparar credenciales
+
+```bash
+cd docker
+cp .env.example .env
+```
+
+Editar `docker/.env` con la URL de tu OpenMRS y la contraseña:
+
+```
+OPENMRS_URL=http://host.docker.internal/openmrs/ws/rest/v1
+OPENMRS_PASSWORD=tu_password
+```
+
+> `docker/.env` está en `.gitignore` — nunca se sube al repositorio.
+
+### 2. Construir y levantar
+
+```bash
+docker compose -f docker/docker-compose.yml up --build
+```
+
+La API queda disponible en `http://localhost:5197`.  
+Swagger UI en `http://localhost:5197/swagger`.
+
+### 3. Detener
+
+```bash
+docker compose -f docker/docker-compose.yml down
+```
+
+> **Nota sobre la URL de OpenMRS:**  
+> - **Windows / Mac**: usa `host.docker.internal` para llegar a `localhost` del host.  
+> - **Linux**: reemplaza con la IP del gateway Docker, habitualmente `172.17.0.1`.
 
 ---
 
