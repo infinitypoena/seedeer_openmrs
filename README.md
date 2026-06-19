@@ -9,27 +9,23 @@ API REST en C# .NET 10 que actúa como **simulador clínico** para una instancia
 | Herramienta | Versión mínima |
 |-------------|---------------|
 | [.NET SDK](https://dotnet.microsoft.com/download) | 10.0 |
-| [Docker Desktop](https://www.docker.com/products/docker-desktop/) | 4.x |
-| OpenMRS 3.6.0 Reference Application | (incluido en docker-compose) |
+| OpenMRS 3.x con REST API activa | cualquier despliegue |
+
+El simulador se conecta exclusivamente a través de la **REST API de OpenMRS** (`/ws/rest/v1`). No importa cómo esté desplegada tu instancia (Docker, servidor local, servidor remoto) — solo necesitas tener la API accesible y sus credenciales.
 
 ---
 
 ## Configuración inicial
 
-### 1. Levantar OpenMRS con Docker
+### 1. Verificar que OpenMRS está accesible
 
-```bash
-cd "PruebaOpenMRS1/open-omrs36-prod/openmrs-distro-referenceapplication-3.6.0"
-docker compose up -d
+Confirma que la REST API responde antes de correr el simulador:
+
+```
+GET http://<tu-host>/openmrs/ws/rest/v1
 ```
 
-Esperar ~10 minutos hasta que el contenedor esté `healthy`:
-
-```bash
-docker compose ps   # columna STATUS debe mostrar "healthy"
-```
-
-OpenMRS queda disponible en `http://localhost/openmrs`.
+Debe devolver un JSON con información de la instancia. Si usas la instalación por defecto en local, la URL base es `http://localhost/openmrs/ws/rest/v1`.
 
 ### 2. Configurar credenciales del simulador
 
