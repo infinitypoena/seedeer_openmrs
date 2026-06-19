@@ -1,0 +1,10 @@
+{
+  "enabledPlugins": {
+    "ponytail@ponytail": true
+  },
+  "permissions": {
+    "additionalDirectories": [
+      "C:\\Users\\Moises Molina\\Documents\\Estudios\\Especializacion\\PruebaOpenMRS1\\open-omrs36-prod\\openmrs-distro-referenceapplication-3.6.0"
+    ]
+  }
+}

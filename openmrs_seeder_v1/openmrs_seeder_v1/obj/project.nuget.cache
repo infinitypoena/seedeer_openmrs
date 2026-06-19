@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "KK+ywgh8M2M=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\Moises Molina\\Documents\\Estudios\\Especializacion\\proyecto_api_seedeer\\openmrs_seeder_v1\\openmrs_seeder_v1\\openmrs_seeder_v1.fsproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\Moises Molina\\.nuget\\packages\\fsharp.core\\10.1.301\\fsharp.core.10.1.301.nupkg.sha512"
+  ],
+  "logs": []
+}
