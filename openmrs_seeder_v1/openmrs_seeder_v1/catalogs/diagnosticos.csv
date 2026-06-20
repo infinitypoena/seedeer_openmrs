@@ -1,12 +1,53 @@
-ciel_uuid,nombre_es,categoria,severidad,aplica_0_14,aplica_15_29,aplica_30_44,aplica_45_64,aplica_65mas,peso_M,peso_F,requiere_lab,requiere_rx,requiere_examen_clinico
-10AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Bronquitis aguda,respiratorio,leve,true,true,true,true,true,10,10,false,true,true
-117399AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Faringitis aguda,respiratorio,leve,true,true,true,true,false,15,15,false,true,false
-117010AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Neumonía,respiratorio,grave,true,false,true,true,true,5,5,true,true,true
-111716AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Asma bronquial,respiratorio,moderado,true,true,true,true,true,8,10,false,true,true
-117321AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hipertensión arterial,cardiovascular,moderado,false,false,false,true,true,28,22,true,true,true
-119481AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Diabetes mellitus tipo 2,diabetes,moderado,false,false,true,true,true,15,18,true,true,true
-117690AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Gastritis aguda,digestivo,leve,true,true,true,true,true,12,15,false,true,false
-114403AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Lumbalgia,osteomuscular,leve,false,true,true,true,true,18,20,false,true,false
-111633AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Infección urinaria,urologico,leve,true,true,true,true,true,8,20,true,true,false
-116128AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Fiebre sin foco,infeccioso,moderado,true,true,true,true,false,15,15,false,false,false
-140918AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hipotiroidismo,endocrino,moderado,false,false,true,true,true,5,18,true,true,false
+ciel_uuid,nombre_es,categoria,severidad,aplica_0_14,aplica_15_29,aplica_30_44,aplica_45_64,aplica_65mas,peso_M,peso_F,requiere_lab,requiere_rx,requiere_examen_clinico,clima
+133483AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Resfriado comun (rinofaringitis aguda),respiratorio,leve,true,true,true,true,true,45,45,false,true,false,invierno
+116958AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Influenza (gripe),respiratorio,moderado,true,true,true,true,true,40,40,false,true,false,invierno
+117399AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Faringitis aguda,respiratorio,leve,true,true,true,true,false,18,18,false,true,false,invierno
+149496AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Amigdalitis aguda,respiratorio,leve,true,true,true,false,false,18,18,false,true,false,invierno
+121692AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Rinitis alergica,respiratorio,leve,true,true,true,true,true,16,16,false,true,false,seca
+149609AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Otitis media aguda,respiratorio,leve,true,true,false,false,false,18,16,false,true,false,invierno
+10AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Bronquitis aguda,respiratorio,leve,true,true,true,true,true,12,12,false,true,true,invierno
+121832AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Sinusitis aguda,respiratorio,leve,false,true,true,true,false,12,14,false,true,false,invierno
+149716AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Laringitis aguda,respiratorio,leve,true,true,true,true,true,10,10,false,true,false,invierno
+111716AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Asma bronquial,respiratorio,moderado,true,true,true,true,true,8,10,false,true,true,invierno
+157809AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,EPOC (moderada),respiratorio,moderado,false,false,false,true,true,8,5,true,true,true,invierno
+117010AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Neumonia,respiratorio,grave,true,false,true,true,true,5,5,true,true,true,invierno
+117321AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hipertension arterial,cardiovascular,moderado,false,false,true,true,true,28,22,true,true,true,
+141623AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Dislipidemia,cardiovascular,leve,false,false,true,true,true,15,15,true,true,false,
+120148AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Arritmia cardiaca,cardiovascular,moderado,false,false,true,true,true,8,8,false,true,false,
+125971AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Angina de pecho estable,cardiovascular,grave,false,false,false,true,true,6,5,false,true,true,
+111000AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Insuficiencia cardiaca,cardiovascular,grave,false,false,false,true,true,6,5,true,true,true,
+161644AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Urgencia hipertensiva,cardiovascular,grave,false,false,false,true,true,5,4,false,true,false,
+119481AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Diabetes mellitus tipo 2,diabetes,moderado,false,false,true,true,true,25,25,true,true,true,
+159188AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Diabetes mellitus tipo 1,diabetes,moderado,true,true,false,false,false,6,6,true,true,true,
+126072AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hipoglucemia,diabetes,moderado,true,true,true,true,true,5,5,false,true,false,
+117889AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Gastroenteritis aguda (EDA),digestivo,leve,true,true,true,true,true,42,42,false,true,false,"verano,lluvia"
+149856AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Diarrea aguda,digestivo,leve,true,true,true,true,true,30,30,false,true,false,"verano,lluvia"
+117690AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Gastritis aguda,digestivo,leve,true,true,true,true,true,18,18,false,true,false,
+116699AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Parasitosis intestinal (helmintiasis),digestivo,leve,true,true,true,false,false,18,18,false,true,false,verano
+1293AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Enfermedad por reflujo gastroesofagico,digestivo,leve,false,false,true,true,true,15,15,false,true,false,
+126482AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Estrenimiento,digestivo,leve,true,true,true,true,true,12,14,false,true,false,
+114403AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Lumbalgia,osteomuscular,leve,false,true,true,true,true,20,20,false,true,false,
+114702AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Osteoartrosis,osteomuscular,moderado,false,false,true,true,true,18,20,false,true,true,
+112770AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Esguince,osteomuscular,leve,true,true,true,true,true,15,15,false,true,false,
+133469AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Cervicalgia,osteomuscular,leve,false,true,true,true,true,14,16,false,true,false,
+124992AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Tendinitis,osteomuscular,leve,false,true,true,true,true,10,10,false,true,false,
+162356AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Gota,osteomuscular,moderado,false,false,true,true,true,8,3,true,true,false,
+127417AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Artritis reumatoide,osteomuscular,moderado,false,false,true,true,true,4,6,true,true,false,
+111633AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Infeccion urinaria,urologico,leve,true,true,true,true,true,12,25,true,true,false,
+119685AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Cistitis,urologico,leve,false,true,true,true,true,8,18,false,true,false,
+116500AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Calculo renal,urologico,moderado,false,false,true,true,true,9,7,false,true,false,
+121164AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hiperplasia prostatica benigna,urologico,moderado,false,false,false,true,true,10,0,false,true,false,
+149554AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Pielonefritis aguda,urologico,grave,true,true,true,true,true,4,7,true,true,false,
+111639AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Uretritis,urologico,leve,false,true,true,false,false,6,5,false,true,false,
+116128AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Fiebre sin foco,infeccioso,moderado,true,true,true,true,false,15,15,false,false,false,
+142592AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Dengue,infeccioso,moderado,true,true,true,true,true,25,25,true,false,true,"verano,lluvia"
+165933AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,COVID-19,infeccioso,leve,true,true,true,true,true,20,20,false,false,false,invierno
+119905AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Conjuntivitis,infeccioso,leve,true,true,true,true,true,18,18,false,true,false,verano
+110929AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Celulitis (infeccion de piel),infeccioso,moderado,true,true,true,true,true,10,10,false,true,false,verano
+5c46caf2-3062-4a04-bb99-fe1fae98e6db,Varicela,infeccioso,leve,true,true,false,false,false,8,8,false,true,false,invierno
+137275AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Mononucleosis infecciosa,infeccioso,leve,false,true,false,false,false,4,4,false,true,false,
+140918AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hipotiroidismo,endocrino,moderado,false,false,true,true,true,5,18,true,true,false,
+138176AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hipertiroidismo,endocrino,moderado,false,true,true,true,true,4,8,true,true,false,
+112959AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Obesidad,endocrino,leve,true,true,true,true,true,15,15,false,false,true,
+134262AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Sindrome metabolico,endocrino,moderado,false,false,false,true,true,6,6,true,false,true,
+117772AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Bocio,endocrino,leve,false,true,true,true,true,3,6,false,true,false,

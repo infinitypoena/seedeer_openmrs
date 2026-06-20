@@ -9,6 +9,7 @@ public class SeedOrchestrator
     private readonly DailyScheduleGenerator _schedule;
     private readonly PatientProfileGenerator _profiler;
     private readonly EpidemiologySelector _epiSelector;
+    private readonly ClimateResolver _climate;
     private readonly PatientSeeder _patientSeeder;
     private readonly AllergySeeder _allergySeeder;
     private readonly VisitSeeder _visitSeeder;
@@ -26,6 +27,7 @@ public class SeedOrchestrator
         DailyScheduleGenerator schedule,
         PatientProfileGenerator profiler,
         EpidemiologySelector epiSelector,
+        ClimateResolver climate,
         PatientSeeder patientSeeder,
         AllergySeeder allergySeeder,
         VisitSeeder visitSeeder,
@@ -39,6 +41,7 @@ public class SeedOrchestrator
         _schedule           = schedule;
         _profiler           = profiler;
         _epiSelector        = epiSelector;
+        _climate            = climate;
         _patientSeeder      = patientSeeder;
         _allergySeeder      = allergySeeder;
         _visitSeeder        = visitSeeder;
@@ -72,15 +75,17 @@ public class SeedOrchestrator
             if (ct.IsCancellationRequested) break;
             if (day.TotalPatients == 0) continue;
 
-            _logger.LogInformation("[Orchestrator] ── {Date} | {Nuevos} nuevos, {Recurrentes} recurrentes ──",
-                day.Date.ToString("yyyy-MM-dd"), day.NuevosPacientes, day.PacientesRecurrentes);
+            var (estacion, tempC) = _climate.Resolve(day.Date);
+
+            _logger.LogInformation("[Orchestrator] ── {Date} | {Nuevos} nuevos, {Recurrentes} recurrentes | clima: {Clima} ──",
+                day.Date.ToString("yyyy-MM-dd"), day.NuevosPacientes, day.PacientesRecurrentes, estacion ?? "—");
 
             tracker.Update(runId, r => r.FechaActual = day.Date.ToString("yyyy-MM-dd"));
 
             // ── Pacientes nuevos ──────────────────────────────────────────────
             for (int i = 0; i < day.NuevosPacientes; i++)
             {
-                var patient = _profiler.GenerateNew();
+                var patient = _profiler.GenerateNew(day.Date);
                 var uuid = await _patientSeeder.CreateAsync(patient, ct);
                 if (uuid is null)
                 {
@@ -94,11 +99,13 @@ public class SeedOrchestrator
 
                 await _allergySeeder.SeedAsync(patient, ct);
 
-                patient.Categoria   = _epiSelector.SelectCategoria(patient.AgeGroup, patient.Gender);
-                patient.Diagnostico = _epiSelector.SelectDiagnostico(patient.Categoria, patient.AgeGroup, patient.Gender);
+                patient.ClimaEstacion = estacion;
+                patient.TempAmbienteC = tempC;
+                patient.Categoria   = _epiSelector.SelectCategoria(patient.AgeGroup, patient.Gender, estacion);
+                patient.Diagnostico = _epiSelector.SelectDiagnostico(patient.Categoria, patient.AgeGroup, patient.Gender, estacion);
                 patient.Comorbilidades = patient.Diagnostico is null
                     ? []
-                    : _epiSelector.SelectComorbilidades(patient.Diagnostico, patient.AgeGroup, patient.Gender);
+                    : _epiSelector.SelectComorbilidades(patient.Diagnostico, patient.AgeGroup, patient.Gender, estacion);
                 patient.VisitDatetime = _schedule.GenerateVisitTime(day.Date);
 
                 await ProcesarVisitaAsync(patient, day.Date, tracker, runId, ct);
@@ -138,15 +145,19 @@ public class SeedOrchestrator
                     Address1      = base_.Address1,
                     City          = base_.City,
                     EsNuevo       = false,
+                    // Compartir historial de órdenes con el paciente original (mismo objeto por referencia)
+                    OrderedConcepts = base_.OrderedConcepts,
+                    ClimaEstacion = estacion,
+                    TempAmbienteC = tempC,
                     // Diagnóstico puede cambiar en visita recurrente
-                    Categoria     = _epiSelector.SelectCategoria(base_.AgeGroup, base_.Gender),
+                    Categoria     = _epiSelector.SelectCategoria(base_.AgeGroup, base_.Gender, estacion),
                     VisitDatetime = _schedule.GenerateVisitTime(day.Date)
                 };
                 recurrente.Diagnostico = _epiSelector.SelectDiagnostico(
-                    recurrente.Categoria, recurrente.AgeGroup, recurrente.Gender);
+                    recurrente.Categoria, recurrente.AgeGroup, recurrente.Gender, estacion);
                 recurrente.Comorbilidades = recurrente.Diagnostico is null
                     ? []
-                    : _epiSelector.SelectComorbilidades(recurrente.Diagnostico, recurrente.AgeGroup, recurrente.Gender);
+                    : _epiSelector.SelectComorbilidades(recurrente.Diagnostico, recurrente.AgeGroup, recurrente.Gender, estacion);
 
                 await ProcesarVisitaAsync(recurrente, day.Date, tracker, runId, ct);
             }

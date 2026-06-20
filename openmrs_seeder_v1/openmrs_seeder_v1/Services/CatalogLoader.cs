@@ -11,6 +11,7 @@ public class CatalogLoader
     public IReadOnlyList<ExamenClinicoEntry> ExamenesClinicos { get; private set; } = [];
     public IReadOnlyList<AlergenoEntry> Alergenos { get; private set; } = [];
     public IReadOnlyList<MotivoConsultaEntry> MotivosConsulta { get; private set; } = [];
+    public IReadOnlyList<ClimaEntry> Clima { get; private set; } = [];
 
     /// <summary>Carga directa desde listas — usado en tests unitarios.</summary>
     public void LoadFromLists(
@@ -20,7 +21,8 @@ public class CatalogLoader
         IEnumerable<Models.Catalogs.LaboratorioEntry> laboratorios,
         IEnumerable<Models.Catalogs.ExamenClinicoEntry> examenesClinicos,
         IEnumerable<Models.Catalogs.AlergenoEntry> alergenos,
-        IEnumerable<Models.Catalogs.MotivoConsultaEntry> motivosConsulta)
+        IEnumerable<Models.Catalogs.MotivoConsultaEntry> motivosConsulta,
+        IEnumerable<Models.Catalogs.ClimaEntry>? clima = null)
     {
         EpidemiologyProfile = epidemiology.ToList().AsReadOnly();
         Diagnosticos        = diagnosticos.ToList().AsReadOnly();
@@ -29,6 +31,7 @@ public class CatalogLoader
         ExamenesClinicos    = examenesClinicos.ToList().AsReadOnly();
         Alergenos           = alergenos.ToList().AsReadOnly();
         MotivosConsulta     = motivosConsulta.ToList().AsReadOnly();
+        Clima               = (clima ?? []).ToList().AsReadOnly();
     }
 
     public void Load(string catalogsPath)
@@ -40,6 +43,7 @@ public class CatalogLoader
         ExamenesClinicos    = LoadCsv(Path.Combine(catalogsPath, "examenes_clinicos.csv"),      ParseExamenClinico);
         Alergenos           = LoadCsv(Path.Combine(catalogsPath, "alergenos.csv"),              ParseAlergeno);
         MotivosConsulta     = LoadCsv(Path.Combine(catalogsPath, "motivos_consulta.csv"),       ParseMotivoConsulta);
+        Clima               = LoadCsv(Path.Combine(catalogsPath, "clima.csv"),                  ParseClima);
     }
 
     private static IReadOnlyList<T> LoadCsv<T>(string path, Func<Dictionary<string, string>, T?> parser)
@@ -90,6 +94,11 @@ public class CatalogLoader
     private static string S(Dictionary<string, string> row, string key) =>
         row.TryGetValue(key, out var v) ? v : "";
 
+    private static double D(Dictionary<string, string> row, string key) =>
+        row.TryGetValue(key, out var v) &&
+        double.TryParse(v, System.Globalization.NumberStyles.Any,
+            System.Globalization.CultureInfo.InvariantCulture, out var n) ? n : 0;
+
     private static EpidemiologyEntry ParseEpidemiology(Dictionary<string, string> row) => new()
     {
         Categoria = S(row, "categoria"),
@@ -113,7 +122,18 @@ public class CatalogLoader
         PesoF                 = I(row, "peso_F"),
         RequiereLab           = B(row, "requiere_lab"),
         RequiereRx            = B(row, "requiere_rx"),
-        RequiereExamenClinico = B(row, "requiere_examen_clinico")
+        RequiereExamenClinico = B(row, "requiere_examen_clinico"),
+        Clima                 = S(row, "clima")
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(s => s.ToLowerInvariant())
+            .ToHashSet()
+    };
+
+    private static ClimaEntry ParseClima(Dictionary<string, string> row) => new()
+    {
+        Semana        = I(row, "semana"),
+        Estacion      = S(row, "estacion").ToLowerInvariant(),
+        TempPromedioC = D(row, "temp_promedio_c")
     };
 
     private static MedicamentoEntry ParseMedicamento(Dictionary<string, string> row) => new()

@@ -35,6 +35,14 @@ public class EpidemiologySelectorTests
             },
             new()
             {
+                CielUuid  = "uuid-gripe", NombreEs = "Influenza (gripe)",
+                Categoria = "respiratorio", Severidad = "leve",
+                Aplica0_14 = true, PesoM = 10, PesoF = 10,
+                RequiereLab = false, RequiereRx = true,
+                Clima = ["invierno"]
+            },
+            new()
+            {
                 CielUuid  = "uuid-hta", NombreEs = "Hipertensión arterial",
                 Categoria = "cardiovascular", Severidad = "moderado",
                 Aplica45_64 = true, PesoM = 28, PesoF = 22,
@@ -168,5 +176,43 @@ public class EpidemiologySelectorTests
         // frente a la alternativa no afín disponible (osteomuscular).
         Assert.True(afines > conComorbilidad * 0.7,
             $"Esperaba mayoría de comorbilidades afines; afines={afines}, total={conComorbilidad}");
+    }
+
+    [Fact]
+    public void SelectDiagnostico_ConClima_FavoreceEnfermedadDeLaEstacion()
+    {
+        // gripe (clima=invierno) y bronquitis (sin clima) tienen el mismo peso base
+        var (_, selector) = CreateSelector();
+
+        int gripe = 0, bronquitis = 0;
+        for (int i = 0; i < 400; i++)
+        {
+            var dx = selector.SelectDiagnostico("respiratorio", "0-14", "M", climate: "invierno");
+            if (dx?.CielUuid == "uuid-gripe") gripe++;
+            else if (dx?.CielUuid == "uuid-bronquitis") bronquitis++;
+        }
+
+        // Con SeasonalBoost (2.5) por defecto, la gripe debe dominar claramente en invierno
+        Assert.True(gripe > bronquitis * 1.5,
+            $"En invierno la gripe debería dominar; gripe={gripe}, bronquitis={bronquitis}");
+    }
+
+    [Fact]
+    public void SelectDiagnostico_SinClima_NoAplicaBoost()
+    {
+        var (_, selector) = CreateSelector();
+
+        int gripe = 0, bronquitis = 0;
+        for (int i = 0; i < 400; i++)
+        {
+            var dx = selector.SelectDiagnostico("respiratorio", "0-14", "M"); // climate = null
+            if (dx?.CielUuid == "uuid-gripe") gripe++;
+            else if (dx?.CielUuid == "uuid-bronquitis") bronquitis++;
+        }
+
+        // Sin clima, pesos iguales → reparto aproximadamente parejo (ninguno domina abrumadoramente)
+        Assert.True(gripe > 0 && bronquitis > 0);
+        Assert.True(gripe < bronquitis * 2 && bronquitis < gripe * 2,
+            $"Sin clima el reparto debería ser parejo; gripe={gripe}, bronquitis={bronquitis}");
     }
 }

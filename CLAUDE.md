@@ -29,6 +29,9 @@ Key architectural decisions:
 - **Dual identifier**: patients get an OpenMRS ID (Luhn Mod-30 valid) + "Old Identification Number" with `SIM-` prefix for tracking.
 - **Same-day deduplication**: `SeedOrchestrator` uses a `HashSet<string>` of OpenMrsUuids per day so a patient cannot appear as both new and recurring on the same day.
 - **Comorbidity (multimorbidity per visit)**: after the primary diagnosis, `EpidemiologySelector.SelectComorbilidades` may add 1..N extra diagnoses (config `Simulation.Comorbidity`). Probability scales with age (`AgeScaling`) and the extra category is weighted toward clinically-related clusters (`Affinities` × `AffinityBoost`). All diagnoses land in one encounter; `LabOrderSeeder`/`PrescriptionSeeder` filter catalogs by `patient.Categorias` (union of all diagnoses' categories) so labs/meds stay coherent across comorbidities.
+- **Seasonal climate (optional)**: if `catalogs/clima.csv` exists (per ISO week → `estacion` + `temp_promedio_c`), `ClimateResolver` maps each visit's date to its season. `EpidemiologySelector` multiplies by `Climate.SeasonalBoost` the weight of categories/diagnoses tagged with that season (`clima` column in `diagnosticos.csv`, e.g. gripe→invierno, dengue/EDA→verano,lluvia), and `VitalsSeeder` nudges body temperature up in hot weeks (heat only). Absent file / unlisted week / `Enabled=false` → neutral. `climate` is an optional last param on the selector methods so behavior is unchanged when null.
+- **Visit closing**: `VisitCloseSeeder` runs last in `ProcesarVisitaAsync` and sets `stopDatetime` (1–4 h after arrival) via `POST visit/{uuid}`. Encounters (vitals/consulta) are point-in-time (`encounterDatetime`) and have no open/closed state — only the **visit** is closed.
+- **Patient birthdate**: `PatientProfileGenerator.GenerateNew(referenceDate)` anchors the birthdate to the **visit/creation date** (not `DateTime.Today`), so age is valid at the (past) visit date — this avoids OpenMRS `startDateCannotFallBeforeTheBirthDate`. Minimum age is `DemographicProfile.MinPatientAgeMonths` (6) — or `PediatricMinAgeMonths` (1) when `PediatricClinic=true`.
 
 ## Infrastructure
 
@@ -61,7 +64,8 @@ See `parametrizacion_archivos.md` for full parameter reference. Key sections in 
       "BaseProbability": 0.20, "MaxAdditional": 2, "SecondExtraProbability": 0.25, "AffinityBoost": 4.0,
       "AgeScaling": { "0-14": 0.3, "15-29": 0.5, "30-44": 0.8, "45-64": 1.3, "65+": 1.8 },
       "Affinities": { "diabetes": ["cardiovascular","endocrino"], "cardiovascular": ["diabetes","endocrino"], "respiratorio": ["infeccioso"] }
-    }
+    },
+    "Climate": { "Enabled": true, "SeasonalBoost": 2.5, "ComfortTempC": 24.0, "TempVitalsFactorC": 0.04, "TempVitalsMaxC": 0.5 }
   }
 }
 ```
@@ -82,6 +86,7 @@ All under `catalogs/`. See `parametrizacion_archivos.md` for column schemas.
 | `examenes_clinicos.csv` | Manual | In-clinic exams recorded as obs | **Empty** — all UUIDs wrong in this instance |
 | `alergenos.csv` | Manual | Allergens (DRUG/FOOD/ENVIRONMENT) | 15 entries with verified UUIDs |
 | `motivos_consulta.csv` | Manual | Consultation reason phrases in Spanish | |
+| `clima.csv` | Manual | **Optional** seasonal climate by ISO week (`semana,estacion,temp_promedio_c`) | If present, boosts season-tagged diseases; absent = neutral |
 
 ## Verified UUID Mappings (this OpenMRS instance)
 

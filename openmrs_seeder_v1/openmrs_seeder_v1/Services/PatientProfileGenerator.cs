@@ -17,8 +17,14 @@ public class PatientProfileGenerator
         _faker = new Faker(settings.Locale) { Random = new Randomizer(settings.RandomSeed + 2) };
     }
 
-    public SimulatedPatient GenerateNew()
+    /// <summary>
+    /// Genera un paciente nuevo. La fecha de nacimiento se ancla a <paramref name="referenceDate"/>
+    /// (la fecha de la visita/creación) para que la edad sea válida y ≥ al mínimo configurado en
+    /// esa fecha. Si se omite, se usa la fecha de hoy.
+    /// </summary>
+    public SimulatedPatient GenerateNew(DateOnly? referenceDate = null)
     {
+        var refDate  = referenceDate ?? DateOnly.FromDateTime(DateTime.Today);
         var gender   = PickGender();
         var ageGroup = PickAgeGroup();
 
@@ -30,7 +36,7 @@ public class PatientProfileGenerator
                 : _faker.Name.FirstName(Bogus.DataSets.Name.Gender.Female),
             FamilyName = _faker.Name.LastName(),
             Gender     = gender,
-            BirthDate  = GenerateBirthDate(ageGroup),
+            BirthDate  = GenerateBirthDate(ageGroup, refDate),
             AgeGroup   = ageGroup,
             Address1   = _faker.Address.StreetAddress(),
             City       = _faker.Address.City(),
@@ -58,11 +64,21 @@ public class PatientProfileGenerator
         return groups.Last().Label;
     }
 
-    private DateOnly GenerateBirthDate(string ageGroup)
+    private DateOnly GenerateBirthDate(string ageGroup, DateOnly refDate)
     {
+        // Grupo 0-14: edad en meses con piso mínimo (6 meses, o 1 mes en consultorio pediátrico).
+        if (ageGroup == "0-14")
+        {
+            var profile   = _settings.DemographicProfile;
+            var minMonths = profile.PediatricClinic ? profile.PediatricMinAgeMonths : profile.MinPatientAgeMonths;
+            minMonths     = Math.Max(1, minMonths);
+            var ageMonths = _rng.Next(minMonths, 14 * 12 + 1);
+            // Restar días solo envejece (mueve el nacimiento más atrás) → nunca baja del mínimo.
+            return refDate.AddMonths(-ageMonths).AddDays(-_rng.Next(0, 28));
+        }
+
         var (min, max) = ageGroup switch
         {
-            "0-14"  => (0,  14),
             "15-29" => (15, 29),
             "30-44" => (30, 44),
             "45-64" => (45, 64),
@@ -71,6 +87,6 @@ public class PatientProfileGenerator
         };
         var age = _rng.Next(min, max + 1);
         var dayOffset = _rng.Next(0, 365);
-        return DateOnly.FromDateTime(DateTime.Today).AddYears(-age).AddDays(-dayOffset);
+        return refDate.AddYears(-age).AddDays(-dayOffset);
     }
 }

@@ -8,15 +8,28 @@ public class EpidemiologySelector
     private readonly CatalogLoader _catalogs;
     private readonly Random _rng;
     private readonly ComorbiditySettings _comorbidity;
+    private readonly double _seasonalBoost;
+    /// <summary>estación → categorías que tienen ≥1 diagnóstico con esa etiqueta de clima.</summary>
+    private readonly Dictionary<string, HashSet<string>> _categoriasPorClima;
 
     public EpidemiologySelector(CatalogLoader catalogs, SimulationSettings settings)
     {
         _catalogs = catalogs;
         _rng = new Random(settings.RandomSeed + 3);
         _comorbidity = settings.Comorbidity;
+        _seasonalBoost = settings.Climate.SeasonalBoost;
+
+        _categoriasPorClima = new Dictionary<string, HashSet<string>>();
+        foreach (var d in _catalogs.Diagnosticos)
+            foreach (var estacion in d.Clima)
+            {
+                if (!_categoriasPorClima.TryGetValue(estacion, out var set))
+                    _categoriasPorClima[estacion] = set = new HashSet<string>();
+                set.Add(d.Categoria);
+            }
     }
 
-    public string SelectCategoria(string ageGroup, string gender)
+    public string SelectCategoria(string ageGroup, string gender, string? climate = null)
     {
         var candidates = _catalogs.EpidemiologyProfile
             .Where(e => e.GrupoEdad == ageGroup && (e.Genero == gender || e.Genero == "Ambos"))
@@ -24,18 +37,25 @@ public class EpidemiologySelector
 
         if (candidates.Count == 0) return "infeccioso";
 
-        var total = candidates.Sum(e => e.Peso);
+        // Categorías favorecidas por la estación activa (las que contienen enfermedades de ese clima)
+        var boostCats = climate is not null && _categoriasPorClima.TryGetValue(climate, out var s)
+            ? s : null;
+
+        double Peso(EpidemiologyEntry e) =>
+            e.Peso * (boostCats != null && boostCats.Contains(e.Categoria) ? _seasonalBoost : 1.0);
+
+        var total = candidates.Sum(Peso);
         var pick = _rng.NextDouble() * total;
         double cumulative = 0;
         foreach (var entry in candidates)
         {
-            cumulative += entry.Peso;
+            cumulative += Peso(entry);
             if (pick <= cumulative) return entry.Categoria;
         }
         return candidates.Last().Categoria;
     }
 
-    public DiagnosticoEntry? SelectDiagnostico(string categoria, string ageGroup, string gender)
+    public DiagnosticoEntry? SelectDiagnostico(string categoria, string ageGroup, string gender, string? climate = null)
     {
         var candidates = _catalogs.Diagnosticos
             .Where(d => d.Categoria == categoria && AplicaAGrupo(d, ageGroup))
@@ -43,14 +63,21 @@ public class EpidemiologySelector
 
         if (candidates.Count == 0) return null;
 
-        var total = candidates.Sum(d => gender == "M" ? d.PesoM : d.PesoF);
+        // Las enfermedades favorecidas por la estación activa pesan más
+        double Peso(DiagnosticoEntry d)
+        {
+            var baseP = gender == "M" ? d.PesoM : d.PesoF;
+            return baseP * (climate is not null && d.Clima.Contains(climate) ? _seasonalBoost : 1.0);
+        }
+
+        var total = candidates.Sum(Peso);
         if (total == 0) return candidates[_rng.Next(candidates.Count)];
 
         var pick = _rng.NextDouble() * total;
         double cumulative = 0;
         foreach (var dx in candidates)
         {
-            cumulative += gender == "M" ? dx.PesoM : dx.PesoF;
+            cumulative += Peso(dx);
             if (pick <= cumulative) return dx;
         }
         return candidates.Last();
@@ -60,7 +87,7 @@ public class EpidemiologySelector
     /// Selecciona 0..N diagnósticos adicionales (comorbilidad) detectados en la misma visita.
     /// La probabilidad escala con la edad y las categorías afines al primario reciben más peso.
     /// </summary>
-    public List<DiagnosticoEntry> SelectComorbilidades(DiagnosticoEntry primario, string ageGroup, string gender)
+    public List<DiagnosticoEntry> SelectComorbilidades(DiagnosticoEntry primario, string ageGroup, string gender, string? climate = null)
     {
         var resultado = new List<DiagnosticoEntry>();
         if (_comorbidity.MaxAdditional <= 0) return resultado;
@@ -79,10 +106,10 @@ public class EpidemiologySelector
 
         for (int i = 0; i < extras; i++)
         {
-            var categoria = PickCategoriaPonderada(ageGroup, gender, usadas);
+            var categoria = PickCategoriaPonderada(ageGroup, gender, usadas, climate);
             if (categoria is null) break;
 
-            var dx = SelectDiagnostico(categoria, ageGroup, gender);
+            var dx = SelectDiagnostico(categoria, ageGroup, gender, climate);
             if (dx is not null && uuids.Add(dx.CielUuid))
             {
                 resultado.Add(dx);
@@ -101,12 +128,15 @@ public class EpidemiologySelector
     /// Elige una categoría por ruleta ponderada (pesos del perfil epidemiológico),
     /// excluyendo las ya usadas y aumentando el peso de las categorías afines a ellas.
     /// </summary>
-    private string? PickCategoriaPonderada(string ageGroup, string gender, HashSet<string> excluir)
+    private string? PickCategoriaPonderada(string ageGroup, string gender, HashSet<string> excluir, string? climate = null)
     {
         var afines = new HashSet<string>();
         foreach (var cat in excluir)
             if (_comorbidity.Affinities.TryGetValue(cat, out var lista))
                 foreach (var a in lista) afines.Add(a);
+
+        var boostCats = climate is not null && _categoriasPorClima.TryGetValue(climate, out var s)
+            ? s : null;
 
         var pesos = _catalogs.EpidemiologyProfile
             .Where(e => e.GrupoEdad == ageGroup && (e.Genero == gender || e.Genero == "Ambos"))
@@ -115,7 +145,9 @@ public class EpidemiologySelector
             .Select(g => new
             {
                 Categoria = g.Key,
-                Peso = g.Sum(e => e.Peso) * (afines.Contains(g.Key) ? _comorbidity.AffinityBoost : 1.0)
+                Peso = g.Sum(e => e.Peso)
+                       * (afines.Contains(g.Key) ? _comorbidity.AffinityBoost : 1.0)
+                       * (boostCats != null && boostCats.Contains(g.Key) ? _seasonalBoost : 1.0)
             })
             .Where(x => x.Peso > 0)
             .ToList();

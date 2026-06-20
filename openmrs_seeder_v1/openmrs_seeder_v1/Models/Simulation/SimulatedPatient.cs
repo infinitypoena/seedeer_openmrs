@@ -38,4 +38,14 @@ public class SimulatedPatient
     public string ConsultaEncounterUuid { get; set; } = "";
     /// <summary>Datetime de la visita (fecha simulada + hora realista del día)</summary>
     public DateTime VisitDatetime { get; set; }
+    /// <summary>
+    /// Conceptos (fármacos/labs) ya ordenados para esta persona durante la simulación.
+    /// Evita el AmbiguousOrderException de OpenMRS al re-ordenar lo mismo en visitas recurrentes.
+    /// Las visitas recurrentes comparten esta colección con el paciente original.
+    /// </summary>
+    public HashSet<string> OrderedConcepts { get; set; } = [];
+    /// <summary>Estación climática activa en la fecha de la visita (null si no hay catálogo de clima).</summary>
+    public string? ClimaEstacion { get; set; }
+    /// <summary>Temperatura ambiente promedio (°C) de la semana de la visita (null si no aplica).</summary>
+    public double? TempAmbienteC { get; set; }
 }

@@ -18,13 +18,15 @@ public class VitalsSeeder
 
     private readonly OpenMrsRestClient _client;
     private readonly OpenMrsSettings _settings;
+    private readonly ClimateSettings _climate;
     private readonly Random _rng = new();
     private readonly ILogger<VitalsSeeder> _logger;
 
-    public VitalsSeeder(OpenMrsRestClient client, OpenMrsSettings settings, ILogger<VitalsSeeder> logger)
+    public VitalsSeeder(OpenMrsRestClient client, OpenMrsSettings settings, SimulationSettings simSettings, ILogger<VitalsSeeder> logger)
     {
         _client   = client;
         _settings = settings;
+        _climate  = simSettings.Climate;
         _logger   = logger;
     }
 
@@ -124,9 +126,12 @@ public class VitalsSeeder
         var systolic  = Math.Round(_rng.NextDouble() * (sysMax - sysMin) + sysMin);
         var diastolic = Math.Round(_rng.NextDouble() * (diaMax - diaMin) + diaMin);
 
-        // Temperatura
+        // Temperatura (con leve ajuste por calor ambiental: solo el calor sube la temperatura corporal)
         var (tMin, tMax) = cat == "infeccioso" ? (37.5, 39.5) : (36.0, 37.4);
-        var temp = Math.Round(_rng.NextDouble() * (tMax - tMin) + tMin, 1);
+        var temp = _rng.NextDouble() * (tMax - tMin) + tMin;
+        if (patient.TempAmbienteC is double ambiente && ambiente > _climate.ComfortTempC)
+            temp += Math.Min(_climate.TempVitalsMaxC, (ambiente - _climate.ComfortTempC) * _climate.TempVitalsFactorC);
+        temp = Math.Round(temp, 1);
 
         // Pulso
         var (pMin, pMax) = cat == "infeccioso" ? (90.0, 115.0) : (60.0, 100.0);

@@ -19,6 +19,7 @@ builder.Services.AddSingleton<CatalogLoader>();
 builder.Services.AddSingleton<DailyScheduleGenerator>();
 builder.Services.AddSingleton<PatientProfileGenerator>();
 builder.Services.AddSingleton<EpidemiologySelector>();
+builder.Services.AddSingleton<ClimateResolver>();
 
 // Seeders transient (dependen de HttpClient via DI)
 builder.Services.AddTransient<PatientSeeder>();

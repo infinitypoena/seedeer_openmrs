@@ -14,6 +14,21 @@ public class SimulationSettings
     public ReferralProbabilitiesSettings ReferralProbabilities { get; set; } = new();
     public WeekdayWeightsSettings WeekdayWeights { get; set; } = new();
     public ComorbiditySettings Comorbidity { get; set; } = new();
+    public ClimateSettings Climate { get; set; } = new();
+}
+
+public class ClimateSettings
+{
+    /// <summary>Si es false, el catálogo clima.csv se ignora aunque exista.</summary>
+    public bool Enabled { get; set; } = true;
+    /// <summary>Multiplicador de peso para enfermedades/categorías favorecidas por el clima activo.</summary>
+    public double SeasonalBoost { get; set; } = 2.5;
+    /// <summary>Temperatura de confort (°C) de referencia para el ajuste de signos vitales.</summary>
+    public double ComfortTempC { get; set; } = 24.0;
+    /// <summary>°C de temperatura corporal añadidos por cada °C ambiente por encima del confort.</summary>
+    public double TempVitalsFactorC { get; set; } = 0.04;
+    /// <summary>Tope del ajuste de temperatura corporal por calor ambiental (°C).</summary>
+    public double TempVitalsMaxC { get; set; } = 0.5;
 }
 
 public class ComorbiditySettings
@@ -38,7 +53,8 @@ public class ComorbiditySettings
         ["cardiovascular"] = ["diabetes", "endocrino"],
         ["endocrino"]      = ["diabetes", "cardiovascular"],
         ["respiratorio"]   = ["infeccioso"],
-        ["infeccioso"]     = ["respiratorio"],
+        ["infeccioso"]     = ["respiratorio", "digestivo"],
+        ["digestivo"]      = ["infeccioso"],
     };
 }
 
@@ -67,6 +83,13 @@ public class DemographicProfileSettings
     ];
 
     public GenderRatioSettings GenderRatio { get; set; } = new();
+
+    /// <summary>Edad mínima general de los pacientes generados, en meses.</summary>
+    public int MinPatientAgeMonths { get; set; } = 6;
+    /// <summary>Consultorio pediátrico: si es true, el mínimo baja a PediatricMinAgeMonths.</summary>
+    public bool PediatricClinic { get; set; } = false;
+    /// <summary>Edad mínima en meses cuando PediatricClinic = true.</summary>
+    public int PediatricMinAgeMonths { get; set; } = 1;
 }
 
 public class AgeGroupWeight

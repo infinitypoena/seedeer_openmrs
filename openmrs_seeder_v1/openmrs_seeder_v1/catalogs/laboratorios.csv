@@ -7,3 +7,8 @@ ciel_uuid,nombre_es,clase,aplica_respiratorio,aplica_cardiovascular,aplica_diabe
 164364AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Creatinina sérica,Test,false,true,true,false,false,true,false,false
 653AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Transaminasa AST,Test,false,false,false,true,false,false,true,false
 654AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Transaminasa ALT,Test,false,false,false,true,false,false,true,false
+58b969e7-77ef-4941-a0ec-72372a2fa716,Antígeno NS1 dengue (prueba rápida),Test,false,false,false,false,false,false,true,false
+85077AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hormona estimulante de la tiroides (TSH),Test,false,false,false,false,false,false,false,true
+159825AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Ácido úrico en suero,Test,false,false,false,false,true,false,false,false
+161500AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Proteína C reactiva,Test,false,false,false,false,true,false,true,false
+123484AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Urocultivo,Test,false,false,false,false,false,true,false,false

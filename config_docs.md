@@ -25,6 +25,7 @@ cualquier persona —sin necesidad de leer el código— pueda parametrizar la s
    - [ReferralProbabilities](#44-referralprobabilities)
    - [WeekdayWeights](#45-weekdayweights)
    - [Comorbidity](#46-comorbidity)
+   - [Climate](#47-climate)
 5. [Modos recomendados](#5-modos-recomendados)
 
 ---
@@ -204,6 +205,9 @@ Define la **distribución de edad y sexo** de los pacientes nuevos.
 | `AgeGroups[].Label` | Grupo etario. **Estas etiquetas son las mismas que usan los catálogos** (`epidemiology-profile.csv`, columnas `aplica_0_14`, etc.). No las cambies sin actualizar los catálogos. |
 | `AgeGroups[].Weight` | Peso relativo del grupo. Los pesos se normalizan al 100% entre sí (no tienen que sumar 100). En el ejemplo, los grupos 30-44 y 45-64 son los más frecuentes. |
 | `GenderRatio.M` / `GenderRatio.F` | Proporción de hombres/mujeres. Se normalizan entre sí (ej.: 48/52). |
+| `MinPatientAgeMonths` | Edad **mínima** de cualquier paciente, en meses (por defecto `6`). Evita generar recién nacidos. La fecha de nacimiento se ancla a la fecha de la visita, así que la edad siempre es válida en esa fecha. |
+| `PediatricClinic` | `true` = consultorio pediátrico: baja el mínimo a `PediatricMinAgeMonths`. No cambia la distribución de edades, solo el piso. |
+| `PediatricMinAgeMonths` | Edad mínima en meses cuando `PediatricClinic` es `true` (por defecto `1`). |
 
 ### 4.4 ReferralProbabilities
 
@@ -280,7 +284,8 @@ Controla la **multimorbilidad**: que un paciente presente más de una enfermedad
     "cardiovascular": [ "diabetes", "endocrino" ],
     "endocrino":      [ "diabetes", "cardiovascular" ],
     "respiratorio":   [ "infeccioso" ],
-    "infeccioso":     [ "respiratorio" ]
+    "infeccioso":     [ "respiratorio", "digestivo" ],
+    "digestivo":      [ "infeccioso" ]
   }
 }
 ```
@@ -306,6 +311,41 @@ Controla la **multimorbilidad**: que un paciente presente más de una enfermedad
 
 **Para que las comorbilidades sean más visibles** sube `BaseProbability` (ej.: `0.6`); para
 desactivarlas, ponlo en `0`.
+
+### 4.7 Climate
+
+Hace que la **época del año** afecte la simulación: más gripe/respiratorias en invierno, más
+dengue/EDA en verano y lluvia, y un leve aumento de la temperatura corporal por calor ambiental.
+Funciona junto con el catálogo **opcional** `catalogs/clima.csv` (una fila por semana ISO del año:
+`semana, estacion, temp_promedio_c`). Si el archivo **no existe**, o una semana no está listada, o
+`Enabled` es `false`, el clima **no afecta nada** (comportamiento neutro).
+
+```json
+"Climate": {
+  "Enabled": true,
+  "SeasonalBoost": 2.5,
+  "ComfortTempC": 24.0,
+  "TempVitalsFactorC": 0.04,
+  "TempVitalsMaxC": 0.5
+}
+```
+
+| Clave | Tipo | Significado |
+|-------|------|-------------|
+| `Enabled` | bool | Si es `false`, ignora `clima.csv` aunque exista (apaga el efecto sin borrar el archivo). |
+| `SeasonalBoost` | factor | Multiplicador de peso que reciben las enfermedades **y** las categorías favorecidas por la estación activa. `2.5` = ~2.5× más probables en su temporada. |
+| `ComfortTempC` | °C | Temperatura ambiente de confort; por encima de ella el calor empieza a subir la temperatura corporal registrada. |
+| `TempVitalsFactorC` | °C/°C | Grados de temperatura corporal añadidos por cada grado ambiente por encima del confort. |
+| `TempVitalsMaxC` | °C | Tope del ajuste de temperatura corporal por calor. |
+
+**Cómo se conecta con las enfermedades:** en `diagnosticos.csv` cada enfermedad tiene una columna
+`clima` con la(s) estación(es) que la favorecen (p.ej. gripe → `invierno`, dengue → `verano,lluvia`,
+EDA → `verano,lluvia`); vacío = sin efecto estacional. Estaciones válidas: `invierno`, `verano`,
+`lluvia`, `seca`. La semana de la visita se calcula con la **semana ISO** del año (1-53) y aplica
+cada año de la simulación. Solo el **calor** sube la temperatura corporal; el frío no la baja.
+
+> El catálogo `clima.csv` que se incluye es un ejemplo editable: ajústalo a tu región (qué semanas
+> son invierno/verano/lluvia/seca y sus temperaturas).
 
 ---
 

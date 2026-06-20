@@ -16,4 +16,6 @@ public class DiagnosticoEntry
     public bool RequiereLab { get; set; }
     public bool RequiereRx { get; set; }
     public bool RequiereExamenClinico { get; set; }
+    /// <summary>Estaciones (en minúscula) bajo las que la enfermedad es más frecuente. Vacío = sin efecto estacional.</summary>
+    public HashSet<string> Clima { get; set; } = [];
 }

@@ -9,6 +9,13 @@ public class PatientProfileGeneratorTests
     private static PatientProfileGenerator CreateGen(int seed = 42) =>
         new(new SimulationSettings { RandomSeed = seed });
 
+    private static int EdadEnMeses(DateOnly birth, DateOnly reference)
+    {
+        var meses = (reference.Year - birth.Year) * 12 + (reference.Month - birth.Month);
+        if (reference.Day < birth.Day) meses--;
+        return meses;
+    }
+
     [Fact]
     public void GenerateNew_IdentificadorConPrefixSIM()
     {
@@ -82,6 +89,53 @@ public class PatientProfileGeneratorTests
     {
         var p = CreateGen().GenerateNew();
         Assert.True(p.EsNuevo);
+    }
+
+    [Fact]
+    public void GenerateNew_ConFechaPasada_NacimientoNuncaDespuesDeLaVisita()
+    {
+        var gen = CreateGen();
+        var refDate = new DateOnly(2023, 6, 1);
+        for (int i = 0; i < 200; i++)
+        {
+            var p = gen.GenerateNew(refDate);
+            Assert.True(p.BirthDate <= refDate,
+                $"Nacimiento {p.BirthDate} no debe ser posterior a la visita {refDate}");
+        }
+    }
+
+    [Fact]
+    public void GenerateNew_RespetaEdadMinima_6Meses()
+    {
+        var gen = CreateGen();
+        var refDate = new DateOnly(2023, 6, 1);
+        for (int i = 0; i < 300; i++)
+        {
+            var p = gen.GenerateNew(refDate);
+            Assert.True(EdadEnMeses(p.BirthDate, refDate) >= 6,
+                $"Edad < 6 meses: nacimiento {p.BirthDate}, grupo {p.AgeGroup}");
+        }
+    }
+
+    [Fact]
+    public void GenerateNew_ModoPediatrico_PermiteDesde1Mes()
+    {
+        var settings = new SimulationSettings { RandomSeed = 7 };
+        settings.DemographicProfile.PediatricClinic = true;
+        // Forzar solo el grupo 0-14 para ejercitar el mínimo pediátrico
+        settings.DemographicProfile.AgeGroups = [new() { Label = "0-14", Weight = 100 }];
+        var gen = new PatientProfileGenerator(settings);
+        var refDate = new DateOnly(2023, 6, 1);
+
+        bool huboLactanteMenor6 = false;
+        for (int i = 0; i < 400; i++)
+        {
+            var p = gen.GenerateNew(refDate);
+            var meses = EdadEnMeses(p.BirthDate, refDate);
+            Assert.True(meses >= 1, $"En pediatría el mínimo es 1 mes; obtuve {meses}");
+            if (meses < 6) huboLactanteMenor6 = true;
+        }
+        Assert.True(huboLactanteMenor6, "En modo pediátrico deberían aparecer lactantes < 6 meses");
     }
 
     [Fact]

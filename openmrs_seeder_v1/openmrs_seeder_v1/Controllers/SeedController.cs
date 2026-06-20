@@ -163,7 +163,7 @@ public class SeedController : ControllerBase
                     try
                     {
                         var visitsJson = await _client.GetAsync(
-                            $"visit?patient={patientUuid}&v=full&limit=500", ct);
+                            $"visit?patient={patientUuid}&v=full&limit=100", ct);
                         var visitsDoc = JsonSerializer.Deserialize<JsonElement>(visitsJson);
                         if (visitsDoc.TryGetProperty("results", out var visits))
                         {

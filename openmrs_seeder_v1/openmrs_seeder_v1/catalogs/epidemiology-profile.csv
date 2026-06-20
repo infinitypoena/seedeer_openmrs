@@ -31,12 +31,15 @@ osteomuscular,45-64,M,18
 osteomuscular,45-64,F,22
 osteomuscular,65+,M,25
 osteomuscular,65+,F,28
+urologico,0-14,Ambos,8
 urologico,15-29,M,8
 urologico,15-29,F,10
 urologico,30-44,M,10
 urologico,30-44,F,15
 urologico,45-64,M,12
 urologico,45-64,F,14
+urologico,65+,M,14
+urologico,65+,F,18
 infeccioso,0-14,Ambos,25
 infeccioso,15-29,Ambos,15
 infeccioso,30-44,Ambos,12

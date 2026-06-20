@@ -47,6 +47,7 @@ public class PrescriptionSeeder
 
         var candidatos = _catalogs.Medicamentos
             .Where(m => patient.Categorias.Any(c => AplicaCategoria(m, c)))
+            .Where(m => !patient.OrderedConcepts.Contains(m.ConceptUuid)) // evita re-ordenar lo ya activo
             .ToList();
 
         if (candidatos.Count == 0) return;
@@ -58,7 +59,7 @@ public class PrescriptionSeeder
         foreach (var med in elegidos)
         {
             var ok = await PostDrugOrderAsync(patient, med, ct);
-            if (ok) rxOk++;
+            if (ok) { rxOk++; patient.OrderedConcepts.Add(med.ConceptUuid); }
         }
         _logger.LogInformation("[Prescription] {N}/{Total} prescripciones para {Id}",
             rxOk, elegidos.Count, patient.Identifier);

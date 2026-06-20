@@ -48,6 +48,7 @@ public class LabOrderSeeder
 
         var candidatos = _catalogs.Laboratorios
             .Where(l => patient.Categorias.Any(c => AplicaCategoria(l, c)))
+            .Where(l => !patient.OrderedConcepts.Contains(l.CielUuid)) // evita re-ordenar lo ya activo
             .ToList();
 
         if (candidatos.Count == 0) return;
@@ -63,7 +64,7 @@ public class LabOrderSeeder
                 : _rng.NextDouble() < _urgentProb;
 
             var ok = await PostOrderAsync(patient, lab.CielUuid, esUrgente ? "STAT" : "ROUTINE", ct);
-            if (ok) ordenesOk++;
+            if (ok) { ordenesOk++; patient.OrderedConcepts.Add(lab.CielUuid); }
         }
 
         _logger.LogInformation("[LabOrder] {N}/{Total} órdenes de lab para {Id}",

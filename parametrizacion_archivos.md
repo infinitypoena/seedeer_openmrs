@@ -98,6 +98,9 @@ Todo el comportamiento del simulador se controla desde aquí.
 | `HorarioAtencion.PicoAM/PM` | objeto | Bloque horario pico con peso (% de atenciones). El resto se distribuye uniformemente. |
 | `DemographicProfile.AgeGroups` | array | Distribución etaria. Los `Weight` se normalizan al 100%. |
 | `DemographicProfile.GenderRatio` | objeto | Proporción M/F (se normalizan entre sí). |
+| `DemographicProfile.MinPatientAgeMonths` | int | Edad mínima de pacientes en meses (def. 6). La fecha de nacimiento se ancla a la fecha de la visita. |
+| `DemographicProfile.PediatricClinic` | bool | Consultorio pediátrico: baja el mínimo a `PediatricMinAgeMonths`. |
+| `DemographicProfile.PediatricMinAgeMonths` | int | Edad mínima en meses en modo pediátrico (def. 1). |
 | `ReferralProbabilities.LabOrder` | float (0-1) | Probabilidad base de orden de laboratorio externo (testorder). |
 | `ReferralProbabilities.ClinicalExam` | float (0-1) | Probabilidad base de examen en consultorio (obs inmediata). |
 | `ReferralProbabilities.DrugOrder` | float (0-1) | Probabilidad base de prescripción de medicamento. |
@@ -113,6 +116,14 @@ Todo el comportamiento del simulador se controla desde aquí.
 | `Comorbidity.Affinities` | objeto | Clusters de comorbilidad: por cada categoría, lista de categorías clínicamente asociadas que reciben `AffinityBoost`. |
 
 > **Comorbilidad en una sola visita:** el primario se elige como antes; luego, con probabilidad `BaseProbability × AgeScaling[grupo]`, se añaden 1..`MaxAdditional` diagnósticos de **otras** categorías (priorizando las afines). Todos se registran en el mismo encounter (`rank=1` primario, `rank=2` secundarios) y las órdenes de laboratorio y prescripciones cubren las categorías de **todas** las enfermedades del paciente.
+
+| `Climate.Enabled` | bool | Activa el efecto estacional (requiere `catalogs/clima.csv`). Si `false`, se ignora el clima. |
+| `Climate.SeasonalBoost` | float | Multiplicador de peso de enfermedades y categorías favorecidas por la estación activa. |
+| `Climate.ComfortTempC` | float | Temperatura ambiente de confort; por encima sube la temperatura corporal registrada. |
+| `Climate.TempVitalsFactorC` | float | °C de temperatura corporal por cada °C ambiente sobre el confort. |
+| `Climate.TempVitalsMaxC` | float | Tope del ajuste de temperatura corporal por calor. |
+
+> **Clima estacional (opcional):** si existe `catalogs/clima.csv` (una fila por semana ISO: `semana,estacion,temp_promedio_c` con estación ∈ invierno/verano/lluvia/seca), la simulación favorece las enfermedades marcadas con esa estación en la columna `clima` de `diagnosticos.csv` (gripe→invierno, dengue/EDA→verano,lluvia) y el calor sube levemente la temperatura corporal. Si el archivo falta o la semana no está listada → efecto neutro.
 
 ### Referencia de parámetros — sección OpenMRS.Defaults
 
