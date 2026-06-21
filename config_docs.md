@@ -125,16 +125,43 @@ objeto ya existente en OpenMRS que el simulador referencia al crear datos.
 |-------|----------------|----------------|
 | `PatientIdentifierTypeUuid` | Tipo "OpenMRS ID" (con validador Luhn; idgen lo autogenera). | `GET /patientidentifiertype` |
 | `TrackingIdentifierTypeUuid` | Tipo "Old Identification Number" — soporta el prefijo `SIM-` para rastrear/limpiar pacientes simulados. | `GET /patientidentifiertype` |
-| `LocationUuid` | Ubicación por defecto de visitas y encuentros. | `GET /location` |
+| `LocationUuid` | Ubicación de **respaldo** (fallback) si no hay `Consultorios`. | `GET /location` |
+| `RegistrationLocationUuid` | Ubicación de registro/admisión (Recepción) para el identificador del paciente. Si vacío, cae a `LocationUuid`. | `GET /location` |
+| `Consultorios` | Lista de consultorios; cada visita rota entre ellos. Ver detalle abajo. | `GET /location` |
 | `VisitTypeUuid` | Tipo de visita "Outpatient" (ambulatoria). | `GET /visittype` |
 | `VitalsEncounterTypeUuid` | Tipo de encuentro "Vitals" (signos vitales). | `GET /encountertype` |
 | `ConsultaEncounterTypeUuid` | Tipo de encuentro "Consultation" (la consulta médica). | `GET /encountertype` |
-| `ProviderUuid` | Profesional de salud autor de los encuentros. | `GET /provider` |
+| `ProviderUuid` | Médico de **respaldo** (fallback) si no hay `Consultorios`. | `GET /provider` |
 | `EncounterRoleUuid` | Rol "Clinician" del proveedor dentro del encuentro. | `GET /encounterrole` |
 | `OutpatientCareSettingUuid` | Care setting "Outpatient" para órdenes de lab/medicamentos. | `GET /caresetting` |
 | `OnceDailyFrequencyUuid` | Frecuencia "Una vez por día" para prescripciones. | `GET /orderfrequency` |
 | `DaysConceptUuid` | Concepto unidad "Días" (duración de prescripciones). | `GET /concept?q=Days` |
 | `TabletConceptUuid` | Concepto unidad "Tableta(s)" (dosis de prescripciones). | `GET /concept?q=Tablet` |
+
+#### Consultorios y médicos (datos dinámicos)
+
+Para que la data no quede toda firmada por un solo proveedor en una sola ubicación, se define una
+lista de **consultorios**, cada uno con su **médico**. En cada visita se elige un consultorio al azar
+y todos sus encuentros/órdenes quedan en esa ubicación y firmados por ese médico. El registro del
+paciente va a `RegistrationLocationUuid` (Recepción), no a un consultorio.
+
+```json
+"Consultorios": [
+  { "LocationUuid": "c1000000-0000-0000-0000-000000000011", "MedicoIdentifier": "SIM-MED-C1", "MedicoNombre": "Carlos Méndez" },
+  { "LocationUuid": "c1000000-0000-0000-0000-000000000012", "MedicoIdentifier": "SIM-MED-C2", "MedicoNombre": "Ana Rivas" }
+]
+```
+
+| Clave | Significado |
+|-------|-------------|
+| `LocationUuid` | Ubicación (Visit Location) del consultorio — `GET /location`. |
+| `MedicoIdentifier` | Identificador único del médico. Se usa para **idempotencia**: al iniciar la corrida se busca por este id; si no existe, se crea el proveedor. Prefijo `SIM-` recomendado. |
+| `MedicoNombre` | Nombre del médico a crear si no existe (ej. "Carlos Méndez"). |
+
+> **Idempotente:** los médicos se crean una sola vez; corridas posteriores los reutilizan. Son
+> **datos de referencia** (personal), por lo que `DELETE /api/seed/clear` **no** los elimina (solo
+> anula pacientes/visitas `SIM-`). Si dejas `Consultorios` vacío, el simulador usa el
+> `LocationUuid`/`ProviderUuid` por defecto (comportamiento previo, un solo recurso).
 
 ---
 

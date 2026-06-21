@@ -26,7 +26,7 @@ public class VisitSeeder
             patient       = patient.OpenMrsUuid,
             visitType     = _settings.Defaults.VisitTypeUuid,
             startDatetime = FormatDatetime(patient.VisitDatetime),
-            location      = _settings.Defaults.LocationUuid
+            location      = patient.AssignedLocationUuid ?? _settings.Defaults.LocationUuid
         };
 
         try

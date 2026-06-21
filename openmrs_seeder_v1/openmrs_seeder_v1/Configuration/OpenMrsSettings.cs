@@ -30,8 +30,15 @@ public class DefaultsSettings
     public string PatientIdentifierTypeUuid { get; set; } = "05a29f94-c0ed-11e2-94be-8c13b969e334";
     /// <summary>UUID del tipo "Old Identification Number" (sin validador) — usado para el prefijo SIM- de tracking</summary>
     public string TrackingIdentifierTypeUuid { get; set; } = "8d79403a-c2cc-11de-8d13-0010c6dffd0f";
-    /// <summary>UUID de la ubicación por defecto — verificar en tu instancia via GET /location</summary>
+    /// <summary>UUID de la ubicación por defecto (fallback) — verificar en tu instancia via GET /location</summary>
     public string LocationUuid { get; set; } = "44c3efb0-2583-4c80-a79e-1f756a03c0a1";
+    /// <summary>UUID de la ubicación de registro/admisión (Recepción) usada en el identificador del paciente. Si vacío, cae a LocationUuid.</summary>
+    public string RegistrationLocationUuid { get; set; } = "";
+    /// <summary>
+    /// Consultorios disponibles (location + médico asignado). Si está vacío, el seeder usa
+    /// LocationUuid/ProviderUuid (comportamiento previo). Cada visita rota entre estos consultorios.
+    /// </summary>
+    public List<ConsultorioSettings> Consultorios { get; set; } = [];
     /// <summary>UUID del tipo de visita "Outpatient" para visitas ambulatorias</summary>
     public string VisitTypeUuid { get; set; } = "7b0f5697-27e3-40c4-8bae-f4049abfb4ed";
     /// <summary>UUID del tipo de encuentro "Vitals"</summary>
@@ -50,4 +57,19 @@ public class DefaultsSettings
     public string DaysConceptUuid { get; set; } = "1072AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
     /// <summary>CIEL concept UUID para unidad "Tablet(s)" (dosis de prescripciones)</summary>
     public string TabletConceptUuid { get; set; } = "1513AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+}
+
+/// <summary>
+/// Un consultorio: su ubicación (Visit Location de OpenMRS) y el médico que lo atiende.
+/// El médico se crea de forma idempotente al inicio de la corrida (ClinicResourceAssigner)
+/// buscándolo por <see cref="MedicoIdentifier"/>; si no existe se crea con <see cref="MedicoNombre"/>.
+/// </summary>
+public class ConsultorioSettings
+{
+    /// <summary>UUID de la ubicación (Visit Location) del consultorio — GET /location.</summary>
+    public string LocationUuid { get; set; } = "";
+    /// <summary>Identificador único del proveedor/médico (idempotencia). Ej: "SIM-MED-C1".</summary>
+    public string MedicoIdentifier { get; set; } = "";
+    /// <summary>Nombre del médico a crear si no existe. Ej: "Carlos Médico".</summary>
+    public string MedicoNombre { get; set; } = "";
 }

@@ -82,12 +82,12 @@ public class ConsultaSeeder
             patient            = patient.OpenMrsUuid,
             visit              = patient.VisitUuid,
             encounterDatetime  = VisitSeeder.FormatDatetime(patient.VisitDatetime.AddMinutes(30)),
-            location           = _settings.Defaults.LocationUuid,
+            location           = patient.AssignedLocationUuid ?? _settings.Defaults.LocationUuid,
             encounterProviders = new[]
             {
                 new
                 {
-                    provider      = _settings.Defaults.ProviderUuid,
+                    provider      = patient.AssignedProviderUuid ?? _settings.Defaults.ProviderUuid,
                     encounterRole = _settings.Defaults.EncounterRoleUuid
                 }
             },

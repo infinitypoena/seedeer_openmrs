@@ -79,7 +79,7 @@ public class LabOrderSeeder
             patient     = patient.OpenMrsUuid,
             concept     = conceptUuid,
             encounter   = patient.ConsultaEncounterUuid,
-            orderer     = _settings.Defaults.ProviderUuid,
+            orderer     = patient.AssignedProviderUuid ?? _settings.Defaults.ProviderUuid,
             careSetting = _settings.Defaults.OutpatientCareSettingUuid,
             urgency
         };

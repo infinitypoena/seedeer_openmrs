@@ -22,6 +22,11 @@ public class PatientSeeder
 
     public async Task<string?> CreateAsync(SimulatedPatient patient, CancellationToken ct)
     {
+        // Registro del paciente en Recepción/Admisión (no en un consultorio); fallback a LocationUuid
+        var registrationLocation = string.IsNullOrEmpty(_settings.Defaults.RegistrationLocationUuid)
+            ? _settings.Defaults.LocationUuid
+            : _settings.Defaults.RegistrationLocationUuid;
+
         var payload = new
         {
             person = new
@@ -50,7 +55,7 @@ public class PatientSeeder
                 {
                     identifier     = LuhnMod30Generator.Next(),
                     identifierType = _settings.Defaults.PatientIdentifierTypeUuid,
-                    location       = _settings.Defaults.LocationUuid,
+                    location       = registrationLocation,
                     preferred      = false
                 },
                 // Old Identification Number: prefijo SIM- para identificar y borrar datos simulados
@@ -58,7 +63,7 @@ public class PatientSeeder
                 {
                     identifier     = patient.Identifier,
                     identifierType = _settings.Defaults.TrackingIdentifierTypeUuid,
-                    location       = _settings.Defaults.LocationUuid,
+                    location       = registrationLocation,
                     preferred      = true
                 }
             }

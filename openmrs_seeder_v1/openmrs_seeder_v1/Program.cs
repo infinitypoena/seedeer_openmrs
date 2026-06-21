@@ -21,6 +21,9 @@ builder.Services.AddSingleton<PatientProfileGenerator>();
 builder.Services.AddSingleton<EpidemiologySelector>();
 builder.Services.AddSingleton<ClimateResolver>();
 
+// Asignador de consultorio/médico (transient: hace REST por corrida, como los seeders)
+builder.Services.AddTransient<ClinicResourceAssigner>();
+
 // Seeders transient (dependen de HttpClient via DI)
 builder.Services.AddTransient<PatientSeeder>();
 builder.Services.AddTransient<AllergySeeder>();

@@ -50,4 +50,8 @@ public class SimulatedPatient
     public double? TempAmbienteC { get; set; }
     /// <summary>Conceptos ya agregados a la lista de problemas (condition) — evita duplicados entre visitas.</summary>
     public HashSet<string> ProblemListConcepts { get; set; } = [];
+    /// <summary>Consultorio (location) asignado a esta visita por ClinicResourceAssigner. Null = usar default.</summary>
+    public string? AssignedLocationUuid { get; set; }
+    /// <summary>Médico (provider) asignado a esta visita. Null = usar ProviderUuid por defecto.</summary>
+    public string? AssignedProviderUuid { get; set; }
 }

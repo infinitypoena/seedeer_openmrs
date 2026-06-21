@@ -19,6 +19,7 @@ public class SeedOrchestrator
     private readonly PrescriptionSeeder _prescriptionSeeder;
     private readonly VisitCloseSeeder _visitCloseSeeder;
     private readonly ConditionSeeder _conditionSeeder;
+    private readonly ClinicResourceAssigner _clinicResources;
 
     private readonly List<SimulatedPatient> _patientPool = [];
     private readonly Lock _poolLock = new();
@@ -38,6 +39,7 @@ public class SeedOrchestrator
         PrescriptionSeeder prescriptionSeeder,
         VisitCloseSeeder visitCloseSeeder,
         ConditionSeeder conditionSeeder,
+        ClinicResourceAssigner clinicResources,
         ILogger<SeedOrchestrator> logger)
     {
         _schedule           = schedule;
@@ -53,6 +55,7 @@ public class SeedOrchestrator
         _prescriptionSeeder = prescriptionSeeder;
         _visitCloseSeeder   = visitCloseSeeder;
         _conditionSeeder    = conditionSeeder;
+        _clinicResources    = clinicResources;
         _logger             = logger;
     }
 
@@ -61,6 +64,9 @@ public class SeedOrchestrator
         var days             = _schedule.Generate();
         var diasConPacientes = days.Count(d => d.TotalPatients > 0);
         var rng              = new Random();
+
+        // Asegurar consultorios + médicos (idempotente) antes de repartir visitas
+        await _clinicResources.InitializeAsync(ct);
 
         // Factor inicial: esta corrida se inclina a común con esta probabilidad (varía entre corridas)
         var runCommonP = _epiSelector.DrawRunCommonProbability();
@@ -196,6 +202,11 @@ public class SeedOrchestrator
         Guid runId,
         CancellationToken ct)
     {
+        // Consultorio + médico de esta visita (rota entre los configurados)
+        var (loc, prov) = _clinicResources.Assign();
+        patient.AssignedLocationUuid = loc;
+        patient.AssignedProviderUuid = prov;
+
         var visitUuid = await _visitSeeder.CreateAsync(patient, ct);
         if (visitUuid is null)
         {

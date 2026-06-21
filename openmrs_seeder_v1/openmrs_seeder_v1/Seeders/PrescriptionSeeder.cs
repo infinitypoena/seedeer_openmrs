@@ -79,7 +79,7 @@ public class PrescriptionSeeder
             concept       = med.ConceptUuid,
             drug          = med.DrugUuid,
             encounter     = patient.ConsultaEncounterUuid,
-            orderer       = _settings.Defaults.ProviderUuid,
+            orderer       = patient.AssignedProviderUuid ?? _settings.Defaults.ProviderUuid,
             careSetting   = _settings.Defaults.OutpatientCareSettingUuid,
             dose          = 1.0,
             doseUnits     = _settings.Defaults.TabletConceptUuid,
