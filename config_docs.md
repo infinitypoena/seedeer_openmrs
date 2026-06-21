@@ -26,6 +26,7 @@ cualquier persona —sin necesidad de leer el código— pueda parametrizar la s
    - [WeekdayWeights](#45-weekdayweights)
    - [Comorbidity](#46-comorbidity)
    - [Climate](#47-climate)
+   - [Allergy](#48-allergy)
 5. [Modos recomendados](#5-modos-recomendados)
 
 ---
@@ -163,6 +164,7 @@ tocar código.
 | `PorcentajeRecurrentes` | 0–100 | Porcentaje de visitas que corresponden a pacientes **ya creados** (controles, crónicos) en lugar de pacientes nuevos. Ej.: `30` ≈ 30% de visitas recurrentes. |
 | `Locale` | string | Idioma/región para generar nombres y direcciones (Bogus). `"es"` = español latinoamericano. |
 | `RandomSeed` | entero | Semilla de aleatoriedad. **Con la misma semilla obtienes exactamente la misma simulación** (reproducibilidad). Cámbiala para generar un conjunto de datos distinto. |
+| `CommonProbMin` / `CommonProbMax` | float (0-1) | **Factor inicial de selección.** Cada corrida sortea su probabilidad de "común" uniformemente en `[CommonProbMin, CommonProbMax]` (por defecto 0.75–0.95), así la proporción **varía entre corridas** pero siempre se inclina a lo común. Con esa probabilidad, el diagnóstico principal se elige del pool `comun=true`; el resto del tiempo de las raras/críticas. La etapa 2 (categoría + diagnóstico por peso) opera **dentro** del pool elegido con los pesos actuales. Sube `CommonProbMin` para inclinar aún más a lo común. |
 | `ClinicType` | string | Perfil del establecimiento (`ConsultaExterna`, `HospitalUrgencias`, `CentroComunitario`). Es una etiqueta semántica orientativa; no fuerza valores por sí sola. |
 
 ### 4.2 HorarioAtencion
@@ -220,8 +222,7 @@ Probabilidades **base** (0 a 1) de que ocurra cada acción clínica en una visit
   "ClinicalExam": 0.35,
   "DrugOrder": 0.65,
   "Urgent": 0.20,
-  "FollowUp": 0.30,
-  "AllergyOnNew": 0.15
+  "FollowUp": 0.30
 }
 ```
 
@@ -232,7 +233,8 @@ Probabilidades **base** (0 a 1) de que ocurra cada acción clínica en una visit
 | `DrugOrder` | Probabilidad base de prescribir medicamento. Si el diagnóstico está marcado `requiere_rx`, sube a 0.90. |
 | `Urgent` | Probabilidad de que una orden de laboratorio salga como **URGENTE** (`STAT`). Para diagnósticos `grave` sube a 0.50. |
 | `FollowUp` | Probabilidad de generar una nota/indicación de seguimiento. |
-| `AllergyOnNew` | Probabilidad de que un paciente **nuevo** tenga alergias registradas. |
+
+> La probabilidad de alergias dejó de vivir aquí; ahora está en su propia sección [`Allergy`](#47-allergy).
 
 > En resumen: estas probabilidades aplican como **piso**, pero el catálogo de diagnósticos puede
 > elevarlas cuando la enfermedad lo amerita clínicamente (`requiere_lab`, `requiere_rx`, severidad).
@@ -306,8 +308,15 @@ Controla la **multimorbilidad**: que un paciente presente más de una enfermedad
 4. Todos los diagnósticos se registran en el **mismo encuentro** (principal `rank=1`, secundarios `rank=2`).
 5. Las órdenes de laboratorio y las prescripciones cubren las categorías de **todas** las enfermedades del paciente, manteniendo la coherencia clínica.
 
-> **Categorías válidas** (deben coincidir con las de los catálogos): `respiratorio`, `cardiovascular`,
-> `diabetes`, `digestivo`, `osteomuscular`, `urologico`, `infeccioso`, `endocrino`.
+> **Categorías válidas** (13, deben coincidir con las de los catálogos): `respiratorio`, `cardiovascular`,
+> `diabetes`, `digestivo`, `osteomuscular`, `urologico`, `infeccioso`, `endocrino`, `neurologico`,
+> `dermatologico`, `salud_mental`, `ginecoobstetrico`, `trauma`.
+
+> **Lista de problemas (condiciones crónicas):** los diagnósticos marcados `cronica=true` en
+> `diagnosticos.csv` (HTA, diabetes, EPOC, hipotiroidismo, epilepsia, depresión, VIH, artritis, etc.)
+> se agregan a la **lista de problemas** del paciente vía `POST /condition`. Las imágenes (Rx, TC,
+> ecografía) se generan como **órdenes de laboratorio** (test order), ya que la instancia no tiene un
+> tipo de orden de procedimiento separado.
 
 **Para que las comorbilidades sean más visibles** sube `BaseProbability` (ej.: `0.6`); para
 desactivarlas, ponlo en `0`.
@@ -346,6 +355,39 @@ cada año de la simulación. Solo el **calor** sube la temperatura corporal; el 
 
 > El catálogo `clima.csv` que se incluye es un ejemplo editable: ajústalo a tu región (qué semanas
 > son invierno/verano/lluvia/seca y sus temperaturas).
+
+### 4.8 Allergy
+
+Controla qué pacientes **nuevos** reciben alergias documentadas y **cuántas**. Modelo en dos pasos:
+
+1. **Prevalencia por corrida** (¿es alérgico?): cada corrida sortea una vez su probabilidad
+   uniformemente en `[BaseProbabilityMin, BaseProbabilityMax]` (igual que `CommonProbMin/Max`), así
+   la proporción de alérgicos **varía entre corridas**. Por defecto ~15-25%. *Dato de referencia:*
+   el 25-30% de la población tiene alguna alergia (OMS/SEAIC); aquí se modela la fracción
+   **clínicamente documentada** (fármacos/alimentos/críticas), que es lo que registra OpenMRS.
+2. **Cuántas alergias** (decaída condicional, igual patrón que comorbilidad): todo alérgico tiene
+   ≥1; suma una **2ª** con `SecondAllergyProbability`; y solo si tiene 2, suma una **3ª** con
+   `ThirdAllergyProbability`. Resultado: la gran mayoría tiene 1, pocos 2, raros 3.
+
+```json
+"Allergy": {
+  "BaseProbabilityMin": 0.15,
+  "BaseProbabilityMax": 0.25,
+  "SecondAllergyProbability": 0.30,
+  "ThirdAllergyProbability": 0.25,
+  "MaxAllergies": 3
+}
+```
+
+| Clave | Tipo | Significado |
+|-------|------|-------------|
+| `BaseProbabilityMin` / `BaseProbabilityMax` | 0-1 | Banda de prevalencia; la corrida sortea su valor entre ambos. Poner el mismo número en los dos = prevalencia fija. |
+| `SecondAllergyProbability` | 0-1 | Prob. condicional de sumar una 2ª alergia dado que ya tiene 1. |
+| `ThirdAllergyProbability` | 0-1 | Prob. condicional de sumar una 3ª alergia dado que ya tiene 2. |
+| `MaxAllergies` | entero | Tope absoluto de alergias por paciente (también acotado por el tamaño de `alergenos.csv`). |
+
+> Solo aplica a pacientes **nuevos**: la alergia se registra una vez en la primera visita y persiste.
+> Los alérgenos se eligen al azar y sin repetir de `catalogs/alergenos.csv`.
 
 ---
 

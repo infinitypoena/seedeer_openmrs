@@ -126,7 +126,9 @@ public class CatalogLoader
         Clima                 = S(row, "clima")
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Select(s => s.ToLowerInvariant())
-            .ToHashSet()
+            .ToHashSet(),
+        EsCronica             = B(row, "cronica"),
+        EsComun               = B(row, "comun")
     };
 
     private static ClimaEntry ParseClima(Dictionary<string, string> row) => new()
@@ -150,7 +152,12 @@ public class CatalogLoader
         AplicaOsteomuscular = B(row, "aplica_osteomuscular"),
         AplicaUrologico     = B(row, "aplica_urologico"),
         AplicaInfeccioso    = B(row, "aplica_infeccioso"),
-        AplicaEndocrino     = B(row, "aplica_endocrino")
+        AplicaEndocrino     = B(row, "aplica_endocrino"),
+        AplicaNeurologico     = B(row, "aplica_neurologico"),
+        AplicaDermatologico   = B(row, "aplica_dermatologico"),
+        AplicaSaludMental     = B(row, "aplica_salud_mental"),
+        AplicaGinecoobstetrico= B(row, "aplica_ginecoobstetrico"),
+        AplicaTrauma          = B(row, "aplica_trauma")
     };
 
     private static LaboratorioEntry ParseLaboratorio(Dictionary<string, string> row) => new()
@@ -165,7 +172,12 @@ public class CatalogLoader
         AplicaOsteomuscular = B(row, "aplica_osteomuscular"),
         AplicaUrologico     = B(row, "aplica_urologico"),
         AplicaInfeccioso    = B(row, "aplica_infeccioso"),
-        AplicaEndocrino     = B(row, "aplica_endocrino")
+        AplicaEndocrino     = B(row, "aplica_endocrino"),
+        AplicaNeurologico     = B(row, "aplica_neurologico"),
+        AplicaDermatologico   = B(row, "aplica_dermatologico"),
+        AplicaSaludMental     = B(row, "aplica_salud_mental"),
+        AplicaGinecoobstetrico= B(row, "aplica_ginecoobstetrico"),
+        AplicaTrauma          = B(row, "aplica_trauma")
     };
 
     private static ExamenClinicoEntry ParseExamenClinico(Dictionary<string, string> row) => new()
@@ -181,7 +193,12 @@ public class CatalogLoader
         AplicaOsteomuscular = B(row, "aplica_osteomuscular"),
         AplicaUrologico     = B(row, "aplica_urologico"),
         AplicaInfeccioso    = B(row, "aplica_infeccioso"),
-        AplicaEndocrino     = B(row, "aplica_endocrino")
+        AplicaEndocrino     = B(row, "aplica_endocrino"),
+        AplicaNeurologico     = B(row, "aplica_neurologico"),
+        AplicaDermatologico   = B(row, "aplica_dermatologico"),
+        AplicaSaludMental     = B(row, "aplica_salud_mental"),
+        AplicaGinecoobstetrico= B(row, "aplica_ginecoobstetrico"),
+        AplicaTrauma          = B(row, "aplica_trauma")
     };
 
     private static AlergenoEntry ParseAlergeno(Dictionary<string, string> row) => new()

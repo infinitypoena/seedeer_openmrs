@@ -30,6 +30,7 @@ builder.Services.AddTransient<ConsultaSeeder>();
 builder.Services.AddTransient<LabOrderSeeder>();
 builder.Services.AddTransient<PrescriptionSeeder>();
 builder.Services.AddTransient<VisitCloseSeeder>();
+builder.Services.AddTransient<ConditionSeeder>();
 builder.Services.AddTransient<SeedOrchestrator>();
 
 // HttpClient para OpenMRS REST API con BasicAuth

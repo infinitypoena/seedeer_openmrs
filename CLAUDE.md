@@ -22,14 +22,18 @@ Swagger UI available at `http://localhost:5197/swagger` after running.
 
 Key architectural decisions:
 - **Simulator model**: daily patient volume is driven by `PacientesPorDiaMedio` + weekday weights + normal distribution. Each patient gets a diagnosis chosen from `epidemiology-profile.csv` weighted by age/gender.
-- **Catalog-driven coherence**: diagnoses, labs, medications, clinical exams, and allergies are selected from CSV catalogs using boolean columns (`aplica_CATEGORIA`, `aplica_GRUPO_EDAD`) — no hardcoded lists.
+- **Catalog-driven coherence**: diagnoses, labs, medications, clinical exams, and allergies are selected from CSV catalogs using boolean columns (`aplica_CATEGORIA`, `aplica_GRUPO_EDAD`) — no hardcoded lists. **13 categories**: respiratorio, cardiovascular, diabetes, digestivo, osteomuscular, urologico, infeccioso, endocrino, neurologico, dermatologico, salud_mental, ginecoobstetrico, trauma. ~700 diagnoses (a broad pool: ~125 hand-curated common+critical with calibrated weights + ~575 harvested variants at low default weight so the common ones still dominate). Adding a category = new `aplica_<cat>` column in medicamentos/laboratorios/examenes models + `CatalogLoader` + the `AplicaCategoria` switch in ConsultaSeeder/LabOrderSeeder/PrescriptionSeeder + epidemiology-profile rows (DiagnosticoEntry uses a `Categoria` string, so diagnoses need no model change).
+- **⚠️ Verify every CIEL UUID against THIS instance** via `GET /concept?q=`. Many UUIDs in the original catalog were wrong (recorded a different disease while still being valid concepts, so no error surfaced) — e.g. `117321` is *hipotiroidismo* not HTA, `116128` is *paludismo* not fiebre. All diagnosis UUIDs were re-verified; do the same for any new entry. Imaging/EKG are ordered as **test orders** (no procedure order type in this instance).
 - **Seeder pipeline**: each domain is a self-contained seeder (`PatientSeeder`, `AllergySeeder`, `VitalsSeeder`, `ConsultaSeeder`, `LabOrderSeeder`, `PrescriptionSeeder`, `VisitCloseSeeder`) coordinated by `SeedOrchestrator`.
 - **Background execution**: `POST /api/seed/run` returns 202 immediately; simulation runs in a background task tracked by `SeedProgressTracker` (in-memory, keyed by runId GUID).
 - **Idempotency**: all seeded patients have identifier prefix `SIM-`; visits/encounters have `SEEDED_BY_SIMULATOR` in description. `DELETE /api/seed/clear` voids them all.
 - **Dual identifier**: patients get an OpenMRS ID (Luhn Mod-30 valid) + "Old Identification Number" with `SIM-` prefix for tracking.
 - **Same-day deduplication**: `SeedOrchestrator` uses a `HashSet<string>` of OpenMrsUuids per day so a patient cannot appear as both new and recurring on the same day.
 - **Comorbidity (multimorbidity per visit)**: after the primary diagnosis, `EpidemiologySelector.SelectComorbilidades` may add 1..N extra diagnoses (config `Simulation.Comorbidity`). Probability scales with age (`AgeScaling`) and the extra category is weighted toward clinically-related clusters (`Affinities` × `AffinityBoost`). All diagnoses land in one encounter; `LabOrderSeeder`/`PrescriptionSeeder` filter catalogs by `patient.Categorias` (union of all diagnoses' categories) so labs/meds stay coherent across comorbidities.
+- **Two-stage diagnosis selection (common-disease bias)**: each **run** draws its common-probability once via `EpidemiologySelector.DrawRunCommonProbability()` uniformly in `[Simulation.CommonProbMin, CommonProbMax]` (default 0.75–0.95), so the common share **varies run-to-run** but always leans common. Per patient, `RollPreferCommon(runProb)` decides the pool; the primary `SelectCategoria`/`SelectDiagnostico` then restrict to it via the `comun` column (precomputed `_categoriasPorComun`, same pattern as `_categoriasPorClima`), with fallback if a pool is empty. Stage 2 keeps the existing category/weight/clima logic. Comorbidities are unaffected. `comun` is derived from existing weights (`max(peso_M,peso_F) >= 10 && severidad != grave`).
 - **Seasonal climate (optional)**: if `catalogs/clima.csv` exists (per ISO week → `estacion` + `temp_promedio_c`), `ClimateResolver` maps each visit's date to its season. `EpidemiologySelector` multiplies by `Climate.SeasonalBoost` the weight of categories/diagnoses tagged with that season (`clima` column in `diagnosticos.csv`, e.g. gripe→invierno, dengue/EDA→verano,lluvia), and `VitalsSeeder` nudges body temperature up in hot weeks (heat only). Absent file / unlisted week / `Enabled=false` → neutral. `climate` is an optional last param on the selector methods so behavior is unchanged when null.
+- **Allergies (probabilistic prevalence + conditional count)**: `AllergySeeder` only seeds **new** patients (registered once at first visit). Like the common-disease bias, each **run** draws its allergy prevalence once, uniformly in `[Allergy.BaseProbabilityMin, BaseProbabilityMax]` (default 0.15–0.25 — the clinically-documented fraction of the ~25-30% real population prevalence), so the allergic share varies run-to-run. For patients who *are* allergic, the **number** of allergies uses conditional decay (same shape as comorbidity): everyone gets ≥1, a 2nd is added with `SecondAllergyProbability`, a 3rd (only if 2) with `ThirdAllergyProbability`, capped by `MaxAllergies` and catalog size — so most have 1, few 2, rare 3 (vs. the old uniform 1–3). Count logic is the pure testable `AllergySeeder.DecidirCantidad`.
+- **Problem list (conditions)**: `ConditionSeeder` runs after `ConsultaSeeder` and adds each diagnosis flagged `cronica=true` (HTA, diabetes, EPOC, hipotiroidismo, epilepsia, ERC, depresión, VIH, artritis…) to the patient's problem list via `POST /condition`. Deduplicated per patient via `SimulatedPatient.ProblemListConcepts` (shared across recurrent visits, like `OrderedConcepts`).
 - **Visit closing**: `VisitCloseSeeder` runs last in `ProcesarVisitaAsync` and sets `stopDatetime` (1–4 h after arrival) via `POST visit/{uuid}`. Encounters (vitals/consulta) are point-in-time (`encounterDatetime`) and have no open/closed state — only the **visit** is closed.
 - **Patient birthdate**: `PatientProfileGenerator.GenerateNew(referenceDate)` anchors the birthdate to the **visit/creation date** (not `DateTime.Today`), so age is valid at the (past) visit date — this avoids OpenMRS `startDateCannotFallBeforeTheBirthDate`. Minimum age is `DemographicProfile.MinPatientAgeMonths` (6) — or `PediatricMinAgeMonths` (1) when `PediatricClinic=true`.
 
@@ -58,7 +62,11 @@ See `parametrizacion_archivos.md` for full parameter reference. Key sections in 
     "ClinicType": "ConsultaExterna",
     "ReferralProbabilities": {
       "LabOrder": 0.40, "ClinicalExam": 0.35, "DrugOrder": 0.65,
-      "Urgent": 0.20, "FollowUp": 0.30, "AllergyOnNew": 0.15
+      "Urgent": 0.20, "FollowUp": 0.30
+    },
+    "Allergy": {
+      "BaseProbabilityMin": 0.15, "BaseProbabilityMax": 0.25,
+      "SecondAllergyProbability": 0.30, "ThirdAllergyProbability": 0.25, "MaxAllergies": 3
     },
     "Comorbidity": {
       "BaseProbability": 0.20, "MaxAdditional": 2, "SecondExtraProbability": 0.25, "AffinityBoost": 4.0,
@@ -80,7 +88,7 @@ All under `catalogs/`. See `parametrizacion_archivos.md` for column schemas.
 | File | Source | Purpose | Notes |
 |------|--------|---------|-------|
 | `epidemiology-profile.csv` | Manual | Category weights by age/gender | |
-| `diagnosticos.csv` | Query DB + manual | CIEL diagnoses + boolean age group columns | |
+| `diagnosticos.csv` | Query DB + manual + harvest | CIEL diagnoses + age columns + `clima` + `cronica` + `comun` | ~700 dx, 13 categories; harvested rows = peso 4; `cronica=true` → problem list; `comun=true` → pool de frecuentes |
 | `medicamentos.csv` | Query DB + manual | Drugs + boolean category columns | Has `drug_uuid` + `concept_uuid` columns |
 | `laboratorios.csv` | Query DB + manual | Lab tests + boolean category columns | 7 entries with verified UUIDs |
 | `examenes_clinicos.csv` | Manual | In-clinic exams recorded as obs | **Empty** — all UUIDs wrong in this instance |
@@ -120,6 +128,7 @@ These were confirmed via `GET /ws/rest/v1/concept?q=...` against this specific i
 - **Order urgency**: valid values are `ROUTINE`, `STAT`, `ON_SCHEDULED_DATE`. `URGENT` is NOT valid.
 - **DrugOrder (dosing type "simple")**: must send `concept` (concept UUID, separate from `drug`), `quantity`, `quantityUnits`, `frequency`, `route`, `dose`, `doseUnits`.
 - **Visit overlap**: if `visitCannotOverlapAnother` is returned, fetch existing active visit via `GET visit?patient={uuid}&includeInactive=false` and reuse its UUID.
+- **Condition (problem list)**: `POST /condition` — `condition.coded` must be a **plain UUID string** (e.g. `condition: { coded: "uuid" }`), NOT a nested object (sending an object → `LinkedHashMap cannot be cast to String`). Other fields: `patient` (uuid string), `clinicalStatus` (`ACTIVE`|`INACTIVE`|`HISTORY_OF`), `onsetDate`. **To query a patient's conditions use `GET /condition?patientUuid={uuid}`** — `?patient=` returns empty. `ConditionSeeder` adds diagnoses flagged `cronica=true` to the problem list.
 - **Allergen format**: `POST /patient/{uuid}/allergy` — `allergen.codedAllergen` must be a **plain UUID string** (e.g. `"codedAllergen": "uuid-here"`), NOT a nested object `{"uuid": "..."}`. Using an object triggers `ResourceDoesNotSupportOperationException` in `ConceptResource1_8`. `severity` and `reactions[].reaction` accept `{uuid: "..."}` normally.
 
 ## Key Design Docs

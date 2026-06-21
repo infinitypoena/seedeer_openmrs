@@ -106,6 +106,11 @@ public class LabOrderSeeder
         "urologico"      => l.AplicaUrologico,
         "infeccioso"     => l.AplicaInfeccioso,
         "endocrino"      => l.AplicaEndocrino,
+        "neurologico"     => l.AplicaNeurologico,
+        "dermatologico"   => l.AplicaDermatologico,
+        "salud_mental"    => l.AplicaSaludMental,
+        "ginecoobstetrico"=> l.AplicaGinecoobstetrico,
+        "trauma"          => l.AplicaTrauma,
         _ => false
     };
 }

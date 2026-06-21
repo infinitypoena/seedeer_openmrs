@@ -14,7 +14,8 @@ public class AllergySeeder
 
     private readonly OpenMrsRestClient _client;
     private readonly CatalogLoader _catalogs;
-    private readonly double _allergyProb;
+    private readonly Configuration.AllergySettings _settings;
+    private readonly double _runAllergyProb;
     private readonly Random _rng = new();
     private readonly ILogger<AllergySeeder> _logger;
 
@@ -24,10 +25,17 @@ public class AllergySeeder
         Configuration.SimulationSettings simSettings,
         ILogger<AllergySeeder> logger)
     {
-        _client      = client;
-        _catalogs    = catalogs;
-        _allergyProb = simSettings.ReferralProbabilities.AllergyOnNew;
-        _logger      = logger;
+        _client   = client;
+        _catalogs = catalogs;
+        _settings = simSettings.Allergy;
+        _logger   = logger;
+
+        // Prevalencia de la corrida: una vez por instancia (AllergySeeder es Transient → una por corrida),
+        // sorteada uniformemente en [Min, Max] igual que la P(común) del orquestador.
+        var min = _settings.BaseProbabilityMin;
+        var max = Math.Max(min, _settings.BaseProbabilityMax);
+        _runAllergyProb = min + _rng.NextDouble() * (max - min);
+        _logger.LogInformation("[Allergy] Prevalencia de la corrida: {P:P0}", _runAllergyProb);
     }
 
     /// <summary>
@@ -41,7 +49,7 @@ public class AllergySeeder
             _logger.LogDebug("[Allergy] Skip: paciente recurrente ({Id})", patient.Identifier);
             return;
         }
-        if (_rng.NextDouble() >= _allergyProb)
+        if (_rng.NextDouble() >= _runAllergyProb)
         {
             _logger.LogDebug("[Allergy] Skip: probabilidad no alcanzada ({Id})", patient.Identifier);
             return;
@@ -55,7 +63,7 @@ public class AllergySeeder
             return;
         }
 
-        var cantidad = _rng.Next(1, Math.Min(4, pool.Count + 1));
+        var cantidad = DecidirCantidad(pool.Count);
         var elegidos = pool.OrderBy(_ => _rng.Next()).Take(cantidad).ToList();
 
         int sembradas = 0;
@@ -67,6 +75,31 @@ public class AllergySeeder
 
         _logger.LogInformation("[Allergy] {N}/{Total} alergias sembradas para {Id}",
             sembradas, elegidos.Count, patient.Identifier);
+    }
+
+    private int DecidirCantidad(int poolCount) =>
+        DecidirCantidad(poolCount, _settings, _rng.NextDouble);
+
+    /// <summary>
+    /// Número de alergias para un paciente que ya resultó alérgico, con decaída condicional:
+    /// todos tienen ≥1; suma una 2ª con SecondAllergyProbability; suma una 3ª (dado que tiene 2)
+    /// con ThirdAllergyProbability. Acotado por MaxAllergies y por el tamaño del catálogo.
+    /// Método puro (RNG inyectado) para ser testeable sin red.
+    /// </summary>
+    public static int DecidirCantidad(
+        int poolCount, Configuration.AllergySettings settings, Func<double> nextDouble)
+    {
+        var tope = Math.Min(settings.MaxAllergies, poolCount);
+        if (tope <= 1) return Math.Max(0, tope);
+
+        var cantidad = 1;
+        if (nextDouble() < settings.SecondAllergyProbability)
+        {
+            cantidad = 2;
+            if (tope >= 3 && nextDouble() < settings.ThirdAllergyProbability)
+                cantidad = 3;
+        }
+        return Math.Min(cantidad, tope);
     }
 
     private async Task<bool> PostAllergyAsync(

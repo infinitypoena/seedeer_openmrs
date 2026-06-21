@@ -94,8 +94,14 @@ Ver `parametrizacion_archivos.md` para referencia completa de todos los parámet
       "ClinicalExam": 0.35,
       "DrugOrder": 0.65,
       "Urgent": 0.20,
-      "FollowUp": 0.30,
-      "AllergyOnNew": 0.15
+      "FollowUp": 0.30
+    },
+    "Allergy": {
+      "BaseProbabilityMin": 0.15,
+      "BaseProbabilityMax": 0.25,
+      "SecondAllergyProbability": 0.30,
+      "ThirdAllergyProbability": 0.25,
+      "MaxAllergies": 3
     },
     "WeekdayWeights": {
       "Monday": 1.20, "Tuesday": 1.20, "Wednesday": 1.00,
@@ -215,7 +221,7 @@ Para cada día del rango `StartDate..EndDate`:
    - Split en `NuevosPacientes` y `PacientesRecurrentes` según `PorcentajeRecurrentes`
 2. Para cada **paciente nuevo**:
    - `PatientSeeder`: genera perfil Bogus (nombre español, edad/género por distribución), crea en OpenMRS, identificador `SIM-XXXXXXXX`
-   - Si `rand < AllergyOnNew` (15%): `AllergySeeder` registra 1-3 alergias _(Fase 7)_
+   - Si `rand < prevalencia de la corrida` (15-25%, banda `Allergy.BaseProbabilityMin/Max`): `AllergySeeder` registra alergias (nº por decaída condicional, mayoría 1) _(Fase 7)_
 3. Para cada **paciente recurrente**:
    - Busca UUID en OpenMRS: `GET /patient?identifier=SIM-` _(Fase 8)_
 4. Selecciona categoría dx: `epidemiology-profile.csv` filtrado por edad+género, normaliza pesos _(Fase 5)_

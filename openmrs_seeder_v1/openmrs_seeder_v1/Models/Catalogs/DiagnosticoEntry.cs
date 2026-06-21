@@ -18,4 +18,8 @@ public class DiagnosticoEntry
     public bool RequiereExamenClinico { get; set; }
     /// <summary>Estaciones (en minúscula) bajo las que la enfermedad es más frecuente. Vacío = sin efecto estacional.</summary>
     public HashSet<string> Clima { get; set; } = [];
+    /// <summary>Si es una condición crónica → se agrega a la lista de problemas del paciente (POST /condition).</summary>
+    public bool EsCronica { get; set; }
+    /// <summary>Si es una enfermedad común/frecuente. El factor inicial de selección apunta mayormente a estas.</summary>
+    public bool EsComun { get; set; }
 }

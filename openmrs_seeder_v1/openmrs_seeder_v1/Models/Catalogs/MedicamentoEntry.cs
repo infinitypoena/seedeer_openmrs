@@ -15,4 +15,9 @@ public class MedicamentoEntry
     public bool AplicaUrologico { get; set; }
     public bool AplicaInfeccioso { get; set; }
     public bool AplicaEndocrino { get; set; }
+    public bool AplicaNeurologico { get; set; }
+    public bool AplicaDermatologico { get; set; }
+    public bool AplicaSaludMental { get; set; }
+    public bool AplicaGinecoobstetrico { get; set; }
+    public bool AplicaTrauma { get; set; }
 }

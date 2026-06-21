@@ -18,6 +18,7 @@ public class SeedOrchestrator
     private readonly LabOrderSeeder _labOrderSeeder;
     private readonly PrescriptionSeeder _prescriptionSeeder;
     private readonly VisitCloseSeeder _visitCloseSeeder;
+    private readonly ConditionSeeder _conditionSeeder;
 
     private readonly List<SimulatedPatient> _patientPool = [];
     private readonly Lock _poolLock = new();
@@ -36,6 +37,7 @@ public class SeedOrchestrator
         LabOrderSeeder labOrderSeeder,
         PrescriptionSeeder prescriptionSeeder,
         VisitCloseSeeder visitCloseSeeder,
+        ConditionSeeder conditionSeeder,
         ILogger<SeedOrchestrator> logger)
     {
         _schedule           = schedule;
@@ -50,6 +52,7 @@ public class SeedOrchestrator
         _labOrderSeeder     = labOrderSeeder;
         _prescriptionSeeder = prescriptionSeeder;
         _visitCloseSeeder   = visitCloseSeeder;
+        _conditionSeeder    = conditionSeeder;
         _logger             = logger;
     }
 
@@ -59,8 +62,11 @@ public class SeedOrchestrator
         var diasConPacientes = days.Count(d => d.TotalPatients > 0);
         var rng              = new Random();
 
-        _logger.LogInformation("[Orchestrator] Iniciando run {RunId} — {Dias} días con pacientes",
-            runId, diasConPacientes);
+        // Factor inicial: esta corrida se inclina a común con esta probabilidad (varía entre corridas)
+        var runCommonP = _epiSelector.DrawRunCommonProbability();
+
+        _logger.LogInformation("[Orchestrator] Iniciando run {RunId} — {Dias} días con pacientes | P(común) de la corrida: {P:P0}",
+            runId, diasConPacientes, runCommonP);
 
         tracker.Update(runId, r =>
         {
@@ -101,8 +107,9 @@ public class SeedOrchestrator
 
                 patient.ClimaEstacion = estacion;
                 patient.TempAmbienteC = tempC;
-                patient.Categoria   = _epiSelector.SelectCategoria(patient.AgeGroup, patient.Gender, estacion);
-                patient.Diagnostico = _epiSelector.SelectDiagnostico(patient.Categoria, patient.AgeGroup, patient.Gender, estacion);
+                var preferCommon = _epiSelector.RollPreferCommon(runCommonP);
+                patient.Categoria   = _epiSelector.SelectCategoria(patient.AgeGroup, patient.Gender, estacion, preferCommon);
+                patient.Diagnostico = _epiSelector.SelectDiagnostico(patient.Categoria, patient.AgeGroup, patient.Gender, estacion, preferCommon);
                 patient.Comorbilidades = patient.Diagnostico is null
                     ? []
                     : _epiSelector.SelectComorbilidades(patient.Diagnostico, patient.AgeGroup, patient.Gender, estacion);
@@ -133,6 +140,7 @@ public class SeedOrchestrator
 
                 var base_ = disponibles[rng.Next(disponibles.Count)];
                 uuidsHoy.Add(base_.OpenMrsUuid);
+                var preferCommonRec = _epiSelector.RollPreferCommon(runCommonP);
                 var recurrente = new SimulatedPatient
                 {
                     Identifier    = base_.Identifier,
@@ -145,16 +153,17 @@ public class SeedOrchestrator
                     Address1      = base_.Address1,
                     City          = base_.City,
                     EsNuevo       = false,
-                    // Compartir historial de órdenes con el paciente original (mismo objeto por referencia)
+                    // Compartir historial de órdenes y lista de problemas con el paciente original
                     OrderedConcepts = base_.OrderedConcepts,
+                    ProblemListConcepts = base_.ProblemListConcepts,
                     ClimaEstacion = estacion,
                     TempAmbienteC = tempC,
                     // Diagnóstico puede cambiar en visita recurrente
-                    Categoria     = _epiSelector.SelectCategoria(base_.AgeGroup, base_.Gender, estacion),
+                    Categoria     = _epiSelector.SelectCategoria(base_.AgeGroup, base_.Gender, estacion, preferCommonRec),
                     VisitDatetime = _schedule.GenerateVisitTime(day.Date)
                 };
                 recurrente.Diagnostico = _epiSelector.SelectDiagnostico(
-                    recurrente.Categoria, recurrente.AgeGroup, recurrente.Gender, estacion);
+                    recurrente.Categoria, recurrente.AgeGroup, recurrente.Gender, estacion, preferCommonRec);
                 recurrente.Comorbilidades = recurrente.Diagnostico is null
                     ? []
                     : _epiSelector.SelectComorbilidades(recurrente.Diagnostico, recurrente.AgeGroup, recurrente.Gender, estacion);
@@ -200,6 +209,7 @@ public class SeedOrchestrator
 
         await _vitalsSeeder.SeedAsync(patient, ct);
         await _consultaSeeder.SeedAsync(patient, ct);
+        await _conditionSeeder.SeedAsync(patient, ct);
         await _labOrderSeeder.SeedAsync(patient, ct);
         await _prescriptionSeeder.SeedAsync(patient, ct);
         await _visitCloseSeeder.SeedAsync(patient, ct);

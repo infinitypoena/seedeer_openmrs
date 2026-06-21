@@ -65,8 +65,15 @@ public class SeedController : ControllerBase
             {
                 labOrder     = _simSettings.ReferralProbabilities.LabOrder,
                 clinicalExam = _simSettings.ReferralProbabilities.ClinicalExam,
-                drugOrder    = _simSettings.ReferralProbabilities.DrugOrder,
-                allergyOnNew = _simSettings.ReferralProbabilities.AllergyOnNew
+                drugOrder    = _simSettings.ReferralProbabilities.DrugOrder
+            },
+            allergy = new
+            {
+                baseProbabilityMin       = _simSettings.Allergy.BaseProbabilityMin,
+                baseProbabilityMax       = _simSettings.Allergy.BaseProbabilityMax,
+                secondAllergyProbability = _simSettings.Allergy.SecondAllergyProbability,
+                thirdAllergyProbability  = _simSettings.Allergy.ThirdAllergyProbability,
+                maxAllergies             = _simSettings.Allergy.MaxAllergies
             },
             catalogs = new
             {

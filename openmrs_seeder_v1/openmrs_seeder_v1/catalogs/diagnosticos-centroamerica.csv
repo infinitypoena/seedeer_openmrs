@@ -1,0 +1,301 @@
+ciel_uuid,nombre_es,categoria,severidad,aplica_0_14,aplica_15_29,aplica_30_44,aplica_45_64,aplica_65mas,peso_M,peso_F,requiere_lab,requiere_rx,requiere_examen_clinico,clima,cronica,comun
+142592AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Dengue sin signos de alarma,infeccioso,moderado,true,true,true,true,true,10,10,false,false,false,lluvia,false,true
+142592AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Dengue con signos de alarma,infeccioso,grave,true,true,true,true,true,10,10,false,false,false,lluvia,false,false
+142592AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Dengue grave (choque/hemorrágico),infeccioso,grave,true,true,true,true,true,10,10,false,false,false,lluvia,false,false
+120743AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Chikungunya,infeccioso,moderado,true,true,true,true,true,10,10,false,false,false,lluvia,false,true
+164922AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Zika,infeccioso,leve,true,true,true,true,true,10,10,false,false,false,lluvia,false,true
+158379AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Malaria por P. vivax,infeccioso,moderado,true,true,true,true,true,10,10,false,false,false,lluvia,false,false
+152295AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Malaria por P. falciparum,infeccioso,grave,true,true,true,true,true,10,10,false,false,false,lluvia,false,false
+154947AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Enfermedad de Chagas aguda,infeccioso,moderado,true,true,true,true,true,10,10,false,false,false,,false,false
+119392AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Enfermedad de Chagas crónica,infeccioso,grave,false,true,true,true,false,10,10,false,false,false,,true,false
+136110AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Leishmaniasis cutánea,infeccioso,moderado,true,true,true,true,true,10,10,false,false,false,,false,false
+137418AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Leishmaniasis mucocutánea,infeccioso,grave,false,true,true,true,false,10,10,false,false,false,,false,false
+42AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Tuberculosis pulmonar (BK+),infeccioso,grave,true,true,true,true,true,10,10,false,false,false,,true,false
+112141AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Tuberculosis extrapulmonar,infeccioso,grave,true,true,true,true,true,10,10,false,false,false,,true,false
+149197AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,VIH / SIDA,infeccioso,grave,false,true,true,true,false,10,10,false,false,false,,true,false
+116958AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Influenza (gripe),infeccioso,moderado,true,true,true,true,true,10,10,false,false,false,invierno,false,true
+166533AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Faringoamigdalitis estreptocócica,infeccioso,leve,true,true,true,true,true,10,10,false,false,false,invierno,false,true
+116699AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Geohelmintiasis (parasitosis intestinal),infeccioso,leve,true,true,true,true,true,10,10,false,false,false,lluvia,false,true
+145315AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Amebiasis intestinal,infeccioso,moderado,true,true,true,true,true,10,10,false,false,false,lluvia,false,true
+137433AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Giardiasis,infeccioso,leve,true,false,false,false,false,10,10,false,false,false,lluvia,false,true
+119429AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Enfermedad diarreica aguda infecciosa,infeccioso,moderado,true,true,true,true,true,10,10,false,false,false,verano,false,true
+141AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Fiebre tifoidea,infeccioso,moderado,true,true,true,true,true,10,10,false,false,false,verano,false,false
+116341AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Leptospirosis,infeccioso,grave,false,true,true,true,false,10,10,false,false,false,lluvia,false,false
+77422AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hepatitis A,infeccioso,moderado,true,false,false,false,false,10,10,false,false,false,lluvia,false,true
+77429AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hepatitis B,infeccioso,grave,false,true,true,true,false,10,10,false,false,false,,true,false
+149743AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hepatitis C,infeccioso,grave,false,false,true,true,false,10,10,false,false,false,,true,false
+140AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Escabiosis (sarna),infeccioso,leve,true,true,true,true,true,10,10,false,false,false,,false,true
+130667AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Pediculosis,infeccioso,leve,true,false,false,false,false,10,10,false,false,false,,false,true
+155231AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Celulitis bacteriana,infeccioso,moderado,true,true,true,true,true,10,10,false,false,false,,false,true
+150632AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Absceso cutáneo,infeccioso,moderado,true,true,true,true,true,10,10,false,false,false,,false,true
+111633AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Infección urinaria (cistitis),infeccioso,leve,true,true,true,true,true,10,10,false,false,false,,false,true
+114100AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Neumonía adquirida en comunidad,infeccioso,grave,true,true,true,true,true,10,10,false,false,false,invierno,false,true
+121009AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Bronquiolitis (VRS),infeccioso,moderado,true,false,false,false,false,10,10,false,false,false,invierno,false,true
+149609AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Otitis media aguda,infeccioso,leve,true,false,false,false,false,10,10,false,false,false,invierno,false,true
+149891AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Sinusitis bacteriana aguda,infeccioso,leve,true,true,true,true,true,10,10,false,false,false,invierno,false,true
+117024AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Conjuntivitis infecciosa,infeccioso,leve,true,true,true,true,true,10,10,false,false,false,,false,true
+5c46caf2-3062-4a04-bb99-fe1fae98e6db,Varicela,infeccioso,leve,true,false,false,false,false,10,10,false,false,false,,false,true
+134561AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Sarampión,infeccioso,grave,true,false,false,false,false,10,10,false,false,false,,false,false
+113205AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Rubéola,infeccioso,leve,true,false,false,false,false,10,10,false,false,false,,false,false
+133671AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Parotiditis (paperas),infeccioso,leve,true,false,false,false,false,10,10,false,false,false,,false,false
+114190AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Tos ferina (pertussis),infeccioso,grave,true,false,false,false,false,10,10,false,false,false,,false,false
+137275AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Mononucleosis infecciosa,infeccioso,leve,false,true,false,false,false,10,10,false,false,false,,false,false
+111177AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Micosis superficial (tiña/dermatofitosis),infeccioso,leve,true,true,true,true,true,10,10,false,false,false,lluvia,false,true
+120939AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Candidiasis,infeccioso,leve,true,true,true,true,true,10,10,false,false,false,,false,true
+112492AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Sífilis,infeccioso,moderado,false,true,true,true,false,10,10,false,false,false,,false,false
+117767AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Gonorrea,infeccioso,moderado,false,true,true,false,false,10,10,false,false,false,,false,false
+120728AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Clamidiasis,infeccioso,leve,false,true,true,false,false,10,10,false,false,false,,false,true
+121005AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Brucelosis,infeccioso,moderado,false,true,true,true,false,10,10,false,false,false,,false,false
+127959AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Rabia (profilaxis post-exposición),infeccioso,grave,true,true,true,true,true,10,10,false,false,false,,false,false
+116344AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Lepra (enfermedad de Hansen),infeccioso,grave,false,true,true,true,false,10,10,false,false,false,,true,false
+165933AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,COVID-19,infeccioso,moderado,true,true,true,true,true,10,10,false,false,false,invierno,false,true
+133483AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Resfriado común (rinofaringitis aguda),respiratorio,leve,true,true,true,true,true,10,10,false,false,false,invierno,false,true
+149579AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Faringitis aguda viral,respiratorio,leve,true,true,true,true,true,10,10,false,false,false,invierno,false,true
+149716AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Laringitis aguda,respiratorio,leve,true,true,true,true,true,10,10,false,false,false,invierno,false,true
+10AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Bronquitis aguda,respiratorio,leve,true,true,true,true,true,10,10,false,false,false,invierno,false,true
+121375AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Asma bronquial,respiratorio,moderado,true,true,true,true,true,10,10,false,false,false,invierno,true,true
+116632AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Crisis asmática,respiratorio,grave,true,true,true,true,true,10,10,false,false,false,invierno,false,false
+157809AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,EPOC,respiratorio,grave,false,false,false,true,true,10,10,false,false,false,invierno,true,true
+166093AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Exacerbación de EPOC,respiratorio,grave,false,false,false,true,true,10,10,false,false,false,invierno,false,false
+121692AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Rinitis alérgica,respiratorio,leve,true,true,true,true,true,10,10,false,false,false,seca,true,true
+113809AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Neumonía atípica,respiratorio,moderado,false,true,true,true,false,10,10,false,false,false,invierno,false,true
+143193AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Crup (laringotraqueítis),respiratorio,moderado,true,false,false,false,false,10,10,false,false,false,invierno,false,true
+118567AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Epiglotitis,respiratorio,grave,true,false,false,false,false,10,10,false,false,false,,false,false
+148517AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Apnea obstructiva del sueño,respiratorio,moderado,false,false,true,true,false,10,10,false,false,false,,true,false
+114108AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Derrame pleural,respiratorio,grave,false,false,true,true,true,10,10,false,false,false,,false,false
+122657AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Neumotórax,respiratorio,grave,false,true,true,false,false,10,10,false,false,false,,false,false
+121011AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Bronquiectasias,respiratorio,grave,false,false,false,true,true,10,10,false,false,false,,true,false
+140185AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Fibrosis pulmonar,respiratorio,grave,false,false,false,true,true,10,10,false,false,false,,true,false
+136721AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Enfisema pulmonar,respiratorio,grave,false,false,false,true,true,10,10,false,false,false,,true,false
+130027AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Neumoconiosis/silicosis,respiratorio,grave,false,false,false,true,true,10,10,false,false,false,,true,false
+138905AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hemoptisis,respiratorio,moderado,false,false,true,true,true,10,10,false,false,false,,false,false
+145455AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Tos crónica,respiratorio,leve,true,true,true,true,true,10,10,false,false,false,,true,true
+120563AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Sinusitis crónica,respiratorio,leve,false,true,true,true,true,10,10,false,false,false,,true,true
+112AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Amigdalitis recurrente,respiratorio,leve,true,true,false,false,false,10,10,false,false,false,invierno,false,true
+121846AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Insuficiencia respiratoria aguda,respiratorio,grave,false,false,false,true,true,10,10,false,false,false,,false,false
+137172AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Influenza con complicación respiratoria,respiratorio,grave,true,true,true,true,true,10,10,false,false,false,invierno,false,false
+145214AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Faringitis crónica,respiratorio,leve,false,true,true,true,true,10,10,false,false,false,,true,true
+126423AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Resfriado complicado (otitis/sinusitis),respiratorio,leve,true,false,false,false,false,10,10,false,false,false,invierno,false,true
+140987AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hipertensión arterial esencial,cardiovascular,moderado,false,false,true,true,true,10,10,false,false,false,,true,true
+161644AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Crisis hipertensiva,cardiovascular,grave,false,false,true,true,true,10,10,false,false,false,,false,false
+120626AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Cardiopatía isquémica crónica (angina),cardiovascular,grave,false,false,false,true,true,10,10,false,false,false,,true,true
+121958AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Infarto agudo de miocardio,cardiovascular,grave,false,false,false,true,true,10,10,false,false,false,,false,false
+111000AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Insuficiencia cardíaca,cardiovascular,grave,false,false,false,true,true,10,10,false,false,false,,true,true
+164960AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Accidente cerebrovascular isquémico,cardiovascular,grave,false,false,false,true,true,10,10,false,false,false,,false,false
+111103AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Accidente cerebrovascular hemorrágico,cardiovascular,grave,false,false,false,true,true,10,10,false,false,false,,false,false
+148203AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Fibrilación auricular,cardiovascular,moderado,false,false,false,true,true,10,10,false,false,false,,true,false
+141623AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Dislipidemia (hipercolesterolemia),cardiovascular,leve,false,false,true,true,true,10,10,false,false,false,,true,true
+114230AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Enfermedad arterial periférica,cardiovascular,moderado,false,false,false,true,true,10,10,false,false,false,,true,false
+121570AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Trombosis venosa profunda,cardiovascular,grave,false,false,true,true,true,10,10,false,false,false,,false,false
+158653AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Embolia pulmonar,cardiovascular,grave,false,false,false,true,true,10,10,false,false,false,,false,false
+123356AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Várices de miembros inferiores,cardiovascular,leve,false,false,true,true,true,10,10,false,false,false,,true,true
+117386AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Cardiopatía hipertensiva,cardiovascular,grave,false,false,false,true,true,10,10,false,false,false,,true,true
+113237AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Valvulopatía reumática,cardiovascular,grave,false,true,true,false,false,10,10,false,false,false,,true,false
+149533AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Fiebre reumática aguda,cardiovascular,moderado,true,false,false,false,false,10,10,false,false,false,invierno,false,false
+5016AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Miocardiopatía chagásica,cardiovascular,grave,false,false,true,true,false,10,10,false,false,false,,true,false
+137261AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Endocarditis infecciosa,cardiovascular,grave,false,false,true,true,true,10,10,false,false,false,,false,false
+121875AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Pericarditis aguda,cardiovascular,moderado,false,true,true,false,false,10,10,false,false,false,,false,false
+120148AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Arritmia (taquicardia supraventricular),cardiovascular,moderado,false,true,true,true,true,10,10,false,false,false,,false,false
+164963AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hipotensión ortostática,cardiovascular,leve,false,false,false,false,true,10,10,false,false,false,,false,true
+121534AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Aneurisma aórtico,cardiovascular,grave,false,false,false,true,true,10,10,false,false,false,,true,false
+143381AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Cor pulmonale,cardiovascular,grave,false,false,false,true,true,10,10,false,false,false,,true,false
+125166AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Síncope cardiogénico,cardiovascular,moderado,false,false,false,true,true,10,10,false,false,false,,false,false
+119481AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Diabetes mellitus tipo 2,diabetes,moderado,false,false,true,true,true,10,10,false,false,false,,true,true
+159188AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Diabetes mellitus tipo 1,diabetes,grave,true,true,false,false,false,10,10,false,false,false,,true,false
+1449AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Diabetes gestacional,diabetes,moderado,false,true,true,false,false,10,10,false,false,false,,false,false
+119441AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Cetoacidosis diabética,diabetes,grave,true,true,true,true,true,10,10,false,false,false,,false,false
+49dd47cf-1e92-4cd9-b759-8a4a107f2ef9,Estado hiperosmolar hiperglucémico,diabetes,grave,false,false,false,true,true,10,10,false,false,false,,false,false
+126072AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hipoglucemia,diabetes,moderado,true,true,true,true,true,10,10,false,false,false,,false,true
+142429AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Retinopatía diabética,diabetes,grave,false,false,true,true,true,10,10,false,false,false,,true,false
+142431AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Nefropatía diabética,diabetes,grave,false,false,true,true,true,10,10,false,false,false,,true,false
+153741AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Neuropatía diabética,diabetes,moderado,false,false,true,true,true,10,10,false,false,false,,true,true
+142452AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Pie diabético (úlcera/infección),diabetes,grave,false,false,false,true,true,10,10,false,false,false,,false,false
+134721AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Diabetes mal controlada (descompensada),diabetes,moderado,false,false,true,true,true,10,10,false,false,false,,true,true
+154216AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Prediabetes (intolerancia a la glucosa),diabetes,leve,false,false,true,true,true,10,10,false,false,false,,true,true
+117889AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Gastroenteritis aguda,digestivo,moderado,true,true,true,true,true,10,10,false,false,false,verano,false,true
+149780AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Gastritis aguda,digestivo,leve,false,true,true,true,true,10,10,false,false,false,,false,true
+1293AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Enfermedad por reflujo gastroesofágico,digestivo,leve,false,false,true,true,true,10,10,false,false,false,,true,true
+114262AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Úlcera péptica,digestivo,moderado,false,false,true,true,true,10,10,false,false,false,,true,true
+139041AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Infección por Helicobacter pylori,digestivo,leve,false,true,true,true,true,10,10,false,false,false,,false,true
+157375AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Síndrome de intestino irritable,digestivo,leve,false,true,true,false,false,10,10,false,false,false,,true,true
+145461AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Estreñimiento crónico,digestivo,leve,true,true,true,true,true,10,10,false,false,false,,true,true
+149906AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Apendicitis aguda,digestivo,grave,true,true,true,false,false,10,10,false,false,false,,false,false
+145625AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Colelitiasis / cólico biliar,digestivo,moderado,false,false,true,true,true,10,10,false,false,false,,true,true
+122101AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Colecistitis aguda,digestivo,grave,false,false,true,true,true,10,10,false,false,false,,false,false
+149607AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Pancreatitis aguda,digestivo,grave,false,false,true,true,true,10,10,false,false,false,,false,false
+149471AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hepatitis viral aguda,digestivo,moderado,true,true,true,true,true,10,10,false,false,false,lluvia,false,true
+145091AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Cirrosis hepática,digestivo,grave,false,false,false,true,true,10,10,false,false,false,,true,false
+140498AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hígado graso no alcohólico,digestivo,leve,false,false,true,true,true,10,10,false,false,false,,true,true
+138849AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hemorroides,digestivo,leve,false,false,true,true,true,10,10,false,false,false,,true,true
+122733AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Fisura anal,digestivo,leve,false,true,true,false,false,10,10,false,false,false,,false,true
+119429AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Enfermedad diarreica persistente,digestivo,moderado,true,false,false,false,false,10,10,false,false,false,lluvia,false,true
+136614AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Parasitosis intestinal mixta,digestivo,leve,true,true,true,true,true,10,10,false,false,false,lluvia,false,true
+142986AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Teniasis / cisticercosis,digestivo,moderado,false,true,true,true,false,10,10,false,false,false,,false,false
+117889AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Gastroenteritis por rotavirus,digestivo,moderado,true,false,false,false,false,10,10,false,false,false,invierno,false,true
+156805AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Intoxicación alimentaria,digestivo,moderado,true,true,true,true,true,10,10,false,false,false,verano,false,true
+116954AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hernia inguinal,digestivo,moderado,true,true,true,true,true,10,10,false,false,false,,true,true
+132535AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hernia umbilical,digestivo,leve,true,false,false,false,false,10,10,false,false,false,,true,true
+137197AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Enfermedad inflamatoria intestinal,digestivo,grave,false,true,true,false,false,10,10,false,false,false,,true,false
+111AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Dispepsia funcional,digestivo,leve,false,true,true,true,true,10,10,false,false,false,,true,true
+123569AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hemorragia digestiva alta,digestivo,grave,false,false,false,true,true,10,10,false,false,false,,false,false
+128706AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Cáncer gástrico,digestivo,grave,false,false,false,true,true,10,10,false,false,false,,true,false
+116225AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Lumbalgia inespecífica,osteomuscular,leve,false,true,true,true,true,10,10,false,false,false,,false,true
+133469AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Cervicalgia,osteomuscular,leve,false,true,true,true,true,10,10,false,false,false,,false,true
+158133AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Osteoartritis (artrosis),osteomuscular,moderado,false,false,false,true,true,10,10,false,false,false,,true,true
+127417AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Artritis reumatoide,osteomuscular,grave,false,false,true,true,false,10,10,false,false,false,,true,false
+162356AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Gota,osteomuscular,moderado,false,false,true,true,false,10,10,false,false,false,,true,true
+124992AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Tendinitis,osteomuscular,leve,false,true,true,true,false,10,10,false,false,false,,false,true
+146620AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Bursitis,osteomuscular,leve,false,false,true,true,true,10,10,false,false,false,,false,true
+126055AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Esguince de tobillo,osteomuscular,leve,true,true,true,true,true,10,10,false,false,false,,false,true
+130093AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Fascitis plantar,osteomuscular,leve,false,false,true,true,true,10,10,false,false,false,,false,true
+113207AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hombro doloroso (síndrome de manguito),osteomuscular,moderado,false,false,true,true,true,10,10,false,false,false,,true,true
+138714AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hernia discal lumbar,osteomuscular,moderado,false,false,true,true,false,10,10,false,false,false,,true,false
+114662AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Osteoporosis,osteomuscular,moderado,false,false,false,false,true,10,10,false,false,false,,true,true
+129122AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Fibromialgia,osteomuscular,moderado,false,false,true,true,false,10,10,false,false,false,,true,false
+136008AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Epicondilitis,osteomuscular,leve,false,false,true,true,false,10,10,false,false,false,,false,true
+146127AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Síndrome del túnel carpiano,osteomuscular,moderado,false,false,true,true,false,10,10,false,false,false,,true,true
+158606AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Artritis séptica,osteomuscular,grave,true,true,true,true,true,10,10,false,false,false,,false,false
+112476AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Lupus eritematoso sistémico,osteomuscular,grave,false,true,true,false,false,10,10,false,false,false,,true,false
+137880AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Escoliosis,osteomuscular,leve,true,false,false,false,false,10,10,false,false,false,,true,false
+111633AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Infección urinaria baja (cistitis),urologico,leve,true,true,true,true,true,10,10,false,false,false,,false,true
+149554AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Pielonefritis aguda,urologico,grave,false,true,true,true,false,10,10,false,false,false,,false,false
+6033AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Enfermedad renal crónica de causas no tradicionales (nefropatía mesoamericana),urologico,grave,false,true,true,true,false,10,10,false,false,false,verano,true,true
+120574AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Enfermedad renal crónica (general),urologico,grave,false,false,false,true,true,10,10,false,false,false,,true,true
+116500AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Litiasis renal (urolitiasis),urologico,moderado,false,false,true,true,false,10,10,false,false,false,verano,true,true
+127707AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Cólico renoureteral,urologico,moderado,false,false,true,true,false,10,10,false,false,false,verano,false,true
+121164AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hiperplasia prostática benigna,urologico,moderado,false,false,false,false,true,10,10,false,false,false,,true,true
+113588AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Prostatitis,urologico,moderado,false,false,true,true,false,10,10,false,false,false,,false,true
+121852AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Insuficiencia renal aguda,urologico,grave,true,true,true,true,true,10,10,false,false,false,verano,false,false
+156439AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Incontinencia urinaria,urologico,leve,false,false,false,true,true,10,10,false,false,false,,true,true
+122041AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Glomerulonefritis aguda,urologico,grave,true,true,false,false,false,10,10,false,false,false,,false,false
+115303AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Síndrome nefrótico,urologico,grave,true,true,false,false,false,10,10,false,false,false,,true,false
+115277AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Vejiga neurogénica,urologico,moderado,false,false,true,true,true,10,10,false,false,false,,true,false
+128792AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Cáncer de próstata,urologico,grave,false,false,false,false,true,10,10,false,false,false,,true,false
+840AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hematuria,urologico,moderado,false,false,true,true,true,10,10,false,false,false,,false,true
+111639AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Uretritis,urologico,leve,false,true,true,false,false,10,10,false,false,false,,false,true
+114731AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Orquitis / epididimitis,urologico,moderado,false,true,true,false,false,10,10,false,false,false,,false,true
+156162AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Disfunción eréctil,urologico,leve,false,false,false,true,true,10,10,false,false,false,,true,true
+117321AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hipotiroidismo,endocrino,moderado,false,false,true,true,true,10,10,false,false,false,,true,true
+138176AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hipertiroidismo,endocrino,moderado,false,true,true,false,false,10,10,false,false,false,,true,false
+117772AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Bocio,endocrino,leve,false,true,true,true,true,10,10,false,false,false,,true,true
+112385AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Tiroiditis,endocrino,leve,false,true,true,false,false,10,10,false,false,false,,false,false
+112959AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Obesidad,endocrino,moderado,true,true,true,true,true,10,10,false,false,false,,true,true
+134262AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Síndrome metabólico,endocrino,moderado,false,false,true,true,true,10,10,false,false,false,,true,true
+141623AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Dislipidemia mixta,endocrino,leve,false,false,true,true,true,10,10,false,false,false,,true,true
+138111AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hiperuricemia,endocrino,leve,false,false,true,true,true,10,10,false,false,false,,true,true
+137919AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Síndrome de Cushing,endocrino,grave,false,false,true,true,false,10,10,false,false,false,,true,false
+137961AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Insuficiencia suprarrenal,endocrino,grave,false,true,true,true,false,10,10,false,false,false,,true,false
+138218AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hiperprolactinemia,endocrino,leve,false,true,true,false,false,10,10,false,false,false,,true,false
+117431AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Deficiencia de vitamina D,endocrino,leve,true,true,true,true,true,10,10,false,false,false,,false,true
+117346AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hipogonadismo,endocrino,leve,false,false,true,true,true,10,10,false,false,false,,true,false
+159030AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Cefalea tensional,neurologico,leve,false,true,true,true,true,10,10,false,false,false,,false,true
+115779AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Migraña,neurologico,moderado,false,true,true,false,false,10,10,false,false,false,,true,true
+155AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Epilepsia,neurologico,grave,true,true,true,true,true,10,10,false,false,false,,true,true
+140485AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Crisis convulsiva febril,neurologico,moderado,true,false,false,false,false,10,10,false,false,false,,false,true
+125943AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Estado epiléptico,neurologico,grave,true,true,true,true,true,10,10,false,false,false,,false,false
+129405AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Neuralgia del trigémino,neurologico,moderado,false,false,false,true,true,10,10,false,false,false,,true,false
+117299AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Neuropatía periférica,neurologico,moderado,false,false,true,true,true,10,10,false,false,false,,true,true
+140816AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Parálisis facial periférica (Bell),neurologico,moderado,false,true,true,true,false,10,10,false,false,false,,false,true
+130795AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Enfermedad de Parkinson,neurologico,grave,false,false,false,false,true,10,10,false,false,false,,true,false
+119566AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Demencia / Alzheimer,neurologico,grave,false,false,false,false,true,10,10,false,false,false,,true,false
+138961AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Secuela de ACV (hemiparesia),neurologico,grave,false,false,false,true,true,10,10,false,false,false,,true,true
+114207AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Vértigo periférico,neurologico,leve,false,false,true,true,true,10,10,false,false,false,,false,true
+121255AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Meningitis bacteriana,neurologico,grave,true,true,true,true,true,10,10,false,false,false,,false,false
+122518AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Meningitis viral,neurologico,moderado,true,true,true,true,true,10,10,false,false,false,,false,false
+165925AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Encefalitis,neurologico,grave,true,true,true,true,true,10,10,false,false,false,lluvia,false,false
+110508AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Neurocisticercosis,neurologico,grave,false,true,true,true,false,10,10,false,false,false,,false,false
+133687AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Esclerosis múltiple,neurologico,grave,false,true,true,false,false,10,10,false,false,false,,true,false
+149148AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Polineuropatía alcohólica,neurologico,moderado,false,false,true,true,false,10,10,false,false,false,,true,false
+140980AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Temblor esencial,neurologico,leve,false,false,false,true,true,10,10,false,false,false,,true,false
+139084AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Cefalea en racimos,neurologico,moderado,false,false,true,false,false,10,10,false,false,false,,true,false
+164107AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Dermatitis atópica,dermatologico,leve,true,true,false,false,false,10,10,false,false,false,,true,true
+119895AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Dermatitis de contacto,dermatologico,leve,true,true,true,true,true,10,10,false,false,false,,false,true
+113114AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Dermatitis seborreica,dermatologico,leve,false,true,true,true,true,10,10,false,false,false,,true,true
+150126AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Acné vulgar,dermatologico,leve,false,true,false,false,false,10,10,false,false,false,,true,true
+140AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Escabiosis (sarna),dermatologico,leve,true,true,true,true,true,10,10,false,false,false,,false,true
+119506AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Tiña corporal (dermatofitosis),dermatologico,leve,true,true,true,true,true,10,10,false,false,false,lluvia,false,true
+124637AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Tiña pedis (pie de atleta),dermatologico,leve,false,true,true,true,true,10,10,false,false,false,lluvia,false,true
+132387AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Onicomicosis,dermatologico,leve,false,false,true,true,true,10,10,false,false,false,,true,true
+120939AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Candidiasis cutánea,dermatologico,leve,true,true,true,true,true,10,10,false,false,false,,false,true
+137693AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Impétigo,dermatologico,leve,true,false,false,false,false,10,10,false,false,false,,false,true
+139998AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Foliculitis / forunculosis,dermatologico,leve,false,true,true,false,false,10,10,false,false,false,,false,true
+123468AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Urticaria,dermatologico,leve,true,true,true,true,true,10,10,false,false,false,,false,true
+128249AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Psoriasis,dermatologico,moderado,false,true,true,true,false,10,10,false,false,false,,true,false
+111459AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Vitiligo,dermatologico,leve,false,true,true,false,false,10,10,false,false,false,,true,false
+123583AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Verrugas virales,dermatologico,leve,true,true,false,false,false,10,10,false,false,false,,false,true
+138706AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Herpes simple labial,dermatologico,leve,false,true,true,true,true,10,10,false,false,false,,false,true
+117543AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Herpes zóster,dermatologico,moderado,false,false,false,true,true,10,10,false,false,false,,false,true
+110929AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Celulitis,dermatologico,moderado,true,true,true,true,true,10,10,false,false,false,,false,true
+112583AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Quemadura solar,dermatologico,leve,true,true,true,true,true,10,10,false,false,false,verano,false,true
+143077AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Larva migrans cutánea,dermatologico,leve,true,true,true,true,true,10,10,false,false,false,lluvia,false,false
+130156AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Pitiriasis versicolor,dermatologico,leve,false,true,true,false,false,10,10,false,false,false,lluvia,false,true
+145659AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Melasma,dermatologico,leve,false,true,true,false,false,10,10,false,false,false,verano,true,true
+159351AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Cáncer de piel (no melanoma),dermatologico,moderado,false,false,false,true,true,10,10,false,false,false,verano,true,false
+149085AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Picadura/reacción a insectos,dermatologico,leve,true,true,true,true,true,10,10,false,false,false,lluvia,false,true
+119536AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Trastorno depresivo mayor,salud_mental,moderado,false,true,true,true,true,10,10,false,false,false,,true,true
+139545AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Trastorno de ansiedad generalizada,salud_mental,moderado,false,true,true,true,false,10,10,false,false,false,,true,true
+130966AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Trastorno de pánico,salud_mental,moderado,false,true,true,false,false,10,10,false,false,false,,true,true
+129286AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Trastorno de estrés postraumático,salud_mental,grave,false,true,true,true,false,10,10,false,false,false,,true,false
+110987AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Trastorno bipolar,salud_mental,grave,false,true,true,false,false,10,10,false,false,false,,true,false
+113155AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Esquizofrenia,salud_mental,grave,false,true,true,false,false,10,10,false,false,false,,true,false
+121712AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Trastorno por consumo de alcohol,salud_mental,grave,false,true,true,true,false,10,10,false,false,false,,true,true
+113555AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Trastorno por consumo de sustancias,salud_mental,grave,false,true,true,false,false,10,10,false,false,false,,true,false
+116743AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Insomnio,salud_mental,leve,true,true,true,true,true,10,10,false,false,false,,true,true
+127803AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Trastorno depresivo posparto,salud_mental,moderado,false,true,true,false,false,10,10,false,false,false,,false,true
+121792AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Trastorno de adaptación,salud_mental,leve,false,true,true,true,false,10,10,false,false,false,,false,true
+132611AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Trastorno obsesivo-compulsivo,salud_mental,moderado,false,true,true,false,false,10,10,false,false,false,,true,false
+119566AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Demencia con trastorno conductual,salud_mental,grave,false,false,false,false,true,10,10,false,false,false,,true,false
+148142AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Trastorno por déficit de atención/hiperactividad,salud_mental,moderado,true,false,false,false,false,10,10,false,false,false,,true,false
+112412AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Conducta suicida / autolesión,salud_mental,grave,false,true,false,false,false,10,10,false,false,false,,false,false
+118762AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Trastorno de la conducta alimentaria,salud_mental,grave,false,true,false,false,false,10,10,false,false,false,,true,false
+112874AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Trastorno somatomorfo,salud_mental,leve,false,true,true,true,false,10,10,false,false,false,,true,true
+139251AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Duelo complicado,salud_mental,leve,true,true,true,true,true,10,10,false,false,false,,false,true
+132678AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Embarazo normal (control prenatal),ginecoobstetrico,leve,false,true,true,false,false,10,10,false,false,false,,false,true
+112415AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Amenaza de aborto,ginecoobstetrico,moderado,false,true,true,false,false,10,10,false,false,false,,false,true
+126127AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Aborto espontáneo,ginecoobstetrico,moderado,false,true,true,false,false,10,10,false,false,false,,false,false
+134138AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Preeclampsia,ginecoobstetrico,grave,false,true,true,false,false,10,10,false,false,false,,false,false
+118744AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Eclampsia,ginecoobstetrico,grave,false,true,true,false,false,10,10,false,false,false,,false,false
+130732AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hemorragia posparto,ginecoobstetrico,grave,false,true,true,false,false,10,10,false,false,false,,false,false
+1449AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Diabetes gestacional,ginecoobstetrico,moderado,false,true,true,false,false,10,10,false,false,false,,false,true
+123491AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Infección urinaria en el embarazo,ginecoobstetrico,leve,false,true,true,false,false,10,10,false,false,false,,false,true
+148002AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Vaginosis bacteriana,ginecoobstetrico,leve,false,true,true,false,false,10,10,false,false,false,,false,true
+298AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Candidiasis vaginal,ginecoobstetrico,leve,false,true,true,false,false,10,10,false,false,false,,false,true
+123384AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Tricomoniasis,ginecoobstetrico,leve,false,true,true,false,false,10,10,false,false,false,,false,true
+152170AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Enfermedad pélvica inflamatoria,ginecoobstetrico,moderado,false,true,true,false,false,10,10,false,false,false,,false,false
+118793AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Dismenorrea,ginecoobstetrico,leve,false,true,false,false,false,10,10,false,false,false,,true,true
+PENDIENTE,Síndrome de ovario poliquístico,ginecoobstetrico,moderado,false,true,true,false,false,10,10,false,false,false,,true,true
+123455AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Miomatosis uterina,ginecoobstetrico,moderado,false,false,true,false,false,10,10,false,false,false,,true,true
+119702AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Quiste ovárico,ginecoobstetrico,leve,false,true,true,false,false,10,10,false,false,false,,false,true
+134346AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Menopausia / climaterio,ginecoobstetrico,leve,false,false,false,true,false,10,10,false,false,false,,true,true
+141631AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Sangrado uterino anormal,ginecoobstetrico,moderado,false,false,true,false,false,10,10,false,false,false,,true,true
+133207AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Cáncer cervicouterino,ginecoobstetrico,grave,false,false,true,true,false,10,10,false,false,false,,true,false
+113753AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Cáncer de mama,ginecoobstetrico,grave,false,false,false,true,false,10,10,false,false,false,,true,false
+145806AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Lesión por VPH (displasia cervical),ginecoobstetrico,leve,false,true,true,false,false,10,10,false,false,false,,true,true
+134615AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Mastitis puerperal,ginecoobstetrico,moderado,false,true,true,false,false,10,10,false,false,false,,false,true
+129211AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Ruptura prematura de membranas,ginecoobstetrico,grave,false,true,true,false,false,10,10,false,false,false,,false,false
+129218AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Parto pretérmino,ginecoobstetrico,grave,false,true,true,false,false,10,10,false,false,false,,false,false
+121629AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Anemia en el embarazo,ginecoobstetrico,leve,false,true,true,false,false,10,10,false,false,false,,false,true
+111167AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hiperémesis gravídica,ginecoobstetrico,moderado,false,true,true,false,false,10,10,false,false,false,,false,true
+118631AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Endometriosis,ginecoobstetrico,moderado,false,true,true,false,false,10,10,false,false,false,,true,false
+159328AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Herida por arma blanca,trauma,grave,false,true,true,false,false,10,10,false,false,false,,false,false
+159328AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Herida por arma de fuego,trauma,grave,false,true,true,false,false,10,10,false,false,false,,false,false
+123153AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Politraumatismo por accidente de tránsito,trauma,grave,false,true,true,false,false,10,10,false,false,false,,false,false
+117972AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Fractura de miembro superior,trauma,moderado,true,true,true,true,true,10,10,false,false,false,,false,true
+177AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Fractura de miembro inferior,trauma,grave,true,true,true,true,true,10,10,false,false,false,,false,false
+120466AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Fractura de cadera,trauma,grave,false,false,false,false,true,10,10,false,false,false,,false,false
+116838AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Traumatismo craneoencefálico,trauma,grave,false,true,true,false,false,10,10,false,false,false,,false,false
+112770AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Esguinces y luxaciones,trauma,leve,true,true,true,true,true,10,10,false,false,false,,false,true
+137655AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Herida cortante (laceración),trauma,leve,true,true,true,true,true,10,10,false,false,false,,false,true
+124923AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Quemadura térmica,trauma,grave,true,false,false,false,false,10,10,false,false,false,,false,true
+141406AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Quemadura eléctrica,trauma,grave,false,true,true,false,false,10,10,false,false,false,,false,false
+119868AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Contusión / hematoma,trauma,leve,true,true,true,true,true,10,10,false,false,false,,false,true
+166AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Mordedura de perro,trauma,moderado,true,false,false,false,false,10,10,false,false,false,,false,true
+126323AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Mordedura de serpiente (ofidismo),trauma,grave,false,true,true,true,false,10,10,false,false,false,lluvia,false,false
+129661AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Picadura de alacrán,trauma,moderado,true,true,true,true,true,10,10,false,false,false,verano,false,true
+157482AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Trauma ocular,trauma,moderado,false,true,true,false,false,10,10,false,false,false,,false,false
+118102AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Cuerpo extraño en vía aérea,trauma,grave,true,false,false,false,false,10,10,false,false,false,,false,false
+114182AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Intoxicación por plaguicidas,trauma,grave,false,true,true,false,false,10,10,false,false,false,,false,false
+141768AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Ahogamiento / casi ahogamiento,trauma,grave,true,true,false,false,false,10,10,false,false,false,lluvia,false,false
+118349AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Caída de altura,trauma,grave,false,true,true,false,false,10,10,false,false,false,,false,false
+PENDIENTE,Trauma de tórax,trauma,grave,false,true,true,false,false,10,10,false,false,false,,false,false
+PENDIENTE,Trauma abdominal,trauma,grave,false,true,true,false,false,10,10,false,false,false,,false,false

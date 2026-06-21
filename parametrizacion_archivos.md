@@ -60,8 +60,14 @@ Todo el comportamiento del simulador se controla desde aquí.
       "ClinicalExam": 0.35,
       "DrugOrder": 0.65,
       "Urgent": 0.20,
-      "FollowUp": 0.30,
-      "AllergyOnNew": 0.15
+      "FollowUp": 0.30
+    },
+    "Allergy": {
+      "BaseProbabilityMin": 0.15,
+      "BaseProbabilityMax": 0.25,
+      "SecondAllergyProbability": 0.30,
+      "ThirdAllergyProbability": 0.25,
+      "MaxAllergies": 3
     },
     "WeekdayWeights": {
       "Monday": 1.20, "Tuesday": 1.20, "Wednesday": 1.00,
@@ -94,6 +100,7 @@ Todo el comportamiento del simulador se controla desde aquí.
 | `PorcentajeRecurrentes` | int (0-100) | % de visitas de pacientes ya existentes (controles, crónicos). |
 | `Locale` | string | Locale de Bogus. `"es"` = español latinoamericano. |
 | `RandomSeed` | int | Semilla para reproducibilidad. Mismo seed = misma simulación. |
+| `CommonProbMin` / `CommonProbMax` | float (0-1) | Factor inicial: cada corrida sortea su P(común) en `[min,max]` (def. 0.75–0.95) → el principal cae mayormente en el pool `comun=true`, variando entre corridas. |
 | `ClinicType` | string | Perfil del establecimiento: `ConsultaExterna`, `HospitalUrgencias`, `CentroComunitario`. Referencia semántica, no fuerza valores. |
 | `HorarioAtencion.PicoAM/PM` | objeto | Bloque horario pico con peso (% de atenciones). El resto se distribuye uniformemente. |
 | `DemographicProfile.AgeGroups` | array | Distribución etaria. Los `Weight` se normalizan al 100%. |
@@ -106,7 +113,10 @@ Todo el comportamiento del simulador se controla desde aquí.
 | `ReferralProbabilities.DrugOrder` | float (0-1) | Probabilidad base de prescripción de medicamento. |
 | `ReferralProbabilities.Urgent` | float (0-1) | Probabilidad de que una orden de lab sea URGENTE. |
 | `ReferralProbabilities.FollowUp` | float (0-1) | Probabilidad de nota de seguimiento. |
-| `ReferralProbabilities.AllergyOnNew` | float (0-1) | Probabilidad de que un paciente **nuevo** tenga alergias registradas. |
+| `Allergy.BaseProbabilityMin` / `BaseProbabilityMax` | float (0-1) | Banda de prevalencia de alergias: cada corrida sortea su valor en `[min,max]` (def. 0.15–0.25, fracción clínicamente documentada del ~25-30% poblacional) → el % de pacientes nuevos alérgicos varía entre corridas. |
+| `Allergy.SecondAllergyProbability` | float (0-1) | Dado que el paciente ya tiene 1 alergia, probabilidad de sumar una 2ª (decaída condicional). |
+| `Allergy.ThirdAllergyProbability` | float (0-1) | Dado que ya tiene 2, probabilidad de sumar una 3ª. |
+| `Allergy.MaxAllergies` | int | Tope de alergias por paciente (también limitado por el tamaño de `alergenos.csv`). |
 | `WeekdayWeights` | objeto | Multiplicador de volumen por día. `1.0` = promedio, `0.0` = sin atención. |
 | `Comorbidity.BaseProbability` | float (0-1) | Probabilidad base de que un paciente tenga ≥1 diagnóstico adicional (comorbilidad) en la misma visita. |
 | `Comorbidity.MaxAdditional` | int | Tope de diagnósticos adicionales además del primario. |
@@ -300,9 +310,11 @@ concept_uuid,nombre_es,tipo_alergeno,severidad_tipica
 | `severidad_tipica` | `leve`, `moderada`, `grave` — se usa como valor por defecto, con variación aleatoria |
 
 **Flujo de alergias en el pipeline**:
-1. Al crear paciente nuevo: si `rand < AllergyOnNew` (ej: 15%) → registrar alergias
-2. Elegir 1–3 alérgenos al azar del catálogo
-3. Para cada alérgeno: `POST /patient/{uuid}/allergy` con `allergenType`, `codedAllergen.uuid`, `severity.uuid`
+1. Al iniciar la corrida se sortea su prevalencia en `[Allergy.BaseProbabilityMin, BaseProbabilityMax]` (def. 15–25%).
+2. Al crear paciente nuevo: si `rand < prevalencia_de_la_corrida` → es alérgico.
+3. Nº de alergias por decaída condicional: 1 fija; +1 con `SecondAllergyProbability`; +1 más (si ya hay 2) con `ThirdAllergyProbability`; acotado por `MaxAllergies` y el tamaño del catálogo. La mayoría tiene 1, pocos 2, raros 3.
+4. Elegir esa cantidad de alérgenos al azar **sin repetir** del catálogo.
+5. Para cada alérgeno: `POST /patient/{uuid}/allergy` con `allergenType`, `codedAllergen` (UUID plano), `severity.uuid`.
 
 ---
 
@@ -335,7 +347,7 @@ appsettings.json
 
 AL CREAR PACIENTE NUEVO:
 alergenos.csv
-  └── rand < AllergyOnNew (0.15) ────────► elegir 1-3 al azar → POST /patient/{uuid}/allergy
+  └── rand < prevalencia corrida (0.15-0.25) ──► nº por decaída condicional (≥1) → POST /patient/{uuid}/allergy
 
 POR CADA VISITA:
 
@@ -439,7 +451,8 @@ Esto permite:
 | Frases de motivo de consulta | `motivos_consulta.csv` → `texto` |
 | % de visitas con labs externos | `appsettings.json` → `ReferralProbabilities.LabOrder` |
 | % de visitas con examen en consultorio | `appsettings.json` → `ReferralProbabilities.ClinicalExam` |
-| % de pacientes con alergias | `appsettings.json` → `ReferralProbabilities.AllergyOnNew` |
+| % de pacientes con alergias | `appsettings.json` → `Allergy.BaseProbabilityMin/Max` |
+| Cuántas alergias por paciente alérgico | `appsettings.json` → `Allergy.SecondAllergyProbability` / `ThirdAllergyProbability` / `MaxAllergies` |
 | Qué alérgenos pueden aparecer | `alergenos.csv` |
 | UUIDs de OpenMRS (location, visita, encuentro) | `appsettings.json` → `OpenMRS.Defaults` |
 | Reproducibilidad | `appsettings.json` → `RandomSeed` |

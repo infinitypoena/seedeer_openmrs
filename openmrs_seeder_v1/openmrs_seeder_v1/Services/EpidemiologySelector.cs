@@ -9,8 +9,12 @@ public class EpidemiologySelector
     private readonly Random _rng;
     private readonly ComorbiditySettings _comorbidity;
     private readonly double _seasonalBoost;
+    private readonly double _commonProbMin;
+    private readonly double _commonProbMax;
     /// <summary>estación → categorías que tienen ≥1 diagnóstico con esa etiqueta de clima.</summary>
     private readonly Dictionary<string, HashSet<string>> _categoriasPorClima;
+    /// <summary>comun (true/false) → categorías que tienen ≥1 diagnóstico con ese flag.</summary>
+    private readonly Dictionary<bool, HashSet<string>> _categoriasPorComun;
 
     public EpidemiologySelector(CatalogLoader catalogs, SimulationSettings settings)
     {
@@ -18,22 +22,45 @@ public class EpidemiologySelector
         _rng = new Random(settings.RandomSeed + 3);
         _comorbidity = settings.Comorbidity;
         _seasonalBoost = settings.Climate.SeasonalBoost;
+        _commonProbMin = settings.CommonProbMin;
+        _commonProbMax = settings.CommonProbMax;
 
         _categoriasPorClima = new Dictionary<string, HashSet<string>>();
+        _categoriasPorComun = new Dictionary<bool, HashSet<string>> { [true] = [], [false] = [] };
         foreach (var d in _catalogs.Diagnosticos)
+        {
             foreach (var estacion in d.Clima)
             {
                 if (!_categoriasPorClima.TryGetValue(estacion, out var set))
                     _categoriasPorClima[estacion] = set = new HashSet<string>();
                 set.Add(d.Categoria);
             }
+            _categoriasPorComun[d.EsComun].Add(d.Categoria);
+        }
     }
 
-    public string SelectCategoria(string ageGroup, string gender, string? climate = null)
+    /// <summary>
+    /// Sortea, una vez por corrida, la probabilidad de "común" uniformemente en la banda
+    /// [CommonProbMin, CommonProbMax]. Así la proporción varía entre corridas pero se inclina a común.
+    /// </summary>
+    public double DrawRunCommonProbability() =>
+        _commonProbMin + (_commonProbMax - _commonProbMin) * _rng.NextDouble();
+
+    /// <summary>Factor inicial por paciente: con probabilidad <paramref name="pCommon"/> apunta a común.</summary>
+    public bool RollPreferCommon(double pCommon) => _rng.NextDouble() < pCommon;
+
+    public string SelectCategoria(string ageGroup, string gender, string? climate = null, bool? preferCommon = null)
     {
         var candidates = _catalogs.EpidemiologyProfile
             .Where(e => e.GrupoEdad == ageGroup && (e.Genero == gender || e.Genero == "Ambos"))
             .ToList();
+
+        // Factor inicial: restringir a categorías que tienen una enfermedad del pool elegido
+        if (preferCommon is bool pc && _categoriasPorComun.TryGetValue(pc, out var poolCats))
+        {
+            var filtrado = candidates.Where(e => poolCats.Contains(e.Categoria)).ToList();
+            if (filtrado.Count > 0) candidates = filtrado; // si vacío → fallback (sin restringir)
+        }
 
         if (candidates.Count == 0) return "infeccioso";
 
@@ -55,13 +82,20 @@ public class EpidemiologySelector
         return candidates.Last().Categoria;
     }
 
-    public DiagnosticoEntry? SelectDiagnostico(string categoria, string ageGroup, string gender, string? climate = null)
+    public DiagnosticoEntry? SelectDiagnostico(string categoria, string ageGroup, string gender, string? climate = null, bool? preferCommon = null)
     {
         var candidates = _catalogs.Diagnosticos
             .Where(d => d.Categoria == categoria && AplicaAGrupo(d, ageGroup))
             .ToList();
 
         if (candidates.Count == 0) return null;
+
+        // Factor inicial: quedarse con el pool elegido (común/no-común); si vacío → fallback a todos
+        if (preferCommon is bool pc)
+        {
+            var filtrado = candidates.Where(d => d.EsComun == pc).ToList();
+            if (filtrado.Count > 0) candidates = filtrado;
+        }
 
         // Las enfermedades favorecidas por la estación activa pesan más
         double Peso(DiagnosticoEntry d)

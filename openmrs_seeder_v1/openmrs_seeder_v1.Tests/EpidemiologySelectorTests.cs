@@ -31,7 +31,7 @@ public class EpidemiologySelectorTests
                 CielUuid  = "uuid-bronquitis", NombreEs = "Bronquitis aguda",
                 Categoria = "respiratorio", Severidad = "leve",
                 Aplica0_14 = true, PesoM = 10, PesoF = 10,
-                RequiereLab = false, RequiereRx = true
+                RequiereLab = false, RequiereRx = true, EsComun = true
             },
             new()
             {
@@ -39,7 +39,7 @@ public class EpidemiologySelectorTests
                 Categoria = "respiratorio", Severidad = "leve",
                 Aplica0_14 = true, PesoM = 10, PesoF = 10,
                 RequiereLab = false, RequiereRx = true,
-                Clima = ["invierno"]
+                Clima = ["invierno"], EsComun = false
             },
             new()
             {
@@ -195,6 +195,48 @@ public class EpidemiologySelectorTests
         // Con SeasonalBoost (2.5) por defecto, la gripe debe dominar claramente en invierno
         Assert.True(gripe > bronquitis * 1.5,
             $"En invierno la gripe debería dominar; gripe={gripe}, bronquitis={bronquitis}");
+    }
+
+    [Fact]
+    public void SelectDiagnostico_PreferCommon_FiltraPorPoolComun()
+    {
+        var (_, selector) = CreateSelector();
+
+        // En respiratorio: bronquitis (comun) y gripe (no comun)
+        for (int i = 0; i < 50; i++)
+        {
+            var comun = selector.SelectDiagnostico("respiratorio", "0-14", "M", preferCommon: true);
+            Assert.Equal("uuid-bronquitis", comun!.CielUuid);
+
+            var raro = selector.SelectDiagnostico("respiratorio", "0-14", "M", preferCommon: false);
+            Assert.Equal("uuid-gripe", raro!.CielUuid);
+        }
+    }
+
+    [Fact]
+    public void DrawRunCommonProbability_DentroDeLaBanda_YVariaEntreCorridas()
+    {
+        var settings = new SimulationSettings { RandomSeed = 42, CommonProbMin = 0.70, CommonProbMax = 0.95 };
+        var (_, selector) = CreateSelector(settings);
+
+        var valores = new System.Collections.Generic.HashSet<double>();
+        for (int i = 0; i < 50; i++)
+        {
+            var p = selector.DrawRunCommonProbability();
+            Assert.InRange(p, 0.70, 0.95);   // siempre dentro de la banda (inclinado a común)
+            valores.Add(p);
+        }
+        Assert.True(valores.Count > 1, "La probabilidad de la corrida debe variar");
+    }
+
+    [Fact]
+    public void RollPreferCommon_RespetaLaProbabilidad()
+    {
+        var (_, selector) = CreateSelector();
+        int comunes = 0;
+        const int n = 2000;
+        for (int i = 0; i < n; i++) if (selector.RollPreferCommon(0.80)) comunes++;
+        Assert.InRange(comunes, (int)(n * 0.74), (int)(n * 0.86)); // ~80%
     }
 
     [Fact]

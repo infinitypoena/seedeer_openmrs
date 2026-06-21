@@ -114,6 +114,11 @@ public class PrescriptionSeeder
         "urologico"      => m.AplicaUrologico,
         "infeccioso"     => m.AplicaInfeccioso,
         "endocrino"      => m.AplicaEndocrino,
+        "neurologico"     => m.AplicaNeurologico,
+        "dermatologico"   => m.AplicaDermatologico,
+        "salud_mental"    => m.AplicaSaludMental,
+        "ginecoobstetrico"=> m.AplicaGinecoobstetrico,
+        "trauma"          => m.AplicaTrauma,
         _ => false
     };
 }

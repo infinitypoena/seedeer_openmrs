@@ -48,4 +48,6 @@ public class SimulatedPatient
     public string? ClimaEstacion { get; set; }
     /// <summary>Temperatura ambiente promedio (°C) de la semana de la visita (null si no aplica).</summary>
     public double? TempAmbienteC { get; set; }
+    /// <summary>Conceptos ya agregados a la lista de problemas (condition) — evita duplicados entre visitas.</summary>
+    public HashSet<string> ProblemListConcepts { get; set; } = [];
 }

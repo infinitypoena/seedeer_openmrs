@@ -306,7 +306,8 @@ GET /ws/rest/v1/provider               → buscar el proveedor
 | `ClinicalExam` | 0.35 | Probabilidad base de registrar examen en consultorio |
 | `DrugOrder` | 0.65 | Probabilidad base de prescribir medicamento |
 | `Urgent` | 0.20 | Probabilidad de urgencia STAT en laboratorio |
-| `AllergyOnNew` | 0.15 | Probabilidad de registrar alergia en paciente nuevo |
+
+> Las alergias tienen su propia sección `Allergy` en `appsettings.json` (prevalencia 15-25% sorteada por corrida + nº de alergias por decaída condicional). La prevalencia ya no vive en `ReferralProbabilities`. Detalle completo en `config_docs.md` §4.8.
 
 Estas probabilidades son la **base**; el diagnóstico puede elevarlas. Si `diagnosticos.csv` marca `requiere_lab = true` para un diagnóstico, la probabilidad de ordenar lab sube al 80% independientemente del valor de `LabOrder`.
 
@@ -365,8 +366,9 @@ PrescriptionSeeder:
 
 AllergySeeder:
   ¿patient.EsNuevo == false? → skip automático (solo pacientes nuevos)
-  Probabilidad               → ReferralProbabilities.AllergyOnNew (0.15)
-  Cantidad: 1 a 3 alergenos (aleatorio)
+  Probabilidad               → prevalencia sorteada por corrida en Allergy.BaseProbabilityMin/Max (0.15-0.25)
+  Cantidad: decaída condicional (≥1; +1 con SecondAllergyProbability; +1 con ThirdAllergyProbability)
+            → la mayoría 1, pocos 2, raros 3
 
 ConsultaSeeder (examen clínico):
   ¿dx.requiere_examen_clinico == true? → probabilidad 90%

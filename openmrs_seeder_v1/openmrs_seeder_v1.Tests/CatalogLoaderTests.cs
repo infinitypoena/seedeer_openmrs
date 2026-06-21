@@ -98,6 +98,41 @@ public class CatalogLoaderTests
     }
 
     [Fact]
+    public void Load_DiagnosticoCronicaYCategoriaNuevaParsean()
+    {
+        var dir = CreateTempDir(new()
+        {
+            ["epidemiology-profile.csv"] = "categoria,grupo_edad,genero,peso\n",
+            ["diagnosticos.csv"] =
+                "ciel_uuid,nombre_es,categoria,severidad,aplica_0_14,aplica_15_29,aplica_30_44,aplica_45_64,aplica_65mas,peso_M,peso_F,requiere_lab,requiere_rx,requiere_examen_clinico,clima,cronica\n" +
+                "uuid-mig,Migrana,neurologico,moderado,false,true,true,true,false,8,20,false,true,false,,true\n",
+            ["medicamentos.csv"]    = "drug_uuid,concept_uuid,nombre_generico,strength,via_uuid,aplica_respiratorio,aplica_cardiovascular,aplica_diabetes,aplica_digestivo,aplica_osteomuscular,aplica_urologico,aplica_infeccioso,aplica_endocrino,aplica_neurologico,aplica_dermatologico,aplica_salud_mental,aplica_ginecoobstetrico,aplica_trauma\n",
+            ["laboratorios.csv"] =
+                "ciel_uuid,nombre_es,clase,aplica_respiratorio,aplica_cardiovascular,aplica_diabetes,aplica_digestivo,aplica_osteomuscular,aplica_urologico,aplica_infeccioso,aplica_endocrino,aplica_neurologico,aplica_dermatologico,aplica_salud_mental,aplica_ginecoobstetrico,aplica_trauma\n" +
+                "uuid-tc,Tomografia de craneo,Test,false,false,false,false,false,false,false,false,true,false,false,false,true\n",
+            ["examenes_clinicos.csv"] = "ciel_uuid,nombre_es,tipo_resultado,unidad,aplica_respiratorio,aplica_cardiovascular,aplica_diabetes,aplica_digestivo,aplica_osteomuscular,aplica_urologico,aplica_infeccioso,aplica_endocrino,aplica_neurologico,aplica_dermatologico,aplica_salud_mental,aplica_ginecoobstetrico,aplica_trauma\n",
+            ["alergenos.csv"]       = "concept_uuid,nombre_es,tipo_alergeno,severidad_tipica\n",
+            ["motivos_consulta.csv"] = "categoria,texto\n",
+        });
+
+        try
+        {
+            var loader = new CatalogLoader();
+            loader.Load(dir);
+
+            var dx = loader.Diagnosticos[0];
+            Assert.Equal("neurologico", dx.Categoria);
+            Assert.True(dx.EsCronica);
+
+            var lab = loader.Laboratorios[0];
+            Assert.True(lab.AplicaNeurologico);
+            Assert.True(lab.AplicaTrauma);
+            Assert.False(lab.AplicaRespiratorio);
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [Fact]
     public void Load_AlergenosTiposCorrectos()
     {
         var dir = CreateTempDir(new()

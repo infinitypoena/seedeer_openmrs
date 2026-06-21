@@ -1,14 +1,28 @@
-ciel_uuid,nombre_es,clase,aplica_respiratorio,aplica_cardiovascular,aplica_diabetes,aplica_digestivo,aplica_osteomuscular,aplica_urologico,aplica_infeccioso,aplica_endocrino
-1019AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hemograma completo,Test,true,true,true,true,true,true,true,false
-160912AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Glucemia en ayunas,Test,false,true,true,false,false,false,false,true
-1006AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Perfil lipídico,Test,false,true,true,false,false,false,false,false
-302AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Orina completa,Test,false,false,true,false,false,true,false,false
-159644AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hemoglobina glicosilada HbA1c,Test,false,false,true,false,false,false,false,true
-164364AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Creatinina sérica,Test,false,true,true,false,false,true,false,false
-653AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Transaminasa AST,Test,false,false,false,true,false,false,true,false
-654AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Transaminasa ALT,Test,false,false,false,true,false,false,true,false
-58b969e7-77ef-4941-a0ec-72372a2fa716,Antígeno NS1 dengue (prueba rápida),Test,false,false,false,false,false,false,true,false
-85077AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hormona estimulante de la tiroides (TSH),Test,false,false,false,false,false,false,false,true
-159825AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Ácido úrico en suero,Test,false,false,false,false,true,false,false,false
-161500AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Proteína C reactiva,Test,false,false,false,false,true,false,true,false
-123484AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Urocultivo,Test,false,false,false,false,false,true,false,false
+ciel_uuid,nombre_es,clase,aplica_respiratorio,aplica_cardiovascular,aplica_diabetes,aplica_digestivo,aplica_osteomuscular,aplica_urologico,aplica_infeccioso,aplica_endocrino,aplica_neurologico,aplica_dermatologico,aplica_salud_mental,aplica_ginecoobstetrico,aplica_trauma
+1019AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hemograma completo,Test,true,true,true,true,true,true,true,false,false,false,false,true,true
+160912AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Glucemia en ayunas,Test,false,true,true,false,false,false,false,true,false,false,false,false,false
+1006AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Perfil lipídico,Test,false,true,true,false,false,false,false,false,false,false,false,false,false
+302AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Orina completa,Test,false,false,true,false,false,true,false,false,false,false,false,true,false
+159644AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hemoglobina glicosilada HbA1c,Test,false,false,true,false,false,false,false,true,false,false,false,false,false
+164364AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Creatinina sérica,Test,false,true,true,false,false,true,false,false,false,false,false,true,true
+653AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Transaminasa AST,Test,false,false,false,true,false,false,true,false,false,false,false,false,false
+654AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Transaminasa ALT,Test,false,false,false,true,false,false,true,false,false,false,false,false,false
+58b969e7-77ef-4941-a0ec-72372a2fa716,Antígeno NS1 dengue (prueba rápida),Test,false,false,false,false,false,false,true,false,false,false,false,false,false
+85077AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hormona estimulante de la tiroides (TSH),Test,false,false,false,false,false,false,false,true,false,false,false,false,false
+159825AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Ácido úrico en suero,Test,false,false,false,false,true,false,false,false,false,false,false,false,false
+161500AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Proteína C reactiva,Test,false,false,false,false,true,false,true,false,false,false,false,false,false
+123484AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Urocultivo,Test,false,false,false,false,false,true,false,false,false,false,false,true,false
+857AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Nitrógeno ureico (BUN),Test,false,true,true,false,false,true,false,false,false,false,false,false,true
+1133AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Potasio sérico,Test,false,true,true,true,false,true,false,false,false,false,false,false,false
+161504AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Tiroxina (T4),Test,false,false,false,false,false,false,false,true,false,false,false,false,false
+655AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Bilirrubina total,Test,false,false,false,true,false,false,true,false,false,false,false,false,false
+1299AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Amilasa sérica,Test,false,false,false,true,false,false,false,false,false,false,false,false,false
+1945AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Prueba de embarazo (beta-hCG),Test,false,false,false,false,false,false,false,false,false,false,false,true,false
+299AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Prueba VDRL,Test,false,false,false,false,false,false,true,false,false,false,false,true,false
+1356AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Prueba de VIH,Test,false,false,false,false,false,false,true,false,false,false,false,true,false
+12AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Radiografía de tórax,Test,true,true,false,false,false,false,false,false,false,false,false,false,false
+101AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Radiografía abdominal,Test,false,false,false,true,false,true,false,false,false,false,false,false,true
+390AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Radiografía de columna,Test,false,false,false,false,true,false,false,false,false,false,false,false,true
+846AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Tomografía de cráneo,Test,false,false,false,false,false,false,false,false,true,false,false,false,true
+164071AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Ecografía abdominal,Test,false,false,false,true,false,true,false,false,false,false,false,true,false
+164941AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Ecografía obstétrica,Test,false,false,false,false,false,false,false,false,false,false,false,true,false

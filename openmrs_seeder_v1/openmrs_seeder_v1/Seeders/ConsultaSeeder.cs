@@ -57,8 +57,9 @@ public class ConsultaSeeder
         if (debeExamen)
             await SeedExamenClinicoAsync(patient, encounterUuid, ct);
 
-        _logger.LogInformation("[Consulta] Encounter {Uuid} para {Id} | Dx: {Dx} | +{Comorb} comorbilidad(es)",
-            encounterUuid, patient.Identifier, patient.Diagnostico?.NombreEs ?? "—", patient.Comorbilidades.Count);
+        _logger.LogInformation("[Consulta] Encounter {Uuid} para {Id} | Dx: {Dx} | comun: {Comun} | +{Comorb} comorbilidad(es)",
+            encounterUuid, patient.Identifier, patient.Diagnostico?.NombreEs ?? "—",
+            patient.Diagnostico?.EsComun, patient.Comorbilidades.Count);
     }
 
     // ── Helpers privados ──────────────────────────────────────────────────────
@@ -150,6 +151,11 @@ public class ConsultaSeeder
         "urologico"      => e.AplicaUrologico,
         "infeccioso"     => e.AplicaInfeccioso,
         "endocrino"      => e.AplicaEndocrino,
+        "neurologico"     => e.AplicaNeurologico,
+        "dermatologico"   => e.AplicaDermatologico,
+        "salud_mental"    => e.AplicaSaludMental,
+        "ginecoobstetrico"=> e.AplicaGinecoobstetrico,
+        "trauma"          => e.AplicaTrauma,
         _ => false
     };
 

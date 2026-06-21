@@ -6,6 +6,13 @@ public class SimulationSettings
     public DateTime EndDate { get; set; } = new DateTime(2024, 12, 31);
     public int PacientesPorDiaMedio { get; set; } = 40;
     public int PorcentajeRecurrentes { get; set; } = 30;
+    /// <summary>
+    /// Banda para el factor inicial de selección. Cada corrida sortea su probabilidad de "común"
+    /// uniformemente en [CommonProbMin, CommonProbMax], así la proporción VARÍA entre corridas pero
+    /// siempre se inclina a lo común. Por defecto ~75-95% (promedio ~85%).
+    /// </summary>
+    public double CommonProbMin { get; set; } = 0.75;
+    public double CommonProbMax { get; set; } = 0.95;
     public string Locale { get; set; } = "es";
     public int RandomSeed { get; set; } = 42;
     public string ClinicType { get; set; } = "ConsultaExterna";
@@ -15,6 +22,25 @@ public class SimulationSettings
     public WeekdayWeightsSettings WeekdayWeights { get; set; } = new();
     public ComorbiditySettings Comorbidity { get; set; } = new();
     public ClimateSettings Climate { get; set; } = new();
+    public AllergySettings Allergy { get; set; } = new();
+}
+
+public class AllergySettings
+{
+    /// <summary>
+    /// Banda de prevalencia por corrida (P de que un paciente nuevo tenga ≥1 alergia documentada).
+    /// Cada corrida sortea su valor uniformemente en [Min, Max], igual que CommonProbMin/Max, así
+    /// la proporción de alérgicos VARÍA entre corridas. Por defecto ~15-25% (dato OMS/SEAIC: el
+    /// 25-30% de la población tiene alguna alergia; aquí se modela la fracción clínicamente documentada).
+    /// </summary>
+    public double BaseProbabilityMin { get; set; } = 0.15;
+    public double BaseProbabilityMax { get; set; } = 0.25;
+    /// <summary>Prob. condicional de sumar una 2ª alergia dado que ya tiene 1.</summary>
+    public double SecondAllergyProbability { get; set; } = 0.30;
+    /// <summary>Prob. condicional de sumar una 3ª alergia dado que ya tiene 2.</summary>
+    public double ThirdAllergyProbability { get; set; } = 0.25;
+    /// <summary>Tope absoluto de alergias por paciente.</summary>
+    public int MaxAllergies { get; set; } = 3;
 }
 
 public class ClimateSettings
@@ -49,12 +75,19 @@ public class ComorbiditySettings
     /// <summary>Categorías clínicamente asociadas (clusters de comorbilidad).</summary>
     public Dictionary<string, List<string>> Affinities { get; set; } = new()
     {
-        ["diabetes"]       = ["cardiovascular", "endocrino"],
-        ["cardiovascular"] = ["diabetes", "endocrino"],
+        ["diabetes"]       = ["cardiovascular", "endocrino", "neurologico"],
+        ["cardiovascular"] = ["diabetes", "endocrino", "neurologico"],
         ["endocrino"]      = ["diabetes", "cardiovascular"],
         ["respiratorio"]   = ["infeccioso"],
-        ["infeccioso"]     = ["respiratorio", "digestivo"],
+        ["infeccioso"]     = ["respiratorio", "digestivo", "dermatologico"],
         ["digestivo"]      = ["infeccioso"],
+        ["neurologico"]    = ["cardiovascular", "diabetes", "salud_mental"],
+        ["salud_mental"]   = ["neurologico"],
+        ["dermatologico"]  = ["infeccioso"],
+        ["ginecoobstetrico"] = ["urologico"],
+        ["urologico"]      = ["ginecoobstetrico"],
+        ["osteomuscular"]  = ["trauma"],
+        ["trauma"]         = ["osteomuscular"],
     };
 }
 
@@ -111,7 +144,6 @@ public class ReferralProbabilitiesSettings
     public double DrugOrder { get; set; } = 0.65;
     public double Urgent { get; set; } = 0.20;
     public double FollowUp { get; set; } = 0.30;
-    public double AllergyOnNew { get; set; } = 0.15;
 }
 
 public class WeekdayWeightsSettings
