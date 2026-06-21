@@ -127,7 +127,6 @@ objeto ya existente en OpenMRS que el simulador referencia al crear datos.
 | `TrackingIdentifierTypeUuid` | Tipo "Old Identification Number" — soporta el prefijo `SIM-` para rastrear/limpiar pacientes simulados. | `GET /patientidentifiertype` |
 | `LocationUuid` | Ubicación de **respaldo** (fallback) si no hay `Consultorios`. | `GET /location` |
 | `RegistrationLocationUuid` | Ubicación de registro/admisión (Recepción) para el identificador del paciente. Si vacío, cae a `LocationUuid`. | `GET /location` |
-| `Consultorios` | Lista de consultorios; cada visita rota entre ellos. Ver detalle abajo. | `GET /location` |
 | `VisitTypeUuid` | Tipo de visita "Outpatient" (ambulatoria). | `GET /visittype` |
 | `VitalsEncounterTypeUuid` | Tipo de encuentro "Vitals" (signos vitales). | `GET /encountertype` |
 | `ConsultaEncounterTypeUuid` | Tipo de encuentro "Consultation" (la consulta médica). | `GET /encountertype` |
@@ -138,31 +137,10 @@ objeto ya existente en OpenMRS que el simulador referencia al crear datos.
 | `DaysConceptUuid` | Concepto unidad "Días" (duración de prescripciones). | `GET /concept?q=Days` |
 | `TabletConceptUuid` | Concepto unidad "Tableta(s)" (dosis de prescripciones). | `GET /concept?q=Tablet` |
 
-#### Consultorios y médicos (datos dinámicos)
-
-Para que la data no quede toda firmada por un solo proveedor en una sola ubicación, se define una
-lista de **consultorios**, cada uno con su **médico**. En cada visita se elige un consultorio al azar
-y todos sus encuentros/órdenes quedan en esa ubicación y firmados por ese médico. El registro del
-paciente va a `RegistrationLocationUuid` (Recepción), no a un consultorio. Los pacientes
-**recurrentes** tienden a volver con su **médico de cabecera** (ver `MedicoCabeceraProbMin/Max` en §4.1).
-
-```json
-"Consultorios": [
-  { "LocationUuid": "c1000000-0000-0000-0000-000000000011", "MedicoIdentifier": "SIM-MED-C1", "MedicoNombre": "Carlos Méndez" },
-  { "LocationUuid": "c1000000-0000-0000-0000-000000000012", "MedicoIdentifier": "SIM-MED-C2", "MedicoNombre": "Ana Rivas" }
-]
-```
-
-| Clave | Significado |
-|-------|-------------|
-| `LocationUuid` | Ubicación (Visit Location) del consultorio — `GET /location`. |
-| `MedicoIdentifier` | Identificador único del médico. Se usa para **idempotencia**: al iniciar la corrida se busca por este id; si no existe, se crea el proveedor. Prefijo `SIM-` recomendado. |
-| `MedicoNombre` | Nombre del médico a crear si no existe (ej. "Carlos Méndez"). |
-
-> **Idempotente:** los médicos se crean una sola vez; corridas posteriores los reutilizan. Son
-> **datos de referencia** (personal), por lo que `DELETE /api/seed/clear` **no** los elimina (solo
-> anula pacientes/visitas `SIM-`). Si dejas `Consultorios` vacío, el simulador usa el
-> `LocationUuid`/`ProviderUuid` por defecto (comportamiento previo, un solo recurso).
+> **Consultorios y médicos** ahora viven en el catálogo `catalogs/consultorios.csv` (ya no en
+> appsettings). Cada visita rota entre esos consultorios y el médico se crea idempotentemente.
+> Ver el esquema en `parametrizacion_archivos.md`. El registro del paciente va a
+> `RegistrationLocationUuid` (Recepción), no a un consultorio.
 
 ---
 
@@ -193,7 +171,7 @@ tocar código.
 | `Locale` | string | Idioma/región para generar nombres y direcciones (Bogus). `"es"` = español latinoamericano. |
 | `RandomSeed` | entero | Semilla de aleatoriedad. **Con la misma semilla obtienes exactamente la misma simulación** (reproducibilidad). Cámbiala para generar un conjunto de datos distinto. |
 | `CommonProbMin` / `CommonProbMax` | float (0-1) | **Factor inicial de selección.** Cada corrida sortea su probabilidad de "común" uniformemente en `[CommonProbMin, CommonProbMax]` (por defecto 0.75–0.95), así la proporción **varía entre corridas** pero siempre se inclina a lo común. Con esa probabilidad, el diagnóstico principal se elige del pool `comun=true`; el resto del tiempo de las raras/críticas. La etapa 2 (categoría + diagnóstico por peso) opera **dentro** del pool elegido con los pesos actuales. Sube `CommonProbMin` para inclinar aún más a lo común. |
-| `MedicoCabeceraProbMin` / `MedicoCabeceraProbMax` | float (0-1) | **Médico de cabecera.** Cada corrida sortea en `[min, max]` (por defecto 0.70–0.90, inclinado al "sí") la probabilidad de que un paciente **recurrente** vuelva con el **mismo médico** (y consultorio) de su primera visita. El resto del tiempo cae con otro médico. Los pacientes nuevos siempre estrenan cabecera. Requiere `OpenMRS.Defaults.Consultorios`. |
+| `MedicoCabeceraProbMin` / `MedicoCabeceraProbMax` | float (0-1) | **Médico de cabecera.** Cada corrida sortea en `[min, max]` (por defecto 0.70–0.90, inclinado al "sí") la probabilidad de que un paciente **recurrente** vuelva con el **mismo médico** (y consultorio) de su primera visita. El resto del tiempo cae con otro médico. Los pacientes nuevos siempre estrenan cabecera. Requiere `catalogs/consultorios.csv`. |
 | `ClinicType` | string | Perfil del establecimiento (`ConsultaExterna`, `HospitalUrgencias`, `CentroComunitario`). Es una etiqueta semántica orientativa; no fuerza valores por sí sola. |
 
 ### 4.2 HorarioAtencion
@@ -309,14 +287,6 @@ Controla la **multimorbilidad**: que un paciente presente más de una enfermedad
     "30-44": 0.8,
     "45-64": 1.3,
     "65+":   1.8
-  },
-  "Affinities": {
-    "diabetes":       [ "cardiovascular", "endocrino" ],
-    "cardiovascular": [ "diabetes", "endocrino" ],
-    "endocrino":      [ "diabetes", "cardiovascular" ],
-    "respiratorio":   [ "infeccioso" ],
-    "infeccioso":     [ "respiratorio", "digestivo" ],
-    "digestivo":      [ "infeccioso" ]
   }
 }
 ```
@@ -328,12 +298,15 @@ Controla la **multimorbilidad**: que un paciente presente más de una enfermedad
 | `SecondExtraProbability` | 0–1 | Dado que ya hay una comorbilidad, probabilidad de añadir una **segunda**. |
 | `AffinityBoost` | factor | Cuánto se multiplica el peso de las categorías clínicamente afines al elegir la enfermedad extra. `4.0` = las categorías relacionadas tienen 4× más chance que una al azar. |
 | `AgeScaling` | objeto | Multiplicador de `BaseProbability` **por grupo de edad**. Refleja que la multimorbilidad crece con la edad. Ej.: para `65+`, prob. efectiva = `0.20 × 1.8 = 0.36`. El resultado se limita a un máximo de 0.95. |
-| `Affinities` | objeto | **Clusters de comorbilidad**: por cada categoría, lista de categorías clínicamente asociadas que reciben el `AffinityBoost`. Así un diabético tiende a presentar enfermedad cardiovascular/endocrina, no algo improbable. |
+
+> Las **afinidades** (clusters categoría→categorías afines que reciben el `AffinityBoost`) viven ahora
+> en el catálogo `catalogs/comorbilidad_afinidades.csv` (ya no en appsettings). Ver esquema en
+> `parametrizacion_archivos.md`.
 
 **Cómo funciona en conjunto:**
 1. Se elige el diagnóstico **principal** como siempre (perfil epidemiológico por edad/sexo).
 2. Con probabilidad `BaseProbability × AgeScaling[grupo]` se decide si hay comorbilidad.
-3. La(s) enfermedad(es) extra se eligen de **otras** categorías, priorizando las afines (`Affinities` × `AffinityBoost`).
+3. La(s) enfermedad(es) extra se eligen de **otras** categorías, priorizando las afines (`comorbilidad_afinidades.csv` × `AffinityBoost`).
 4. Todos los diagnósticos se registran en el **mismo encuentro** (principal `rank=1`, secundarios `rank=2`).
 5. Las órdenes de laboratorio y las prescripciones cubren las categorías de **todas** las enfermedades del paciente, manteniendo la coherencia clínica.
 

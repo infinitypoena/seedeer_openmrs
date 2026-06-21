@@ -1,3 +1,4 @@
+using OpenmrsSeeder.Models.Catalogs;
 using OpenmrsSeeder.Services;
 using Xunit;
 
@@ -74,5 +75,44 @@ public class ClinicResourceAssignerTests
     public void UsarCabecera_RecurrenteSinCabecera_NoLaUsa()
     {
         Assert.False(ClinicResourceAssigner.UsarCabecera(tieneCabecera: false, esNuevo: false, roll: 0.0, runProb: 0.90));
+    }
+
+    // ── ResolvePool (fail-fast) ───────────────────────────────────────────────
+
+    private static ConsultorioEntry Entry(string loc, string id) =>
+        new() { LocationUuid = loc, MedicoIdentifier = id, MedicoNombre = id };
+
+    [Fact]
+    public void ResolvePool_TodosResueltos_DevuelvePares()
+    {
+        var pool = ClinicResourceAssigner.ResolvePool(
+        [
+            (Entry("loc-1", "MED-1"), "prov-1"),
+            (Entry("loc-2", "MED-2"), "prov-2"),
+        ]);
+
+        Assert.Equal(2, pool.Count);
+        Assert.Equal(("loc-1", "prov-1"), pool[0]);
+        Assert.Equal(("loc-2", "prov-2"), pool[1]);
+    }
+
+    [Fact]
+    public void ResolvePool_ConMedicoNoAsegurado_Lanza()
+    {
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            ClinicResourceAssigner.ResolvePool(
+            [
+                (Entry("loc-1", "MED-1"), "prov-1"),
+                (Entry("loc-2", "MED-2"), null),
+            ]));
+
+        Assert.Contains("MED-2", ex.Message);
+    }
+
+    [Fact]
+    public void ResolvePool_ListaVacia_DevuelveVacioSinLanzar()
+    {
+        var pool = ClinicResourceAssigner.ResolvePool([]);
+        Assert.Empty(pool);
     }
 }

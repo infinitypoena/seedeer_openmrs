@@ -15,6 +15,8 @@ public class EpidemiologySelector
     private readonly Dictionary<string, HashSet<string>> _categoriasPorClima;
     /// <summary>comun (true/false) → categorías que tienen ≥1 diagnóstico con ese flag.</summary>
     private readonly Dictionary<bool, HashSet<string>> _categoriasPorComun;
+    /// <summary>categoría → categorías clínicamente afines (clusters de comorbilidad, desde catálogo).</summary>
+    private readonly Dictionary<string, List<string>> _afinidades;
 
     public EpidemiologySelector(CatalogLoader catalogs, SimulationSettings settings)
     {
@@ -24,6 +26,9 @@ public class EpidemiologySelector
         _seasonalBoost = settings.Climate.SeasonalBoost;
         _commonProbMin = settings.CommonProbMin;
         _commonProbMax = settings.CommonProbMax;
+
+        _afinidades = _catalogs.Afinidades.ToDictionary(
+            a => a.Categoria, a => a.Afines, StringComparer.OrdinalIgnoreCase);
 
         _categoriasPorClima = new Dictionary<string, HashSet<string>>();
         _categoriasPorComun = new Dictionary<bool, HashSet<string>> { [true] = [], [false] = [] };
@@ -166,7 +171,7 @@ public class EpidemiologySelector
     {
         var afines = new HashSet<string>();
         foreach (var cat in excluir)
-            if (_comorbidity.Affinities.TryGetValue(cat, out var lista))
+            if (_afinidades.TryGetValue(cat, out var lista))
                 foreach (var a in lista) afines.Add(a);
 
         var boostCats = climate is not null && _categoriasPorClima.TryGetValue(climate, out var s)

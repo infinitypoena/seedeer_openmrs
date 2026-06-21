@@ -18,6 +18,7 @@ public class ClinicResourceAssigner
     private readonly OpenMrsRestClient _client;
     private readonly OpenMrsSettings _settings;
     private readonly SimulationSettings _simSettings;
+    private readonly CatalogLoader _catalogs;
     private readonly ILogger<ClinicResourceAssigner> _logger;
     private readonly Random _rng = new();
 
@@ -29,11 +30,13 @@ public class ClinicResourceAssigner
         OpenMrsRestClient client,
         OpenMrsSettings settings,
         SimulationSettings simSettings,
+        CatalogLoader catalogs,
         ILogger<ClinicResourceAssigner> logger)
     {
         _client      = client;
         _settings    = settings;
         _simSettings = simSettings;
+        _catalogs    = catalogs;
         _logger      = logger;
     }
 
@@ -43,21 +46,24 @@ public class ClinicResourceAssigner
             ? _settings.Defaults.LocationUuid
             : _settings.Defaults.RegistrationLocationUuid;
 
-    /// <summary>Asegura que existan los médicos de cada consultorio y arma los pares (ubicación, médico).</summary>
+    /// <summary>
+    /// Asegura que existan los médicos de cada consultorio y arma los pares (ubicación, médico).
+    /// Fail-fast: si algún médico del catálogo no se puede asegurar, lanza y aborta la corrida
+    /// (antes de crear datos) para que no queden encuentros firmados por un proveedor inexistente.
+    /// </summary>
     public async Task InitializeAsync(CancellationToken ct)
     {
-        var pares = new List<(string, string)>();
-        foreach (var c in _settings.Defaults.Consultorios)
+        var resueltos = new List<(Models.Catalogs.ConsultorioEntry Entry, string? ProviderUuid)>();
+        foreach (var c in _catalogs.Consultorios)
         {
             if (string.IsNullOrWhiteSpace(c.LocationUuid) || string.IsNullOrWhiteSpace(c.MedicoIdentifier))
                 continue;
 
             var providerUuid = await EnsureMedicoAsync(c, ct);
-            if (providerUuid is not null)
-                pares.Add((c.LocationUuid, providerUuid));
+            resueltos.Add((c, providerUuid));
         }
 
-        _consultorios = pares;
+        _consultorios = ResolvePool(resueltos);
 
         // Prob. de cabecera de la corrida: una vez, uniforme en [Min, Max], inclinada al "sí"
         var min = _simSettings.MedicoCabeceraProbMin;
@@ -116,10 +122,32 @@ public class ClinicResourceAssigner
         return consultorios[nextInt(consultorios.Count)];
     }
 
+    /// <summary>
+    /// Construye el pool (ubicación, médico) a partir de los médicos resueltos. Fail-fast:
+    /// si algún consultorio quedó sin proveedor (no se pudo crear/encontrar), lanza
+    /// <see cref="InvalidOperationException"/> listando los identificadores. Lista vacía
+    /// (sin catálogo) → pool vacío sin lanzar (modo proveedor único por defecto). Método puro/testeable.
+    /// </summary>
+    public static List<(string Location, string Provider)> ResolvePool(
+        IReadOnlyList<(Models.Catalogs.ConsultorioEntry Entry, string? ProviderUuid)> resueltos)
+    {
+        var faltantes = resueltos
+            .Where(r => string.IsNullOrEmpty(r.ProviderUuid))
+            .Select(r => r.Entry.MedicoIdentifier)
+            .ToList();
+
+        if (faltantes.Count > 0)
+            throw new InvalidOperationException(
+                $"No se pudieron asegurar {faltantes.Count} médico(s) del catálogo consultorios.csv: " +
+                $"{string.Join(", ", faltantes)}. Abortando la corrida (revisa el log para el error REST).");
+
+        return resueltos.Select(r => (r.Entry.LocationUuid, r.ProviderUuid!)).ToList();
+    }
+
     // ── Helpers privados ──────────────────────────────────────────────────────
 
     /// <summary>UUID del provider con ese identificador; lo crea (person + provider) si no existe.</summary>
-    private async Task<string?> EnsureMedicoAsync(ConsultorioSettings c, CancellationToken ct)
+    private async Task<string?> EnsureMedicoAsync(Models.Catalogs.ConsultorioEntry c, CancellationToken ct)
     {
         try
         {
@@ -135,7 +163,7 @@ public class ClinicResourceAssigner
             var personJson = await _client.PostAsync("person", new
             {
                 names  = new[] { new { givenName = given, familyName = family, preferred = true } },
-                gender = "M"
+                gender = string.IsNullOrWhiteSpace(c.MedicoGenero) ? "M" : c.MedicoGenero
             }, ct);
             var personUuid = JsonSerializer.Deserialize<JsonElement>(personJson).GetProperty("uuid").GetString();
 

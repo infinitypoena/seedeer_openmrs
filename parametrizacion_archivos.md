@@ -28,10 +28,6 @@ Todo el comportamiento del simulador se controla desde aquí.
       "PatientIdentifierTypeUuid": "05a29f94-c0ed-11e2-94be-8c13b969e334",
       "LocationUuid": "44c3efb0-2583-4c80-a79e-1f756a03c0a1",
       "RegistrationLocationUuid": "c1000000-0000-0000-0000-000000000002",
-      "Consultorios": [
-        { "LocationUuid": "c1000000-0000-0000-0000-000000000011", "MedicoIdentifier": "SIM-MED-C1", "MedicoNombre": "Carlos Méndez" },
-        { "LocationUuid": "c1000000-0000-0000-0000-000000000012", "MedicoIdentifier": "SIM-MED-C2", "MedicoNombre": "Ana Rivas" }
-      ],
       "VisitTypeUuid": "7b0f5697-27e3-40c4-8bae-f4049abfb4ed",
       "VitalsEncounterTypeUuid": "67a71486-1a54-468f-ac3e-7091a9a79584",
       "ConsultaEncounterTypeUuid": "92a52cce-c614-4046-b5f2-07f32f0bcf91",
@@ -83,14 +79,7 @@ Todo el comportamiento del simulador se controla desde aquí.
       "MaxAdditional": 2,
       "SecondExtraProbability": 0.25,
       "AffinityBoost": 4.0,
-      "AgeScaling": { "0-14": 0.3, "15-29": 0.5, "30-44": 0.8, "45-64": 1.3, "65+": 1.8 },
-      "Affinities": {
-        "diabetes": [ "cardiovascular", "endocrino" ],
-        "cardiovascular": [ "diabetes", "endocrino" ],
-        "endocrino": [ "diabetes", "cardiovascular" ],
-        "respiratorio": [ "infeccioso" ],
-        "infeccioso": [ "respiratorio" ]
-      }
+      "AgeScaling": { "0-14": 0.3, "15-29": 0.5, "30-44": 0.8, "45-64": 1.3, "65+": 1.8 }
     }
   }
 }
@@ -106,7 +95,7 @@ Todo el comportamiento del simulador se controla desde aquí.
 | `Locale` | string | Locale de Bogus. `"es"` = español latinoamericano. |
 | `RandomSeed` | int | Semilla para reproducibilidad. Mismo seed = misma simulación. |
 | `CommonProbMin` / `CommonProbMax` | float (0-1) | Factor inicial: cada corrida sortea su P(común) en `[min,max]` (def. 0.75–0.95) → el principal cae mayormente en el pool `comun=true`, variando entre corridas. |
-| `MedicoCabeceraProbMin` / `MedicoCabeceraProbMax` | float (0-1) | Médico de cabecera: cada corrida sortea en `[min,max]` (def. 0.70–0.90) la prob. de que un recurrente vuelva con el mismo médico/consultorio de su primera visita; si no, cae con otro. Requiere `Defaults.Consultorios`. |
+| `MedicoCabeceraProbMin` / `MedicoCabeceraProbMax` | float (0-1) | Médico de cabecera: cada corrida sortea en `[min,max]` (def. 0.70–0.90) la prob. de que un recurrente vuelva con el mismo médico/consultorio de su primera visita; si no, cae con otro. Requiere `catalogs/consultorios.csv`. |
 | `ClinicType` | string | Perfil del establecimiento: `ConsultaExterna`, `HospitalUrgencias`, `CentroComunitario`. Referencia semántica, no fuerza valores. |
 | `HorarioAtencion.PicoAM/PM` | objeto | Bloque horario pico con peso (% de atenciones). El resto se distribuye uniformemente. |
 | `DemographicProfile.AgeGroups` | array | Distribución etaria. Los `Weight` se normalizan al 100%. |
@@ -129,7 +118,7 @@ Todo el comportamiento del simulador se controla desde aquí.
 | `Comorbidity.SecondExtraProbability` | float (0-1) | Dado que ya hay una comorbilidad, probabilidad de añadir una segunda. |
 | `Comorbidity.AffinityBoost` | float | Multiplicador del peso de las categorías clínicamente afines al elegir la enfermedad adicional. |
 | `Comorbidity.AgeScaling` | objeto | Multiplicador de `BaseProbability` por grupo de edad (la multimorbilidad crece con la edad). El producto se limita a 0.95. |
-| `Comorbidity.Affinities` | objeto | Clusters de comorbilidad: por cada categoría, lista de categorías clínicamente asociadas que reciben `AffinityBoost`. |
+| _Afinidades de comorbilidad_ | catálogo | Movido a `catalogs/comorbilidad_afinidades.csv` (ver §10). Clusters categoría→afines que reciben `AffinityBoost`. |
 
 > **Comorbilidad en una sola visita:** el primario se elige como antes; luego, con probabilidad `BaseProbability × AgeScaling[grupo]`, se añaden 1..`MaxAdditional` diagnósticos de **otras** categorías (priorizando las afines). Todos se registran en el mismo encounter (`rank=1` primario, `rank=2` secundarios) y las órdenes de laboratorio y prescripciones cubren las categorías de **todas** las enfermedades del paciente.
 
@@ -146,13 +135,12 @@ Todo el comportamiento del simulador se controla desde aquí.
 | Parámetro | Descripción | Cómo obtenerlo |
 |-----------|-------------|----------------|
 | `PatientIdentifierTypeUuid` | UUID del tipo de ID "OpenMRS ID" | `GET /ws/rest/v1/patientidentifiertype` |
-| `LocationUuid` | Ubicación de **respaldo** si no hay `Consultorios` | `GET /ws/rest/v1/location` |
+| `LocationUuid` | Ubicación de **respaldo** si no hay `catalogs/consultorios.csv` | `GET /ws/rest/v1/location` |
 | `RegistrationLocationUuid` | Ubicación de registro/admisión (Recepción) del identificador del paciente | `GET /ws/rest/v1/location` |
-| `Consultorios` | Lista de consultorios (`LocationUuid` + `MedicoIdentifier` + `MedicoNombre`). Cada visita rota entre ellos; los médicos se crean idempotentemente por identificador. Vacío = un solo recurso (comportamiento previo). | `GET /ws/rest/v1/location` y `/provider` |
 | `VisitTypeUuid` | UUID del tipo de visita "Outpatient" | `GET /ws/rest/v1/visittype` |
 | `VitalsEncounterTypeUuid` | UUID del tipo de encuentro "Vitals" | `GET /ws/rest/v1/encountertype` |
 | `ConsultaEncounterTypeUuid` | UUID del tipo de encuentro "Consultation" | `GET /ws/rest/v1/encountertype` |
-| `ProviderUuid` | Médico de **respaldo** si no hay `Consultorios` | `GET /ws/rest/v1/provider` |
+| `ProviderUuid` | Médico de **respaldo** si no hay `catalogs/consultorios.csv` | `GET /ws/rest/v1/provider` |
 
 ---
 
@@ -345,7 +333,57 @@ digestivo,Dolor abdominal fuerte después de comer
 
 ---
 
-## 9. Coherencia entre archivos — Cómo se conectan
+## 9. catalogs/consultorios.csv — Consultorios y su médico
+
+**Opcional.** Define los consultorios entre los que rotan las visitas; cada uno con su médico, que se
+crea de forma **idempotente** en OpenMRS al iniciar la corrida (se busca por `medico_identifier`; si
+no existe se crea con `medico_nombre`). Si el archivo falta, el seeder cae al
+`Defaults.LocationUuid`/`ProviderUuid` (un solo recurso).
+
+```csv
+location_uuid,medico_identifier,medico_nombre,medico_genero
+c1000000-0000-0000-0000-000000000011,SIM-MED-C1,Carlos Méndez,M
+c1000000-0000-0000-0000-000000000012,SIM-MED-C2,Ana Rivas,F
+```
+
+| Columna | Descripción |
+|---------|-------------|
+| `location_uuid` | UUID de la ubicación (Visit Location) del consultorio — `GET /location`. |
+| `medico_identifier` | Identificador único del proveedor/médico (idempotencia). Prefijo `SIM-` recomendado. |
+| `medico_nombre` | Nombre del médico a crear si no existe (ej. "Carlos Méndez"). |
+| `medico_genero` | Género (`M` o `F`) con que se crea la persona en OpenMRS. Vacío = `M`. |
+
+> Los médicos son **datos de referencia** (personal): se reutilizan entre corridas y `DELETE
+> /api/seed/clear` **no** los elimina. El registro del paciente va a `Defaults.RegistrationLocationUuid`
+> (Recepción), no a un consultorio. Los recurrentes vuelven a su médico de cabecera según
+> `MedicoCabeceraProbMin/Max`.
+
+> **Fail-fast:** si un médico del catálogo no se puede crear ni encontrar al iniciar la corrida, el
+> seeder **aborta** con un error claro (estado `error` en `GET /api/seed/progress/{runId}`, listando los
+> identificadores) **antes** de crear datos — así no quedan encuentros firmados por "Unknown Provider".
+
+---
+
+## 10. catalogs/comorbilidad_afinidades.csv — Clusters de comorbilidad
+
+**Opcional.** Por cada categoría, las categorías clínicamente afines que reciben el `AffinityBoost`
+al elegir una comorbilidad. Así un diabético tiende a presentar enfermedad cardiovascular/endocrina.
+Si el archivo falta, las comorbilidades se eligen sin sesgo de afinidad.
+
+```csv
+categoria,afines
+diabetes,cardiovascular|endocrino|neurologico
+respiratorio,infeccioso
+```
+
+| Columna | Descripción |
+|---------|-------------|
+| `categoria` | Categoría origen (una de las 13). |
+| `afines` | Categorías afines **separadas por `\|`** (no por coma, que es el delimitador CSV). |
+
+---
+
+## 11. Coherencia entre archivos — Cómo se conectan
 
 ```
 appsettings.json
@@ -402,7 +440,7 @@ motivos_consulta.csv
 
 ---
 
-## 10. Vitales coherentes con diagnóstico
+## 12. Vitales coherentes con diagnóstico
 
 Los signos vitales del encuentro VITALS se ajustan según la categoría del diagnóstico:
 
@@ -428,7 +466,7 @@ Rangos base (sin ajuste por dx):
 
 ---
 
-## 11. Idempotencia y limpieza
+## 13. Idempotencia y limpieza
 
 Todos los registros creados por el simulador son identificables:
 - **Pacientes**: identificador con prefijo `SIM-` (ej: `SIM-A3F8C201`)

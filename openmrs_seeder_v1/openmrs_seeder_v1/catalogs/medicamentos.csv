@@ -21,3 +21,11 @@ b0ce9018-f569-4380-a233-97efb9d2a168,77696AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hidroc
 3b3e2029-84c4-4472-85b4-a1f1af0885b6,aee5f376-e00c-46f3-83ef-3759e54f85a1,Insulina,100UI/ml,160240AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,false,false,true,false,false,false,false,false,false,false,false,false,false
 0e8496ea-c8f7-4f08-abef-994e3c3243a2,74745AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Diazepam,5mg,160240AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,false,false,false,false,false,false,false,false,true,false,true,false,false
 4eb11496-3275-4087-ab5c-b1e4ea885e99,76613AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Acido folico,5mg,160240AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,false,false,false,false,false,false,false,true,false,false,false,true,false
+e5e8b45b-83db-4a9d-8cd4-398c4e8081fa,3cba8193-4ffd-4cc3-828b-3269da016da5,Simvastatina,20mg,160240AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,false,true,false,false,false,false,false,false,false,false,false,false,false
+02dd2a8e-1a8f-49cb-bc06-daf9e1af16ba,71617AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Aspirina (antiagregante),81mg,160240AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,false,true,false,false,false,false,false,false,false,false,false,false,false
+dae4050d-c309-4a20-a62e-e84d192e1e87,316441ec-c0fd-44bc-a040-c68f4da8d228,Atenolol,50mg,160240AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,false,true,false,false,false,false,false,false,false,false,false,false,false
+912e4679-7758-403e-8441-5b528561f7bc,da550975-a6c3-47f2-b568-1e2e749644c7,Glipizida,6mg,160240AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,false,false,true,false,false,false,false,false,false,false,false,false,false
+2f76266a-a841-4147-9401-c6b8409b8ccc,32d6f1a8-7a0d-46f7-845a-84e3a27e686e,Fluconazol,150mg,160240AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,false,false,false,false,false,false,false,false,false,true,false,true,false
+5b420f3b-7584-4934-b457-91d6f94ff6b7,73e9e187-7164-4e0a-bb36-0a7178406288,Ketoconazol,200mg,160240AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,false,false,false,false,false,false,false,false,false,true,false,false,false
+33558e37-627d-475f-b18f-5e5baf0ac0a6,1d4d3f02-ccf9-4c9e-b321-486b75c50924,Difenhidramina,25mg,160240AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,true,false,false,false,false,false,false,false,false,true,true,false,false
+12dd160a-2ab4-4b95-900c-40ebf6ccc55f,b571adbe-388f-4219-be01-343738d3ed80,Doxiciclina,100mg,160240AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,true,false,false,false,false,false,true,false,false,true,false,false,false

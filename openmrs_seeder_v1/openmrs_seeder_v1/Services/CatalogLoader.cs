@@ -12,6 +12,8 @@ public class CatalogLoader
     public IReadOnlyList<AlergenoEntry> Alergenos { get; private set; } = [];
     public IReadOnlyList<MotivoConsultaEntry> MotivosConsulta { get; private set; } = [];
     public IReadOnlyList<ClimaEntry> Clima { get; private set; } = [];
+    public IReadOnlyList<ConsultorioEntry> Consultorios { get; private set; } = [];
+    public IReadOnlyList<AfinidadEntry> Afinidades { get; private set; } = [];
 
     /// <summary>Carga directa desde listas — usado en tests unitarios.</summary>
     public void LoadFromLists(
@@ -22,7 +24,9 @@ public class CatalogLoader
         IEnumerable<Models.Catalogs.ExamenClinicoEntry> examenesClinicos,
         IEnumerable<Models.Catalogs.AlergenoEntry> alergenos,
         IEnumerable<Models.Catalogs.MotivoConsultaEntry> motivosConsulta,
-        IEnumerable<Models.Catalogs.ClimaEntry>? clima = null)
+        IEnumerable<Models.Catalogs.ClimaEntry>? clima = null,
+        IEnumerable<Models.Catalogs.ConsultorioEntry>? consultorios = null,
+        IEnumerable<Models.Catalogs.AfinidadEntry>? afinidades = null)
     {
         EpidemiologyProfile = epidemiology.ToList().AsReadOnly();
         Diagnosticos        = diagnosticos.ToList().AsReadOnly();
@@ -32,6 +36,8 @@ public class CatalogLoader
         Alergenos           = alergenos.ToList().AsReadOnly();
         MotivosConsulta     = motivosConsulta.ToList().AsReadOnly();
         Clima               = (clima ?? []).ToList().AsReadOnly();
+        Consultorios        = (consultorios ?? []).ToList().AsReadOnly();
+        Afinidades          = (afinidades ?? []).ToList().AsReadOnly();
     }
 
     public void Load(string catalogsPath)
@@ -44,6 +50,8 @@ public class CatalogLoader
         Alergenos           = LoadCsv(Path.Combine(catalogsPath, "alergenos.csv"),              ParseAlergeno);
         MotivosConsulta     = LoadCsv(Path.Combine(catalogsPath, "motivos_consulta.csv"),       ParseMotivoConsulta);
         Clima               = LoadCsv(Path.Combine(catalogsPath, "clima.csv"),                  ParseClima);
+        Consultorios        = LoadCsv(Path.Combine(catalogsPath, "consultorios.csv"),           ParseConsultorio);
+        Afinidades          = LoadCsv(Path.Combine(catalogsPath, "comorbilidad_afinidades.csv"), ParseAfinidad);
     }
 
     private static IReadOnlyList<T> LoadCsv<T>(string path, Func<Dictionary<string, string>, T?> parser)
@@ -213,5 +221,21 @@ public class CatalogLoader
     {
         Categoria = S(row, "categoria"),
         Texto     = S(row, "texto")
+    };
+
+    private static ConsultorioEntry ParseConsultorio(Dictionary<string, string> row) => new()
+    {
+        LocationUuid     = S(row, "location_uuid"),
+        MedicoIdentifier = S(row, "medico_identifier"),
+        MedicoNombre     = S(row, "medico_nombre"),
+        MedicoGenero     = S(row, "medico_genero").Equals("F", StringComparison.OrdinalIgnoreCase) ? "F" : "M"
+    };
+
+    private static AfinidadEntry ParseAfinidad(Dictionary<string, string> row) => new()
+    {
+        Categoria = S(row, "categoria"),
+        Afines    = S(row, "afines")
+            .Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .ToList()
     };
 }

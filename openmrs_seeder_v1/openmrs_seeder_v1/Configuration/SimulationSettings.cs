@@ -80,23 +80,7 @@ public class ComorbiditySettings
     {
         ["0-14"] = 0.3, ["15-29"] = 0.5, ["30-44"] = 0.8, ["45-64"] = 1.3, ["65+"] = 1.8
     };
-    /// <summary>Categorías clínicamente asociadas (clusters de comorbilidad).</summary>
-    public Dictionary<string, List<string>> Affinities { get; set; } = new()
-    {
-        ["diabetes"]       = ["cardiovascular", "endocrino", "neurologico"],
-        ["cardiovascular"] = ["diabetes", "endocrino", "neurologico"],
-        ["endocrino"]      = ["diabetes", "cardiovascular"],
-        ["respiratorio"]   = ["infeccioso"],
-        ["infeccioso"]     = ["respiratorio", "digestivo", "dermatologico"],
-        ["digestivo"]      = ["infeccioso"],
-        ["neurologico"]    = ["cardiovascular", "diabetes", "salud_mental"],
-        ["salud_mental"]   = ["neurologico"],
-        ["dermatologico"]  = ["infeccioso"],
-        ["ginecoobstetrico"] = ["urologico"],
-        ["urologico"]      = ["ginecoobstetrico"],
-        ["osteomuscular"]  = ["trauma"],
-        ["trauma"]         = ["osteomuscular"],
-    };
+    // Las afinidades (clusters de comorbilidad) viven ahora en catalogs/comorbilidad_afinidades.csv
 }
 
 public class HorarioAtencionSettings

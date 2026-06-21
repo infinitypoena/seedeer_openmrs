@@ -64,7 +64,13 @@ public class EpidemiologySelectorTests
             },
         };
 
-        catalogs.LoadFromLists(epidemiology, diagnosticos, [], [], [], [], []);
+        var afinidades = new List<AfinidadEntry>
+        {
+            new() { Categoria = "diabetes",       Afines = ["cardiovascular", "endocrino"] },
+            new() { Categoria = "cardiovascular", Afines = ["diabetes", "endocrino"] },
+        };
+
+        catalogs.LoadFromLists(epidemiology, diagnosticos, [], [], [], [], [], afinidades: afinidades);
 
         settings ??= new SimulationSettings { RandomSeed = 42 };
         var selector = new EpidemiologySelector(catalogs, settings);

@@ -163,4 +163,74 @@ public class CatalogLoaderTests
         }
         finally { Directory.Delete(dir, recursive: true); }
     }
+
+    [Fact]
+    public void Load_ConsultoriosParsean()
+    {
+        var dir = CreateTempDir(new()
+        {
+            ["consultorios.csv"] =
+                "location_uuid,medico_identifier,medico_nombre,medico_genero\n" +
+                "loc-11,SIM-MED-C1,Carlos Méndez,M\n" +
+                "loc-12,SIM-MED-C2,Ana Rivas,F\n",
+        });
+
+        try
+        {
+            var loader = new CatalogLoader();
+            loader.Load(dir);
+
+            Assert.Equal(2, loader.Consultorios.Count);
+            Assert.Equal("loc-11",      loader.Consultorios[0].LocationUuid);
+            Assert.Equal("SIM-MED-C1",  loader.Consultorios[0].MedicoIdentifier);
+            Assert.Equal("Carlos Méndez", loader.Consultorios[0].MedicoNombre);
+            Assert.Equal("M", loader.Consultorios[0].MedicoGenero);
+            Assert.Equal("F", loader.Consultorios[1].MedicoGenero);
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [Fact]
+    public void Load_ConsultorioSinGenero_DefaultM()
+    {
+        var dir = CreateTempDir(new()
+        {
+            ["consultorios.csv"] =
+                "location_uuid,medico_identifier,medico_nombre\n" +
+                "loc-11,SIM-MED-C1,Carlos Méndez\n",
+        });
+
+        try
+        {
+            var loader = new CatalogLoader();
+            loader.Load(dir);
+
+            Assert.Equal("M", loader.Consultorios[0].MedicoGenero);
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [Fact]
+    public void Load_AfinidadesParteAfinesPorPipe()
+    {
+        var dir = CreateTempDir(new()
+        {
+            ["comorbilidad_afinidades.csv"] =
+                "categoria,afines\n" +
+                "diabetes,cardiovascular|endocrino|neurologico\n" +
+                "respiratorio,infeccioso\n",
+        });
+
+        try
+        {
+            var loader = new CatalogLoader();
+            loader.Load(dir);
+
+            Assert.Equal(2, loader.Afinidades.Count);
+            Assert.Equal("diabetes", loader.Afinidades[0].Categoria);
+            Assert.Equal(new[] { "cardiovascular", "endocrino", "neurologico" }, loader.Afinidades[0].Afines);
+            Assert.Single(loader.Afinidades[1].Afines);
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
 }
