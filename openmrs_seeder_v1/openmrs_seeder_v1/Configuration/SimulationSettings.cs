@@ -13,6 +13,14 @@ public class SimulationSettings
     /// </summary>
     public double CommonProbMin { get; set; } = 0.75;
     public double CommonProbMax { get; set; } = 0.95;
+    /// <summary>
+    /// Banda de probabilidad de que un paciente recurrente sea atendido por su MISMO médico de
+    /// cabecera (el de su primera visita), en su mismo consultorio. Cada corrida sortea su valor
+    /// uniformemente en [Min, Max], inclinado al "sí" (def. 0.70–0.90). Los pacientes nuevos siempre
+    /// estrenan médico de cabecera; con probabilidad (1-valor) un recurrente cae con otro médico.
+    /// </summary>
+    public double MedicoCabeceraProbMin { get; set; } = 0.70;
+    public double MedicoCabeceraProbMax { get; set; } = 0.90;
     public string Locale { get; set; } = "es";
     public int RandomSeed { get; set; } = 42;
     public string ClinicType { get; set; } = "ConsultaExterna";

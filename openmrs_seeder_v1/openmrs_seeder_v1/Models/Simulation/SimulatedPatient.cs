@@ -54,4 +54,8 @@ public class SimulatedPatient
     public string? AssignedLocationUuid { get; set; }
     /// <summary>Médico (provider) asignado a esta visita. Null = usar ProviderUuid por defecto.</summary>
     public string? AssignedProviderUuid { get; set; }
+    /// <summary>Consultorio del médico de cabecera (fijado en la primera visita). Las visitas recurrentes lo heredan.</summary>
+    public string? CabeceraLocationUuid { get; set; }
+    /// <summary>Médico de cabecera del paciente (el de su primera visita). Las recurrentes vuelven a él con alta probabilidad.</summary>
+    public string? CabeceraProviderUuid { get; set; }
 }

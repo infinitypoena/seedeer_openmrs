@@ -48,4 +48,31 @@ public class ClinicResourceAssignerTests
             Assert.Equal(Consultorios[idx].Provider, prov);
         }
     }
+
+    // ── Médico de cabecera ────────────────────────────────────────────────────
+
+    [Fact]
+    public void UsarCabecera_NuevoSiempreEstrena()
+    {
+        // Paciente nuevo: nunca usa cabecera (la estrena en esta visita), aunque el roll sea bajo
+        Assert.False(ClinicResourceAssigner.UsarCabecera(tieneCabecera: false, esNuevo: true, roll: 0.0, runProb: 0.9));
+    }
+
+    [Fact]
+    public void UsarCabecera_RecurrenteConRollBajo_VuelveASuCabecera()
+    {
+        Assert.True(ClinicResourceAssigner.UsarCabecera(tieneCabecera: true, esNuevo: false, roll: 0.10, runProb: 0.80));
+    }
+
+    [Fact]
+    public void UsarCabecera_RecurrenteConRollAlto_CaeConOtroMedico()
+    {
+        Assert.False(ClinicResourceAssigner.UsarCabecera(tieneCabecera: true, esNuevo: false, roll: 0.95, runProb: 0.80));
+    }
+
+    [Fact]
+    public void UsarCabecera_RecurrenteSinCabecera_NoLaUsa()
+    {
+        Assert.False(ClinicResourceAssigner.UsarCabecera(tieneCabecera: false, esNuevo: false, roll: 0.0, runProb: 0.90));
+    }
 }

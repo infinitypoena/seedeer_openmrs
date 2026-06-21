@@ -143,7 +143,8 @@ objeto ya existente en OpenMRS que el simulador referencia al crear datos.
 Para que la data no quede toda firmada por un solo proveedor en una sola ubicación, se define una
 lista de **consultorios**, cada uno con su **médico**. En cada visita se elige un consultorio al azar
 y todos sus encuentros/órdenes quedan en esa ubicación y firmados por ese médico. El registro del
-paciente va a `RegistrationLocationUuid` (Recepción), no a un consultorio.
+paciente va a `RegistrationLocationUuid` (Recepción), no a un consultorio. Los pacientes
+**recurrentes** tienden a volver con su **médico de cabecera** (ver `MedicoCabeceraProbMin/Max` en §4.1).
 
 ```json
 "Consultorios": [
@@ -192,6 +193,7 @@ tocar código.
 | `Locale` | string | Idioma/región para generar nombres y direcciones (Bogus). `"es"` = español latinoamericano. |
 | `RandomSeed` | entero | Semilla de aleatoriedad. **Con la misma semilla obtienes exactamente la misma simulación** (reproducibilidad). Cámbiala para generar un conjunto de datos distinto. |
 | `CommonProbMin` / `CommonProbMax` | float (0-1) | **Factor inicial de selección.** Cada corrida sortea su probabilidad de "común" uniformemente en `[CommonProbMin, CommonProbMax]` (por defecto 0.75–0.95), así la proporción **varía entre corridas** pero siempre se inclina a lo común. Con esa probabilidad, el diagnóstico principal se elige del pool `comun=true`; el resto del tiempo de las raras/críticas. La etapa 2 (categoría + diagnóstico por peso) opera **dentro** del pool elegido con los pesos actuales. Sube `CommonProbMin` para inclinar aún más a lo común. |
+| `MedicoCabeceraProbMin` / `MedicoCabeceraProbMax` | float (0-1) | **Médico de cabecera.** Cada corrida sortea en `[min, max]` (por defecto 0.70–0.90, inclinado al "sí") la probabilidad de que un paciente **recurrente** vuelva con el **mismo médico** (y consultorio) de su primera visita. El resto del tiempo cae con otro médico. Los pacientes nuevos siempre estrenan cabecera. Requiere `OpenMRS.Defaults.Consultorios`. |
 | `ClinicType` | string | Perfil del establecimiento (`ConsultaExterna`, `HospitalUrgencias`, `CentroComunitario`). Es una etiqueta semántica orientativa; no fuerza valores por sí sola. |
 
 ### 4.2 HorarioAtencion

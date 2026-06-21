@@ -162,6 +162,9 @@ public class SeedOrchestrator
                     // Compartir historial de órdenes y lista de problemas con el paciente original
                     OrderedConcepts = base_.OrderedConcepts,
                     ProblemListConcepts = base_.ProblemListConcepts,
+                    // Heredar el médico de cabecera (asignado en la primera visita del paciente)
+                    CabeceraLocationUuid = base_.CabeceraLocationUuid,
+                    CabeceraProviderUuid = base_.CabeceraProviderUuid,
                     ClimaEstacion = estacion,
                     TempAmbienteC = tempC,
                     // Diagnóstico puede cambiar en visita recurrente
@@ -202,10 +205,9 @@ public class SeedOrchestrator
         Guid runId,
         CancellationToken ct)
     {
-        // Consultorio + médico de esta visita (rota entre los configurados)
-        var (loc, prov) = _clinicResources.Assign();
-        patient.AssignedLocationUuid = loc;
-        patient.AssignedProviderUuid = prov;
+        // Consultorio + médico de esta visita: nuevos estrenan cabecera; recurrentes vuelven a la suya
+        // con alta probabilidad (o caen con otro médico).
+        _clinicResources.AssignVisit(patient);
 
         var visitUuid = await _visitSeeder.CreateAsync(patient, ct);
         if (visitUuid is null)

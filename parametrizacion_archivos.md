@@ -106,6 +106,7 @@ Todo el comportamiento del simulador se controla desde aquí.
 | `Locale` | string | Locale de Bogus. `"es"` = español latinoamericano. |
 | `RandomSeed` | int | Semilla para reproducibilidad. Mismo seed = misma simulación. |
 | `CommonProbMin` / `CommonProbMax` | float (0-1) | Factor inicial: cada corrida sortea su P(común) en `[min,max]` (def. 0.75–0.95) → el principal cae mayormente en el pool `comun=true`, variando entre corridas. |
+| `MedicoCabeceraProbMin` / `MedicoCabeceraProbMax` | float (0-1) | Médico de cabecera: cada corrida sortea en `[min,max]` (def. 0.70–0.90) la prob. de que un recurrente vuelva con el mismo médico/consultorio de su primera visita; si no, cae con otro. Requiere `Defaults.Consultorios`. |
 | `ClinicType` | string | Perfil del establecimiento: `ConsultaExterna`, `HospitalUrgencias`, `CentroComunitario`. Referencia semántica, no fuerza valores. |
 | `HorarioAtencion.PicoAM/PM` | objeto | Bloque horario pico con peso (% de atenciones). El resto se distribuye uniformemente. |
 | `DemographicProfile.AgeGroups` | array | Distribución etaria. Los `Weight` se normalizan al 100%. |

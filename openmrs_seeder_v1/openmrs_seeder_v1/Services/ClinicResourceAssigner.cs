@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using OpenmrsSeeder.Clients;
 using OpenmrsSeeder.Configuration;
+using OpenmrsSeeder.Models.Simulation;
 
 namespace OpenmrsSeeder.Services;
 
@@ -16,19 +17,24 @@ public class ClinicResourceAssigner
 {
     private readonly OpenMrsRestClient _client;
     private readonly OpenMrsSettings _settings;
+    private readonly SimulationSettings _simSettings;
     private readonly ILogger<ClinicResourceAssigner> _logger;
     private readonly Random _rng = new();
 
     private List<(string Location, string Provider)> _consultorios = [];
+    /// <summary>Prob. de la corrida de que un recurrente vuelva con su médico de cabecera.</summary>
+    private double _runCabeceraProb;
 
     public ClinicResourceAssigner(
         OpenMrsRestClient client,
         OpenMrsSettings settings,
+        SimulationSettings simSettings,
         ILogger<ClinicResourceAssigner> logger)
     {
-        _client   = client;
-        _settings = settings;
-        _logger   = logger;
+        _client      = client;
+        _settings    = settings;
+        _simSettings = simSettings;
+        _logger      = logger;
     }
 
     /// <summary>Ubicación de registro/admisión para el identificador del paciente (fallback: LocationUuid).</summary>
@@ -52,8 +58,47 @@ public class ClinicResourceAssigner
         }
 
         _consultorios = pares;
-        _logger.LogInformation("[Clinic] {N} consultorio(s) listos con médico asignado", _consultorios.Count);
+
+        // Prob. de cabecera de la corrida: una vez, uniforme en [Min, Max], inclinada al "sí"
+        var min = _simSettings.MedicoCabeceraProbMin;
+        var max = Math.Max(min, _simSettings.MedicoCabeceraProbMax);
+        _runCabeceraProb = min + _rng.NextDouble() * (max - min);
+
+        _logger.LogInformation("[Clinic] {N} consultorio(s) listos | P(médico de cabecera) de la corrida: {P:P0}",
+            _consultorios.Count, _runCabeceraProb);
     }
+
+    /// <summary>
+    /// Asigna consultorio + médico a la visita y mantiene el médico de cabecera del paciente:
+    /// los nuevos estrenan cabecera; los recurrentes vuelven a su cabecera con probabilidad
+    /// <c>_runCabeceraProb</c>, o caen con otro médico en caso contrario.
+    /// </summary>
+    public void AssignVisit(SimulatedPatient patient)
+    {
+        var tieneCabecera = !string.IsNullOrEmpty(patient.CabeceraProviderUuid);
+
+        if (UsarCabecera(tieneCabecera, patient.EsNuevo, _rng.NextDouble(), _runCabeceraProb))
+        {
+            patient.AssignedLocationUuid = patient.CabeceraLocationUuid;
+            patient.AssignedProviderUuid = patient.CabeceraProviderUuid;
+            return;
+        }
+
+        var (loc, prov) = Assign();
+        patient.AssignedLocationUuid = loc;
+        patient.AssignedProviderUuid = prov;
+
+        // El paciente fija su cabecera la primera vez que recibe una
+        if (!tieneCabecera)
+        {
+            patient.CabeceraLocationUuid = loc;
+            patient.CabeceraProviderUuid = prov;
+        }
+    }
+
+    /// <summary>Decisión pura: ¿atender a este paciente con su médico de cabecera? (RNG inyectado, testeable).</summary>
+    public static bool UsarCabecera(bool tieneCabecera, bool esNuevo, double roll, double runProb) =>
+        tieneCabecera && !esNuevo && roll < runProb;
 
     /// <summary>Devuelve un par (ubicación, médico) aleatorio para una visita.</summary>
     public (string Location, string Provider) Assign() =>
