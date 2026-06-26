@@ -28,7 +28,7 @@ Todo el comportamiento del simulador se controla desde aquí.
       "PatientIdentifierTypeUuid": "05a29f94-c0ed-11e2-94be-8c13b969e334",
       "LocationUuid": "44c3efb0-2583-4c80-a79e-1f756a03c0a1",
       "RegistrationLocationUuid": "c1000000-0000-0000-0000-000000000002",
-      "VisitTypeUuid": "7b0f5697-27e3-40c4-8bae-f4049abfb4ed",
+      "VisitTypeUuid": "287463d3-2233-4c69-9851-5841a1f5e109",
       "VitalsEncounterTypeUuid": "67a71486-1a54-468f-ac3e-7091a9a79584",
       "ConsultaEncounterTypeUuid": "92a52cce-c614-4046-b5f2-07f32f0bcf91",
       "ProviderUuid": "f9badd80-ab76-11e2-9e96-0800200c9a66"
@@ -107,7 +107,7 @@ Todo el comportamiento del simulador se controla desde aquí.
 | `ReferralProbabilities.ClinicalExam` | float (0-1) | Probabilidad base de examen en consultorio (obs inmediata). |
 | `ReferralProbabilities.DrugOrder` | float (0-1) | Probabilidad base de prescripción de medicamento. |
 | `ReferralProbabilities.Urgent` | float (0-1) | Probabilidad de que una orden de lab sea URGENTE. |
-| `ReferralProbabilities.FollowUp` | float (0-1) | Probabilidad de nota de seguimiento. |
+| `ReferralProbabilities.FollowUp` | float (0-1) | Probabilidad de registrar una cita de control: obs fecha "Return visit date" (`5096`) 7–30 días después de la visita. |
 | `Allergy.BaseProbabilityMin` / `BaseProbabilityMax` | float (0-1) | Banda de prevalencia de alergias: cada corrida sortea su valor en `[min,max]` (def. 0.15–0.25, fracción clínicamente documentada del ~25-30% poblacional) → el % de pacientes nuevos alérgicos varía entre corridas. |
 | `Allergy.SecondAllergyProbability` | float (0-1) | Dado que el paciente ya tiene 1 alergia, probabilidad de sumar una 2ª (decaída condicional). |
 | `Allergy.ThirdAllergyProbability` | float (0-1) | Dado que ya tiene 2, probabilidad de sumar una 3ª. |
@@ -137,7 +137,7 @@ Todo el comportamiento del simulador se controla desde aquí.
 | `PatientIdentifierTypeUuid` | UUID del tipo de ID "OpenMRS ID" | `GET /ws/rest/v1/patientidentifiertype` |
 | `LocationUuid` | Ubicación de **respaldo** si no hay `catalogs/consultorios.csv` | `GET /ws/rest/v1/location` |
 | `RegistrationLocationUuid` | Ubicación de registro/admisión (Recepción) del identificador del paciente | `GET /ws/rest/v1/location` |
-| `VisitTypeUuid` | UUID del tipo de visita "Outpatient" | `GET /ws/rest/v1/visittype` |
+| `VisitTypeUuid` | UUID del tipo de visita "OPD Visit" (consulta externa; `287463d3-…`) | `GET /ws/rest/v1/visittype` |
 | `VitalsEncounterTypeUuid` | UUID del tipo de encuentro "Vitals" | `GET /ws/rest/v1/encountertype` |
 | `ConsultaEncounterTypeUuid` | UUID del tipo de encuentro "Consultation" | `GET /ws/rest/v1/encountertype` |
 | `ProviderUuid` | Médico de **respaldo** si no hay `catalogs/consultorios.csv` | `GET /ws/rest/v1/provider` |
@@ -215,8 +215,13 @@ ciel_uuid,nombre_es,categoria,severidad,aplica_0_14,aplica_15_29,aplica_30_44,ap
 | `requiere_lab` | `true` si este dx siempre pide laboratorio (aumenta la probabilidad base de `LabOrder`) |
 | `requiere_rx` | `true` si este dx siempre recibe prescripción (aumenta la probabilidad base de `DrugOrder`) |
 | `requiere_examen_clinico` | `true` si este dx típicamente requiere examen en consultorio (sube prob. a 90%) |
+| `clima` | Estación(es) que favorecen el dx (`invierno`/`verano`/`lluvia`/`seca`, separadas por coma). Vacío = sin efecto estacional |
+| `cronica` | `true` → se agrega a la lista de problemas del paciente (`POST /condition`) |
+| `comun` | `true` → pertenece al pool de enfermedades frecuentes (sesgo de selección inicial) |
+| `vital_fiebre` *(opcional)* | `true` → fuerza fiebre en los vitales aunque la categoría no sea febril (p.ej. apendicitis, pielonefritis). Vacío = neutro |
+| `vital_imc` *(opcional)* | `alto` (sobrepeso/obesidad) o `bajo` (desnutrición/caquexia: TB, cáncer, hipertiroidismo, VIH…) para fijar el IMC objetivo. **Gana sobre la categoría.** Vacío = neutro |
 
-> **Fuente**: Query SQL sobre `concept` + `concept_name` en la DB OpenMRS. Las columnas `aplica_*`, `peso_*` y `requiere_*` se agregan manualmente. Ver queries en `fases_implementacion.md` Fase 2.
+> **Fuente**: Query SQL sobre `concept` + `concept_name` en la DB OpenMRS. Las columnas `aplica_*`, `peso_*`, `requiere_*` y `vital_*` se agregan manualmente. Las columnas `vital_*` son **opcionales** (el loader tolera su ausencia → comportamiento neutro gobernado por la categoría). Ver queries en `fases_implementacion.md` Fase 2.
 
 ---
 
@@ -442,27 +447,35 @@ motivos_consulta.csv
 
 ## 12. Vitales coherentes con diagnóstico
 
-Los signos vitales del encuentro VITALS se ajustan según la categoría del diagnóstico:
+Los signos vitales se derivan (`VitalsSeeder.ComputeVitals`) de la **unión de categorías** de
+**todos** los diagnósticos del paciente (primario + comorbilidades), la **peor severidad**, y
+los overrides opcionales por enfermedad (`vital_fiebre`, `vital_imc`). El override gana sobre
+la categoría.
 
-| Categoría dx | Ajuste en vitales |
-|--------------|-------------------|
-| `cardiovascular` (HTA) | PA sistólica: 140-180 mmHg, diastólica: 90-110 |
-| `infeccioso` | Temperatura: 37.5-39.5°C, pulso elevado: 90-110 lpm |
-| `respiratorio` grave | SpO2: 88-94%, FR elevada |
-| `diabetes` | Peso tendencia alta (BMI 25-35) |
-| Resto | Rangos normales con variación estadística |
+| Condición | Ajuste en vitales |
+|-----------|-------------------|
+| `cardiovascular` | PA 140-180 / 90-110 mmHg; pulso 80-110 |
+| `infeccioso`, `respiratorio` (≥moderado) o `vital_fiebre=true` | Temperatura 37.5-39.5°C (hasta 40 si grave); pulso 90-120; FR elevada |
+| `respiratorio` grave / moderado | SpO2 88-93 / 92-96% |
+| `diabetes`, `endocrino` o `vital_imc=alto` | IMC objetivo 27-38 (sobrepeso/obesidad) |
+| `vital_imc=bajo` (TB, cáncer, hipertiroidismo, VIH…) | IMC objetivo 16-19 (bajo peso) |
+| Resto | IMC 18.5-27; temperatura/pulso/FR/SpO2 normales con variación |
 
-Rangos base (sin ajuste por dx):
+> **Peso acoplado a la talla:** el peso ya **no** es un rango independiente. Se elige un IMC
+> objetivo (según la tabla) y se calcula `peso = IMC × (talla/100)²`, de modo que peso y talla
+> siempre son coherentes (no más IMC de 50 en pacientes de consulta externa).
 
-| Signo vital | Rango base | Unidad |
+Rangos base de talla (de ahí sale el peso vía IMC):
+
+| Signo vital | Rango | Unidad |
 |---|---|---|
-| Peso | 45-120 | kg |
-| Talla | 145-195 | cm |
-| PA sistólica | 100-130 | mmHg |
-| PA diastólica | 60-85 | mmHg |
-| Temperatura | 36.0-37.4 | °C |
-| Pulso | 60-100 | lpm |
-| SpO2 | 96-100 | % |
+| Talla (hombre) | 160-185 | cm |
+| Talla (mujer) | 150-172 | cm |
+| Talla (0-14) | 90-160 | cm |
+| Temperatura (afebril) | 36.0-37.4 | °C |
+| Pulso (basal) | 60-100 | lpm |
+| Frecuencia respiratoria (basal) | 12-20 | rpm |
+| SpO2 (basal) | 95-99 | % |
 
 ---
 

@@ -136,7 +136,9 @@ public class CatalogLoader
             .Select(s => s.ToLowerInvariant())
             .ToHashSet(),
         EsCronica             = B(row, "cronica"),
-        EsComun               = B(row, "comun")
+        EsComun               = B(row, "comun"),
+        VitalFiebre           = B(row, "vital_fiebre"),
+        VitalImc              = S(row, "vital_imc").ToLowerInvariant()
     };
 
     private static ClimaEntry ParseClima(Dictionary<string, string> row) => new()

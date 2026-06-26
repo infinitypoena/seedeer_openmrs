@@ -9,14 +9,16 @@ namespace OpenmrsSeeder.Seeders;
 
 public class ConsultaSeeder
 {
-    private const string ChiefComplaintUuid = "162169AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
-    private const string NormalUuid         = "1115AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
-    private const string AbnormalUuid       = "1116AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+    private const string ChiefComplaintUuid  = "162169AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+    private const string NormalUuid          = "1115AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+    private const string AbnormalUuid        = "1116AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+    private const string ReturnVisitDateUuid = "5096AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"; // Return visit date (datatype Date)
 
     private readonly OpenMrsRestClient _client;
     private readonly OpenMrsSettings _settings;
     private readonly CatalogLoader _catalogs;
     private readonly double _clinicalExamProb;
+    private readonly double _followUpProb;
     private readonly Random _rng = new();
     private readonly ILogger<ConsultaSeeder> _logger;
 
@@ -31,6 +33,7 @@ public class ConsultaSeeder
         _settings         = settings;
         _catalogs         = catalogs;
         _clinicalExamProb = simSettings.ReferralProbabilities.ClinicalExam;
+        _followUpProb     = simSettings.ReferralProbabilities.FollowUp;
         _logger           = logger;
     }
 
@@ -56,6 +59,14 @@ public class ConsultaSeeder
 
         if (debeExamen)
             await SeedExamenClinicoAsync(patient, encounterUuid, ct);
+
+        // Nota de seguimiento: cita de control 7–30 días después (obs fecha "Return visit date")
+        if (_rng.NextDouble() < _followUpProb)
+        {
+            var returnDate = patient.VisitDatetime.AddDays(_rng.Next(7, 31));
+            await PostObsDateAsync(patient.Identifier, patient.OpenMrsUuid, encounterUuid,
+                ReturnVisitDateUuid, returnDate, patient.VisitDatetime, ct);
+        }
 
         _logger.LogInformation("[Consulta] Encounter {Uuid} para {Id} | Dx: {Dx} | comun: {Comun} | +{Comorb} comorbilidad(es)",
             encounterUuid, patient.Identifier, patient.Diagnostico?.NombreEs ?? "—",
@@ -184,6 +195,21 @@ public class ConsultaSeeder
         };
         try { await _client.PostAsync("obs", payload, ct); }
         catch (Exception ex) { _logger.LogError("[Consulta] Error obs texto para {Id}: {Msg}", identifier, ex.Message); }
+    }
+
+    private async Task PostObsDateAsync(string identifier, string personUuid, string encounterUuid,
+        string conceptUuid, DateTime value, DateTime obsDatetime, CancellationToken ct)
+    {
+        var payload = new
+        {
+            concept     = conceptUuid,
+            person      = personUuid,
+            encounter   = encounterUuid,
+            obsDatetime = VisitSeeder.FormatDatetime(obsDatetime),
+            value       = VisitSeeder.FormatDatetime(value)
+        };
+        try { await _client.PostAsync("obs", payload, ct); }
+        catch (Exception ex) { _logger.LogError("[Consulta] Error obs fecha para {Id}: {Msg}", identifier, ex.Message); }
     }
 
     private async Task PostObsCodedAsync(string identifier, string personUuid, string encounterUuid,

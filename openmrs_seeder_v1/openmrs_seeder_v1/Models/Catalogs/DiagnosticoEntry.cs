@@ -22,4 +22,8 @@ public class DiagnosticoEntry
     public bool EsCronica { get; set; }
     /// <summary>Si es una enfermedad común/frecuente. El factor inicial de selección apunta mayormente a estas.</summary>
     public bool EsComun { get; set; }
+    /// <summary>Override opcional de vitales: fuerza fiebre aunque la categoría no lo haría (col. <c>vital_fiebre</c>). Default false = neutro.</summary>
+    public bool VitalFiebre { get; set; }
+    /// <summary>Override opcional de IMC: <c>"alto"</c> (sobrepeso/obesidad) | <c>"bajo"</c> (desnutrición/caquexia) | <c>""</c> neutro (col. <c>vital_imc</c>).</summary>
+    public string VitalImc { get; set; } = "";
 }

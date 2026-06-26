@@ -127,7 +127,7 @@ objeto ya existente en OpenMRS que el simulador referencia al crear datos.
 | `TrackingIdentifierTypeUuid` | Tipo "Old Identification Number" — soporta el prefijo `SIM-` para rastrear/limpiar pacientes simulados. | `GET /patientidentifiertype` |
 | `LocationUuid` | Ubicación de **respaldo** (fallback) si no hay `Consultorios`. | `GET /location` |
 | `RegistrationLocationUuid` | Ubicación de registro/admisión (Recepción) para el identificador del paciente. Si vacío, cae a `LocationUuid`. | `GET /location` |
-| `VisitTypeUuid` | Tipo de visita "Outpatient" (ambulatoria). | `GET /visittype` |
+| `VisitTypeUuid` | Tipo de visita "OPD Visit" (consulta externa ambulatoria; `287463d3-…`). "Facility Visit" (`7b0f5697-…`) es alternativa genérica. | `GET /visittype` |
 | `VitalsEncounterTypeUuid` | Tipo de encuentro "Vitals" (signos vitales). | `GET /encountertype` |
 | `ConsultaEncounterTypeUuid` | Tipo de encuentro "Consultation" (la consulta médica). | `GET /encountertype` |
 | `ProviderUuid` | Médico de **respaldo** (fallback) si no hay `Consultorios`. | `GET /provider` |
@@ -239,7 +239,7 @@ Probabilidades **base** (0 a 1) de que ocurra cada acción clínica en una visit
 | `ClinicalExam` | Probabilidad base de registrar un examen en consultorio (obs inmediata). Si el diagnóstico requiere examen clínico, sube a 0.90. |
 | `DrugOrder` | Probabilidad base de prescribir medicamento. Si el diagnóstico está marcado `requiere_rx`, sube a 0.90. |
 | `Urgent` | Probabilidad de que una orden de laboratorio salga como **URGENTE** (`STAT`). Para diagnósticos `grave` sube a 0.50. |
-| `FollowUp` | Probabilidad de generar una nota/indicación de seguimiento. |
+| `FollowUp` | Probabilidad (def. 0.30) de registrar una **cita de control**: obs fecha "Return visit date" (`5096`) con la próxima visita 7–30 días después. |
 
 > La probabilidad de alergias dejó de vivir aquí; ahora está en su propia sección [`Allergy`](#47-allergy).
 

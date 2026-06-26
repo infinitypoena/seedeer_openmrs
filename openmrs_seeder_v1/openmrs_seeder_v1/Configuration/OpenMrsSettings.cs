@@ -34,8 +34,8 @@ public class DefaultsSettings
     public string LocationUuid { get; set; } = "44c3efb0-2583-4c80-a79e-1f756a03c0a1";
     /// <summary>UUID de la ubicación de registro/admisión (Recepción) usada en el identificador del paciente. Si vacío, cae a LocationUuid.</summary>
     public string RegistrationLocationUuid { get; set; } = "";
-    /// <summary>UUID del tipo de visita "Outpatient" para visitas ambulatorias</summary>
-    public string VisitTypeUuid { get; set; } = "7b0f5697-27e3-40c4-8bae-f4049abfb4ed";
+    /// <summary>UUID del tipo de visita "OPD Visit" (consulta externa ambulatoria)</summary>
+    public string VisitTypeUuid { get; set; } = "287463d3-2233-4c69-9851-5841a1f5e109";
     /// <summary>UUID del tipo de encuentro "Vitals"</summary>
     public string VitalsEncounterTypeUuid { get; set; } = "67a71486-1a54-468f-ac3e-7091a9a79584";
     /// <summary>UUID del tipo de encuentro "Consultation" (ADULTINITIAL)</summary>
