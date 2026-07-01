@@ -26,4 +26,6 @@ public class DiagnosticoEntry
     public bool VitalFiebre { get; set; }
     /// <summary>Override opcional de IMC: <c>"alto"</c> (sobrepeso/obesidad) | <c>"bajo"</c> (desnutrición/caquexia) | <c>""</c> neutro (col. <c>vital_imc</c>).</summary>
     public string VitalImc { get; set; } = "";
+    /// <summary>Sexo al que aplica el diagnóstico: <c>"M"</c> | <c>"F"</c> | <c>""</c> (ambos). Excluye duro el sexo contrario (embarazo→F, próstata→M).</summary>
+    public string Sexo { get; set; } = "";
 }

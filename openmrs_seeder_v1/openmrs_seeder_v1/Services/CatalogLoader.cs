@@ -147,7 +147,8 @@ public class CatalogLoader
         EsCronica             = B(row, "cronica"),
         EsComun               = B(row, "comun"),
         VitalFiebre           = B(row, "vital_fiebre"),
-        VitalImc              = S(row, "vital_imc").ToLowerInvariant()
+        VitalImc              = S(row, "vital_imc").ToLowerInvariant(),
+        Sexo                  = S(row, "sexo").Trim().ToUpperInvariant() is "M" or "F" ? S(row, "sexo").Trim().ToUpperInvariant() : ""
     };
 
     private static ClimaEntry ParseClima(Dictionary<string, string> row) => new()

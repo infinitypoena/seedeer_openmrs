@@ -97,6 +97,9 @@ public class EpidemiologySelector
     {
         var candidates = _catalogs.Diagnosticos
             .Where(d => d.Categoria == categoria && AplicaAGrupo(d, ageGroup))
+            // Exclusión dura por sexo: un dx marcado M|F no puede caer en el sexo contrario
+            // (p.ej. embarazo/eclampsia solo F, próstata/testículo solo M). Vacío = ambos.
+            .Where(d => d.Sexo.Length == 0 || d.Sexo == gender)
             .ToList();
 
         if (candidates.Count == 0) return null;

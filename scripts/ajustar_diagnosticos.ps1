@@ -39,11 +39,29 @@ $grave = @('sepsis','septic','shock','choque','infarto agudo','hemorragia','embo
     'status epileptic','falciparum','cetoacidosis','insuficiencia respiratoria aguda',
     'edema agudo de pulmon','diseccion','eclampsia','anafilaxia','politraumatismo','paro card')
 
+# Sexo-específicos (acento-insensible, substring). Femeninos: embarazo/parto/ginecológicos.
+$sexoF = @('embaraz','gestacion','gestacional','preeclamp','eclampsia','parto','posparto','postparto',
+    'puerper','aborto','placenta','corioamnionitis','obstetric','ginecolog','vaginal','vaginitis',
+    'vaginosis','vulv','cervicitis','cervicouterin','cuello uterino','endometr','menstrual','menstruacion',
+    'dismenorrea','amenorrea','menopaus','ovaric','ovario','ovulacion','salping','anexial','mastitis',
+    'utero','uterin','miomatosis','leucorrea','trompa','lactancia','galactorrea','bartholin',
+    'cervical intraepitelial','mama')
+# Masculinos: próstata/testículos/etc. (se evita 'pene' suelto por falsos positivos como 'penetrante').
+$sexoM = @('prostat','testicul','escrot','epididim','orquitis','varicocele','hidrocele','espermat',
+    'prepucio','fimosis','balanitis','priapismo','peneana','del pene')
+
 $rows = Import-Csv -Path $Csv
-$chg = [ordered]@{ imc = 0; fiebre = 0; cronica = 0; severidad = 0 }
+$chg = [ordered]@{ imc = 0; fiebre = 0; cronica = 0; severidad = 0; sexo = 0 }
 
 foreach ($r in $rows) {
     $n = Fold $r.nombre_es
+
+    # sexo (columna nueva): asegurar que exista y solo asignar si está vacía (respeta overrides).
+    if ($null -eq $r.PSObject.Properties['sexo']) { $r | Add-Member -NotePropertyName sexo -NotePropertyValue '' }
+    if ([string]::IsNullOrWhiteSpace($r.sexo)) {
+        if     (Hit $n $sexoF) { $r.sexo = 'F'; $chg.sexo++ }
+        elseif (Hit $n $sexoM) { $r.sexo = 'M'; $chg.sexo++ }
+    }
 
     # vital_imc (bajo gana sobre alto); no pisar un valor ya puesto a mano
     if ([string]::IsNullOrWhiteSpace($r.vital_imc)) {
@@ -60,4 +78,4 @@ foreach ($r in $rows) {
 
 $rows | Export-Csv -Path $Csv -NoTypeInformation -Encoding utf8 -UseQuotes AsNeeded
 "Filas: $($rows.Count)"
-"Cambios -> vital_imc:$($chg.imc)  vital_fiebre:$($chg.fiebre)  cronica:$($chg.cronica)  severidad:$($chg.severidad)"
+"Cambios -> vital_imc:$($chg.imc)  vital_fiebre:$($chg.fiebre)  cronica:$($chg.cronica)  severidad:$($chg.severidad)  sexo:$($chg.sexo)"

@@ -223,6 +223,7 @@ ciel_uuid,nombre_es,categoria,severidad,aplica_0_14,aplica_15_29,aplica_30_44,ap
 | `comun` | `true` → pertenece al pool de enfermedades frecuentes (sesgo de selección inicial) |
 | `vital_fiebre` *(opcional)* | `true` → fuerza fiebre en los vitales aunque la categoría no sea febril (p.ej. apendicitis, pielonefritis). Vacío = neutro |
 | `vital_imc` *(opcional)* | `alto` (sobrepeso/obesidad) o `bajo` (desnutrición/caquexia: TB, cáncer, hipertiroidismo, VIH…) para fijar el IMC objetivo. **Gana sobre la categoría.** Vacío = neutro |
+| `sexo` *(opcional)* | `M` o `F` → el dx **solo** aparece en ese sexo (exclusión dura: embarazo/eclampsia = F, próstata/testículo = M). Vacío = ambos. Se puebla con `scripts/ajustar_diagnosticos.ps1` (reglas por palabra clave) |
 
 > **Fuente**: Query SQL sobre `concept` + `concept_name` en la DB OpenMRS. Las columnas `aplica_*`, `peso_*`, `requiere_*` y `vital_*` se agregan manualmente. Las columnas `vital_*` son **opcionales** (el loader tolera su ausencia → comportamiento neutro gobernado por la categoría). Ver queries en `fases_implementacion.md` Fase 2.
 

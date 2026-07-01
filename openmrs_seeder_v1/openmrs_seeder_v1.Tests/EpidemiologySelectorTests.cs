@@ -78,6 +78,42 @@ public class EpidemiologySelectorTests
     }
 
     [Fact]
+    public void SelectDiagnostico_ExcluyeDuroPorSexo()
+    {
+        var catalogs = new CatalogLoader();
+        var dx = new List<DiagnosticoEntry>
+        {
+            new() { CielUuid = "f-emb", NombreEs = "Preeclampsia", Categoria = "ginecoobstetrico",
+                    Aplica15_29 = true, Aplica30_44 = true, PesoM = 4, PesoF = 4, Sexo = "F" },
+            new() { CielUuid = "m-pro", NombreEs = "Prostatitis", Categoria = "urologico",
+                    Aplica30_44 = true, Aplica45_64 = true, PesoM = 4, PesoF = 4, Sexo = "M" },
+            new() { CielUuid = "ambos", NombreEs = "Cistitis", Categoria = "urologico",
+                    Aplica30_44 = true, PesoM = 10, PesoF = 10, Sexo = "" },
+        };
+        catalogs.LoadFromLists([], dx, [], [], [], [], []);
+        var selector = new EpidemiologySelector(catalogs, new SimulationSettings { RandomSeed = 42 });
+
+        // Un hombre NUNCA debe recibir un dx femenino (y no hay dx masculino en ginecoobstetrico → null).
+        for (int i = 0; i < 50; i++)
+            Assert.Null(selector.SelectDiagnostico("ginecoobstetrico", "30-44", "M"));
+
+        // En urologico, el hombre puede recibir prostatitis o cistitis, nunca un dx femenino.
+        for (int i = 0; i < 100; i++)
+        {
+            var d = selector.SelectDiagnostico("urologico", "30-44", "M");
+            Assert.NotNull(d);
+            Assert.NotEqual("F", d!.Sexo);
+        }
+        // La mujer no recibe prostatitis.
+        for (int i = 0; i < 100; i++)
+        {
+            var d = selector.SelectDiagnostico("urologico", "30-44", "F");
+            Assert.NotNull(d);
+            Assert.NotEqual("M", d!.Sexo);
+        }
+    }
+
+    [Fact]
     public void RollSeguimientoCronico_ProbabilidadLimite()
     {
         var (_, selector) = CreateSelector();
