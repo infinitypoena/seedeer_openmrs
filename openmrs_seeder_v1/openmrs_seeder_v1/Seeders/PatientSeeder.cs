@@ -33,7 +33,14 @@ public class PatientSeeder
             {
                 names = new[]
                 {
-                    new { givenName = patient.GivenName, familyName = patient.FamilyName, preferred = true }
+                    new
+                    {
+                        givenName   = patient.GivenName,
+                        middleName  = patient.SecondGivenName,
+                        familyName  = patient.FamilyName,
+                        familyName2 = patient.SecondFamilyName,
+                        preferred   = true
+                    }
                 },
                 gender    = patient.Gender,
                 birthdate = patient.BirthDate.ToString("yyyy-MM-dd"),

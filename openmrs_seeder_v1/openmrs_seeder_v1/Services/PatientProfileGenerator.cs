@@ -7,12 +7,18 @@ namespace OpenmrsSeeder.Services;
 public class PatientProfileGenerator
 {
     private readonly SimulationSettings _settings;
+    private readonly CatalogLoader _catalogs;
     private readonly Faker _faker;
     private readonly Random _rng;
 
-    public PatientProfileGenerator(SimulationSettings settings)
+    // Pools de nombres del catálogo (lazy: el CatalogLoader se carga después del constructor).
+    private List<string>? _nombresM;
+    private List<string>? _nombresF;
+
+    public PatientProfileGenerator(SimulationSettings settings, CatalogLoader catalogs)
     {
         _settings = settings;
+        _catalogs = catalogs;
         _rng = new Random(settings.RandomSeed + 1);
         _faker = new Faker(settings.Locale) { Random = new Randomizer(settings.RandomSeed + 2) };
     }
@@ -27,21 +33,62 @@ public class PatientProfileGenerator
         var refDate  = referenceDate ?? DateOnly.FromDateTime(DateTime.Today);
         var gender   = PickGender();
         var ageGroup = PickAgeGroup();
+        var (given, secondGiven, family, secondFamily) = GenerateName(gender);
 
         return new SimulatedPatient
         {
-            Identifier = $"SIM-{Guid.NewGuid().ToString("N")[..8].ToUpper()}",
-            GivenName  = gender == "M"
-                ? _faker.Name.FirstName(Bogus.DataSets.Name.Gender.Male)
-                : _faker.Name.FirstName(Bogus.DataSets.Name.Gender.Female),
-            FamilyName = _faker.Name.LastName(),
-            Gender     = gender,
-            BirthDate  = GenerateBirthDate(ageGroup, refDate),
-            AgeGroup   = ageGroup,
-            Address1   = _faker.Address.StreetAddress(),
-            City       = _faker.Address.City(),
-            EsNuevo    = true
+            Identifier       = $"SIM-{Guid.NewGuid().ToString("N")[..8].ToUpper()}",
+            GivenName        = given,
+            SecondGivenName  = secondGiven,
+            FamilyName       = family,
+            SecondFamilyName = secondFamily,
+            Gender           = gender,
+            BirthDate        = GenerateBirthDate(ageGroup, refDate),
+            AgeGroup         = ageGroup,
+            Address1         = _faker.Address.StreetAddress(),
+            City             = _faker.Address.City(),
+            EsNuevo          = true
         };
+    }
+
+    /// <summary>
+    /// Genera un nombre completo (primer + segundo nombre, primer + segundo apellido) a partir de los
+    /// catálogos <c>nombres.csv</c>/<c>apellidos.csv</c>. Si el catálogo está vacío cae al comportamiento
+    /// previo con Bogus (un solo nombre y un apellido), manteniendo retrocompatibilidad.
+    /// </summary>
+    private (string given, string secondGiven, string family, string secondFamily) GenerateName(string gender)
+    {
+        var nombres   = PoolNombres(gender);
+        var apellidos = _catalogs.Apellidos;
+
+        if (nombres.Count == 0 || apellidos.Count == 0)
+        {
+            var fallbackGiven = gender == "M"
+                ? _faker.Name.FirstName(Bogus.DataSets.Name.Gender.Male)
+                : _faker.Name.FirstName(Bogus.DataSets.Name.Gender.Female);
+            return (fallbackGiven, "", _faker.Name.LastName(), "");
+        }
+
+        var (given, secondGiven) = PickDistinctPair(nombres);
+        var (family, secondFamily) = PickDistinctPair(apellidos);
+        return (given, secondGiven, family, secondFamily);
+    }
+
+    /// <summary>Dos elementos distintos del pool (el segundo vacío si el pool tiene un solo elemento).</summary>
+    private (string first, string second) PickDistinctPair(IReadOnlyList<string> pool)
+    {
+        var first = pool[_rng.Next(pool.Count)];
+        if (pool.Count == 1) return (first, "");
+        string second;
+        do { second = pool[_rng.Next(pool.Count)]; } while (second == first);
+        return (first, second);
+    }
+
+    private List<string> PoolNombres(string gender)
+    {
+        _nombresM ??= _catalogs.Nombres.Where(n => n.Genero == "M").Select(n => n.Nombre).ToList();
+        _nombresF ??= _catalogs.Nombres.Where(n => n.Genero == "F").Select(n => n.Nombre).ToList();
+        return gender == "M" ? _nombresM : _nombresF;
     }
 
     private string PickGender()

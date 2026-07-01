@@ -1,4 +1,5 @@
 using OpenmrsSeeder.Configuration;
+using OpenmrsSeeder.Models.Catalogs;
 using OpenmrsSeeder.Services;
 using Xunit;
 
@@ -6,8 +7,29 @@ namespace openmrs_seeder_v1.Tests;
 
 public class PatientProfileGeneratorTests
 {
+    /// <summary>CatalogLoader vacío → el generador cae al fallback de Bogus (comportamiento previo).</summary>
+    private static CatalogLoader EmptyCatalogs()
+    {
+        var c = new CatalogLoader();
+        c.LoadFromLists([], [], [], [], [], [], []);
+        return c;
+    }
+
+    /// <summary>CatalogLoader con pools de nombres/apellidos representativos.</summary>
+    private static CatalogLoader NameCatalogs()
+    {
+        var nombres = new List<NombreEntry>();
+        for (int i = 0; i < 60; i++) nombres.Add(new NombreEntry { Nombre = $"NomM{i}", Genero = "M" });
+        for (int i = 0; i < 60; i++) nombres.Add(new NombreEntry { Nombre = $"NomF{i}", Genero = "F" });
+        var apellidos = Enumerable.Range(0, 80).Select(i => $"Ape{i}").ToList();
+
+        var c = new CatalogLoader();
+        c.LoadFromLists([], [], [], [], [], [], [], nombres: nombres, apellidos: apellidos);
+        return c;
+    }
+
     private static PatientProfileGenerator CreateGen(int seed = 42) =>
-        new(new SimulationSettings { RandomSeed = seed });
+        new(new SimulationSettings { RandomSeed = seed }, EmptyCatalogs());
 
     private static int EdadEnMeses(DateOnly birth, DateOnly reference)
     {
@@ -124,7 +146,7 @@ public class PatientProfileGeneratorTests
         settings.DemographicProfile.PediatricClinic = true;
         // Forzar solo el grupo 0-14 para ejercitar el mínimo pediátrico
         settings.DemographicProfile.AgeGroups = [new() { Label = "0-14", Weight = 100 }];
-        var gen = new PatientProfileGenerator(settings);
+        var gen = new PatientProfileGenerator(settings, EmptyCatalogs());
         var refDate = new DateOnly(2023, 6, 1);
 
         bool huboLactanteMenor6 = false;
@@ -136,6 +158,38 @@ public class PatientProfileGeneratorTests
             if (meses < 6) huboLactanteMenor6 = true;
         }
         Assert.True(huboLactanteMenor6, "En modo pediátrico deberían aparecer lactantes < 6 meses");
+    }
+
+    [Fact]
+    public void GenerateNew_ConCatalogo_NombreCompletoCasiSiempreUnico()
+    {
+        // Con 60 nombres/género × 2 posiciones × 80 apellidos × 2 posiciones el espacio es enorme:
+        // las colisiones de nombre completo deben ser una fracción mínima.
+        var gen = new PatientProfileGenerator(new SimulationSettings { RandomSeed = 42 }, NameCatalogs());
+        var nombres = new List<string>();
+        const int n = 1000;
+        for (int i = 0; i < n; i++)
+        {
+            var p = gen.GenerateNew();
+            Assert.NotEmpty(p.SecondGivenName);
+            Assert.NotEmpty(p.SecondFamilyName);
+            Assert.NotEqual(p.GivenName, p.SecondGivenName);
+            Assert.NotEqual(p.FamilyName, p.SecondFamilyName);
+            nombres.Add($"{p.GivenName}|{p.SecondGivenName}|{p.FamilyName}|{p.SecondFamilyName}");
+        }
+        var distintos = nombres.Distinct().Count();
+        Assert.True(distintos >= 985, $"Se esperaban ~únicos; hubo {n - distintos} colisiones de nombre completo");
+    }
+
+    [Fact]
+    public void GenerateNew_SinCatalogo_FallbackBogus_SegundoNombreVacio()
+    {
+        var gen = CreateGen(); // catálogos vacíos
+        var p = gen.GenerateNew();
+        Assert.NotEmpty(p.GivenName);
+        Assert.NotEmpty(p.FamilyName);
+        Assert.Empty(p.SecondGivenName);
+        Assert.Empty(p.SecondFamilyName);
     }
 
     [Fact]

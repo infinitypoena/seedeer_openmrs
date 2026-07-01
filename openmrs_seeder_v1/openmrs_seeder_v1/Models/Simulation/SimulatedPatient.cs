@@ -7,7 +7,11 @@ public class SimulatedPatient
     public string Identifier { get; set; } = "";
     public string OpenMrsUuid { get; set; } = "";
     public string GivenName { get; set; } = "";
+    /// <summary>Segundo nombre (opcional). Se envía a OpenMRS como <c>middleName</c>.</summary>
+    public string SecondGivenName { get; set; } = "";
     public string FamilyName { get; set; } = "";
+    /// <summary>Segundo apellido (opcional). Se envía a OpenMRS como <c>familyName2</c>.</summary>
+    public string SecondFamilyName { get; set; } = "";
     /// <summary>M | F</summary>
     public string Gender { get; set; } = "";
     public DateOnly BirthDate { get; set; }
@@ -50,6 +54,17 @@ public class SimulatedPatient
     public double? TempAmbienteC { get; set; }
     /// <summary>Conceptos ya agregados a la lista de problemas (condition) — evita duplicados entre visitas.</summary>
     public HashSet<string> ProblemListConcepts { get; set; } = [];
+    /// <summary>
+    /// Diagnósticos crónicos que arrastra el paciente (los <c>EsCronica</c> ya asignados en visitas previas).
+    /// Las visitas recurrentes vuelven a uno de estos como motivo de control con alta probabilidad.
+    /// Compartida por referencia con la copia recurrente (como <see cref="ProblemListConcepts"/>).
+    /// </summary>
+    public List<DiagnosticoEntry> CronicasActivas { get; set; } = [];
+    /// <summary>
+    /// Fecha más temprana en que el paciente puede volver a consulta (intervalo mínimo entre visitas).
+    /// Se fija tras cada visita con <see cref="Services.RecurrenceScheduler"/>; <c>null</c> = elegible ya.
+    /// </summary>
+    public DateOnly? ProximoElegibleDesde { get; set; }
     /// <summary>Consultorio (location) asignado a esta visita por ClinicResourceAssigner. Null = usar default.</summary>
     public string? AssignedLocationUuid { get; set; }
     /// <summary>Médico (provider) asignado a esta visita. Null = usar ProviderUuid por defecto.</summary>

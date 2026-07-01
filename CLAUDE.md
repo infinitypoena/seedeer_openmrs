@@ -40,6 +40,9 @@ Key architectural decisions:
 - **Vitals — SpO2 vs frecuencia respiratoria**: ⚠️ El SpO2 va al concepto `5092` (no `5242`, que es *frecuencia respiratoria*). Se emiten **ambas**: FR real en `5242` (12–20, elevada en respiratorio/infeccioso) y SpO2 en `5092` (95–99, baja 88–93 en respiratorio grave). La query `querys/visita_detalle.sql` §5 (QA) caza valores imposibles (p.ej. FR>40).
 - **Pistas de vitales por enfermedad (opcionales)**: columnas `vital_fiebre` (bool) y `vital_imc` (`alto`|`bajo`) en `diagnosticos.csv` permiten **override por enfermedad** sobre la lógica de categoría (p.ej. *hipertiroidismo* es endocrino pero adelgaza → `vital_imc=bajo`; *apendicitis* es digestivo pero da fiebre → `vital_fiebre=true`). El override gana sobre la categoría. Ausentes/vacías = neutro (gobernado por la categoría); el `CatalogLoader` las parsea de forma retrocompatible.
 - **Visit closing**: `VisitCloseSeeder` runs last in `ProcesarVisitaAsync` and sets `stopDatetime` (1–4 h after arrival) via `POST visit/{uuid}`. Encounters (vitals/consulta) are point-in-time (`encounterDatetime`) and have no open/closed state — only the **visit** is closed.
+- **Realistic patient names (catalog-driven, 2 given + 2 family)**: `PatientProfileGenerator.GenerateNew` builds the name from catalogs `nombres.csv` (`nombre,genero`) and `apellidos.csv` (`apellido`) — **primer + segundo nombre** (distinct, gendered) and **primer + segundo apellido** (distinct). `PatientSeeder` sends them as `givenName`/`middleName`/`familyName`/`familyName2`. This fixes the old bottleneck where Bogus locale `"es"` `FirstName(gender)` yielded only ~24 distinct first names → ~1.800 patients sharing a full name over a 1-year run. Pools are cached lazily in the generator (CatalogLoader loads after ctor). **Fallback**: empty `nombres.csv`/`apellidos.csv` → old Bogus single-name behavior (`SecondGivenName`/`SecondFamilyName` empty), so tests/back-compat are unaffected.
+- **Longitudinal continuity (chronic patients return for the same condition)**: `SimulatedPatient.CronicasActivas` accumulates the patient's `EsCronica` diagnoses (deduped by UUID, written back to the **pool** object via `SeedOrchestrator.RegistrarCronicas`, shared like `ProblemListConcepts`). On a recurrent visit, if the patient carries ≥1 chronic dx and the pure seam `EpidemiologySelector.RollSeguimientoCronico(Simulation.SeguimientoCronicoProb)` (default 0.70) fires, the visit's **primary dx = one of their chronic conditions** (control visit) instead of a fresh random acute complaint; category follows the chronic dx. Otherwise the previous fresh-random selection is kept. Comorbidities still layer on top via `SelectComorbilidades`.
+- **Realistic inter-visit spacing**: a patient cannot return to consulta externa day-after-day. Each pool patient carries `SimulatedPatient.ProximoElegibleDesde`, set after **every** visit (new + recurrent, in `SeedOrchestrator.FijarProximaVisita`, after `RegistrarCronicas` so chronic status is known) via the pure seam `RecurrenceScheduler.ProximaFechaElegible(lastVisit, esCronico, rng, Simulation.Recurrence)`: chronic patients get a **control interval** (`Min/MaxDiasCronico`, def. 30–120 d), non-chronic an **acute follow-up** (`Min/MaxDiasAgudo`, def. 7–21 d). The recurrent-selection filter in `RunAsync` only considers candidates with `day.Date >= ProximoElegibleDesde`. Side effect: on short windows / young pools fewer patients are eligible, so the realized recurrent share can dip slightly below `PorcentajeRecurrentes` (intended — recurrence builds up as the pool ages). Pure decision seam tested in `RecurrenceSchedulerTests`.
 - **Patient birthdate**: `PatientProfileGenerator.GenerateNew(referenceDate)` anchors the birthdate to the **visit/creation date** (not `DateTime.Today`), so age is valid at the (past) visit date — this avoids OpenMRS `startDateCannotFallBeforeTheBirthDate`. Minimum age is `DemographicProfile.MinPatientAgeMonths` (6) — or `PediatricMinAgeMonths` (1) when `PediatricClinic=true`.
 
 ## Infrastructure
@@ -64,6 +67,7 @@ See `parametrizacion_archivos.md` for full parameter reference. Key sections in 
     "EndDate": "2024-12-31",
     "PacientesPorDiaMedio": 40,
     "PorcentajeRecurrentes": 30,
+    "SeguimientoCronicoProb": 0.70,
     "ClinicType": "ConsultaExterna",
     "ReferralProbabilities": {
       "LabOrder": 0.40, "ClinicalExam": 0.35, "DrugOrder": 0.65,
@@ -77,7 +81,8 @@ See `parametrizacion_archivos.md` for full parameter reference. Key sections in 
       "BaseProbability": 0.20, "MaxAdditional": 2, "SecondExtraProbability": 0.25, "AffinityBoost": 4.0,
       "AgeScaling": { "0-14": 0.3, "15-29": 0.5, "30-44": 0.8, "45-64": 1.3, "65+": 1.8 }
     },
-    "Climate": { "Enabled": true, "SeasonalBoost": 2.5, "ComfortTempC": 24.0, "TempVitalsFactorC": 0.04, "TempVitalsMaxC": 0.5 }
+    "Climate": { "Enabled": true, "SeasonalBoost": 2.5, "ComfortTempC": 24.0, "TempVitalsFactorC": 0.04, "TempVitalsMaxC": 0.5 },
+    "Recurrence": { "MinDiasAgudo": 7, "MaxDiasAgudo": 21, "MinDiasCronico": 30, "MaxDiasCronico": 120 }
   }
 }
 ```
@@ -101,6 +106,8 @@ All under `catalogs/`. See `parametrizacion_archivos.md` for column schemas.
 | `clima.csv` | Manual | **Optional** seasonal climate by ISO week (`semana,estacion,temp_promedio_c`) | If present, boosts season-tagged diseases; absent = neutral |
 | `consultorios.csv` | Manual | **Optional** consultorios + médico (`location_uuid,medico_identifier,medico_nombre`) | Instance-specific UUIDs; absent = fallback a `Defaults.Location/ProviderUuid` |
 | `comorbilidad_afinidades.csv` | Manual | Clusters de comorbilidad (`categoria,afines`) | `afines` separado por `\|`; absent = sin boost de afinidad |
+| `nombres.csv` | Manual | Nombres de pila por género (`nombre,genero`) | ~155 nombres centroamericanos M/F; ausente = fallback a Bogus (un solo nombre) |
+| `apellidos.csv` | Manual | Apellidos (`apellido`) | ~200 apellidos hispanos/centroamericanos; se usan como primer y segundo apellido; ausente = fallback a Bogus |
 
 ## Verified UUID Mappings (this OpenMRS instance)
 

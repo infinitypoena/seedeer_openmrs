@@ -1,4 +1,6 @@
 using Microsoft.Extensions.Logging;
+using OpenmrsSeeder.Configuration;
+using OpenmrsSeeder.Models.Catalogs;
 using OpenmrsSeeder.Models.Simulation;
 using OpenmrsSeeder.Services;
 
@@ -6,6 +8,7 @@ namespace OpenmrsSeeder.Seeders;
 
 public class SeedOrchestrator
 {
+    private readonly SimulationSettings _settings;
     private readonly DailyScheduleGenerator _schedule;
     private readonly PatientProfileGenerator _profiler;
     private readonly EpidemiologySelector _epiSelector;
@@ -26,6 +29,7 @@ public class SeedOrchestrator
     private readonly ILogger<SeedOrchestrator> _logger;
 
     public SeedOrchestrator(
+        SimulationSettings settings,
         DailyScheduleGenerator schedule,
         PatientProfileGenerator profiler,
         EpidemiologySelector epiSelector,
@@ -42,6 +46,7 @@ public class SeedOrchestrator
         ClinicResourceAssigner clinicResources,
         ILogger<SeedOrchestrator> logger)
     {
+        _settings           = settings;
         _schedule           = schedule;
         _profiler           = profiler;
         _epiSelector        = epiSelector;
@@ -123,6 +128,8 @@ public class SeedOrchestrator
 
                 await ProcesarVisitaAsync(patient, day.Date, tracker, runId, ct);
 
+                RegistrarCronicas(patient, patient);
+                FijarProximaVisita(patient, day.Date, rng);
                 lock (_poolLock) _patientPool.Add(patient);
                 tracker.Update(runId, r => r.PacientesCreados++);
             }
@@ -141,18 +148,34 @@ public class SeedOrchestrator
             {
                 if (poolSnapshot.Count == 0) break;
 
-                var disponibles = poolSnapshot.Where(p => !uuidsHoy.Contains(p.OpenMrsUuid)).ToList();
+                // Elegibles: no atendidos hoy y que ya cumplieron su intervalo mínimo entre visitas.
+                var disponibles = poolSnapshot
+                    .Where(p => !uuidsHoy.Contains(p.OpenMrsUuid))
+                    .Where(p => p.ProximoElegibleDesde is null || day.Date >= p.ProximoElegibleDesde.Value)
+                    .ToList();
                 if (disponibles.Count == 0) break;
 
                 var base_ = disponibles[rng.Next(disponibles.Count)];
                 uuidsHoy.Add(base_.OpenMrsUuid);
                 var preferCommonRec = _epiSelector.RollPreferCommon(runCommonP);
+
+                // Continuidad longitudinal: si el paciente ya arrastra una condición crónica, con alta
+                // probabilidad esta visita es un CONTROL de esa misma condición (no un motivo nuevo).
+                DiagnosticoEntry? dxSeguimiento = null;
+                if (base_.CronicasActivas.Count > 0 &&
+                    _epiSelector.RollSeguimientoCronico(_settings.SeguimientoCronicoProb))
+                {
+                    dxSeguimiento = base_.CronicasActivas[rng.Next(base_.CronicasActivas.Count)];
+                }
+
                 var recurrente = new SimulatedPatient
                 {
                     Identifier    = base_.Identifier,
                     OpenMrsUuid   = base_.OpenMrsUuid,
                     GivenName     = base_.GivenName,
+                    SecondGivenName = base_.SecondGivenName,
                     FamilyName    = base_.FamilyName,
+                    SecondFamilyName = base_.SecondFamilyName,
                     Gender        = base_.Gender,
                     BirthDate     = base_.BirthDate,
                     AgeGroup      = base_.AgeGroup,
@@ -167,17 +190,23 @@ public class SeedOrchestrator
                     CabeceraProviderUuid = base_.CabeceraProviderUuid,
                     ClimaEstacion = estacion,
                     TempAmbienteC = tempC,
-                    // Diagnóstico puede cambiar en visita recurrente
-                    Categoria     = _epiSelector.SelectCategoria(base_.AgeGroup, base_.Gender, estacion, preferCommonRec),
+                    // Control de crónica → misma categoría; si no, se elige una nueva (motivo agudo).
+                    Categoria     = dxSeguimiento?.Categoria
+                                    ?? _epiSelector.SelectCategoria(base_.AgeGroup, base_.Gender, estacion, preferCommonRec),
                     VisitDatetime = _schedule.GenerateVisitTime(day.Date)
                 };
-                recurrente.Diagnostico = _epiSelector.SelectDiagnostico(
-                    recurrente.Categoria, recurrente.AgeGroup, recurrente.Gender, estacion, preferCommonRec);
+                recurrente.Diagnostico = dxSeguimiento
+                    ?? _epiSelector.SelectDiagnostico(
+                        recurrente.Categoria, recurrente.AgeGroup, recurrente.Gender, estacion, preferCommonRec);
                 recurrente.Comorbilidades = recurrente.Diagnostico is null
                     ? []
                     : _epiSelector.SelectComorbilidades(recurrente.Diagnostico, recurrente.AgeGroup, recurrente.Gender, estacion);
 
                 await ProcesarVisitaAsync(recurrente, day.Date, tracker, runId, ct);
+
+                // Persistir en el paciente original cualquier crónica nueva surgida en esta visita.
+                RegistrarCronicas(base_, recurrente);
+                FijarProximaVisita(base_, day.Date, rng);
             }
 
             diasProcesados++;
@@ -196,6 +225,31 @@ public class SeedOrchestrator
             r.Porcentaje = 100;
             r.Completado = true;
         });
+    }
+
+    /// <summary>
+    /// Acumula en <paramref name="poolPatient"/> (el objeto persistente del pool) los diagnósticos
+    /// crónicos surgidos en la visita de <paramref name="visitPatient"/>, deduplicados por UUID.
+    /// Así el paciente "arrastra" sus crónicas y puede volver por ellas en visitas recurrentes.
+    /// </summary>
+    private static void RegistrarCronicas(SimulatedPatient poolPatient, SimulatedPatient visitPatient)
+    {
+        foreach (var dx in visitPatient.TodosDiagnosticos)
+        {
+            if (!dx.EsCronica) continue;
+            if (poolPatient.CronicasActivas.Any(c => c.CielUuid == dx.CielUuid)) continue;
+            poolPatient.CronicasActivas.Add(dx);
+        }
+    }
+
+    /// <summary>
+    /// Fija en el paciente del pool la fecha más temprana de su próxima visita, imponiendo el intervalo
+    /// mínimo entre visitas (crónico = control mensual/trimestral; agudo = 1–3 semanas).
+    /// </summary>
+    private void FijarProximaVisita(SimulatedPatient poolPatient, DateOnly visita, Random rng)
+    {
+        poolPatient.ProximoElegibleDesde = RecurrenceScheduler.ProximaFechaElegible(
+            visita, poolPatient.CronicasActivas.Count > 0, rng, _settings.Recurrence);
     }
 
     private async Task ProcesarVisitaAsync(

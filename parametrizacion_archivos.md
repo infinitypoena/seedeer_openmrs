@@ -92,7 +92,10 @@ Todo el comportamiento del simulador se controla desde aquí.
 | `StartDate` / `EndDate` | date | Rango temporal de la simulación. |
 | `PacientesPorDiaMedio` | int | Promedio de pacientes por día hábil. Se aplica variación σ ≈ 20% con distribución normal (Box-Muller). |
 | `PorcentajeRecurrentes` | int (0-100) | % de visitas de pacientes ya existentes (controles, crónicos). |
-| `Locale` | string | Locale de Bogus. `"es"` = español latinoamericano. |
+| `SeguimientoCronicoProb` | float (0-1) | Continuidad longitudinal: prob. (def. 0.70) de que una visita recurrente de un paciente con condición crónica conocida sea un **control de esa misma condición** en vez de un motivo agudo nuevo. Solo aplica si el paciente arrastra ≥1 dx crónico. |
+| `Recurrence.MinDiasAgudo` / `MaxDiasAgudo` | int (días) | Intervalo mínimo/máximo para que un paciente **no crónico** vuelva (seguimiento agudo, def. 7–21). Evita retornos día-a-día. |
+| `Recurrence.MinDiasCronico` / `MaxDiasCronico` | int (días) | Intervalo del **control crónico** (def. 30–120). En ventanas cortas la proporción real de recurrentes puede quedar algo bajo `PorcentajeRecurrentes`. |
+| `Locale` | string | Locale de Bogus (solo fallback de nombres si faltan `nombres.csv`/`apellidos.csv`). `"es"` = español. |
 | `RandomSeed` | int | Semilla para reproducibilidad. Mismo seed = misma simulación. |
 | `CommonProbMin` / `CommonProbMax` | float (0-1) | Factor inicial: cada corrida sortea su P(común) en `[min,max]` (def. 0.75–0.95) → el principal cae mayormente en el pool `comun=true`, variando entre corridas. |
 | `MedicoCabeceraProbMin` / `MedicoCabeceraProbMax` | float (0-1) | Médico de cabecera: cada corrida sortea en `[min,max]` (def. 0.70–0.90) la prob. de que un recurrente vuelva con el mismo médico/consultorio de su primera visita; si no, cae con otro. Requiere `catalogs/consultorios.csv`. |
@@ -366,6 +369,36 @@ c1000000-0000-0000-0000-000000000012,SIM-MED-C2,Ana Rivas,F
 > **Fail-fast:** si un médico del catálogo no se puede crear ni encontrar al iniciar la corrida, el
 > seeder **aborta** con un error claro (estado `error` en `GET /api/seed/progress/{runId}`, listando los
 > identificadores) **antes** de crear datos — así no quedan encuentros firmados por "Unknown Provider".
+
+---
+
+## 10. catalogs/nombres.csv y catalogs/apellidos.csv — Nombres realistas de pacientes
+
+**Opcionales pero recomendados.** Alimentan el nombre completo del paciente (primer + segundo nombre y
+primer + segundo apellido), lo que evita el cuello de botella del locale de Bogus (`"es"` daba solo ~24
+nombres de pila → miles de pacientes con nombre repetido). Si faltan, el generador cae al Bogus previo
+(un solo nombre y un apellido).
+
+```csv
+nombre,genero
+José,M
+María,F
+```
+```csv
+apellido
+García
+López
+```
+
+| Archivo | Columna | Descripción |
+|---------|---------|-------------|
+| `nombres.csv` | `nombre` | Nombre de pila. |
+| `nombres.csv` | `genero` | `M` o `F`. El generador elige 2 nombres distintos del pool del género del paciente. |
+| `apellidos.csv` | `apellido` | Apellido. Se eligen 2 distintos (primer y segundo apellido). |
+
+> Los campos se envían a OpenMRS como `givenName` / `middleName` / `familyName` / `familyName2`.
+> Con ~150 nombres/género y ~200 apellidos el espacio de combinaciones supera el millón → colisiones
+> de nombre completo prácticamente nulas para una corrida de un año.
 
 ---
 

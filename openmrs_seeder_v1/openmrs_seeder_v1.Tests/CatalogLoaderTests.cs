@@ -211,6 +211,39 @@ public class CatalogLoaderTests
     }
 
     [Fact]
+    public void Load_NombresYApellidosParsean()
+    {
+        var dir = CreateTempDir(new()
+        {
+            ["nombres.csv"] =
+                "nombre,genero\n" +
+                "José,M\n" +
+                "María,F\n" +
+                ",M\n",          // fila sin nombre → se ignora
+            ["apellidos.csv"] =
+                "apellido\n" +
+                "García\n" +
+                "López\n" +
+                "\n",            // fila vacía → se ignora
+        });
+
+        try
+        {
+            var loader = new CatalogLoader();
+            loader.Load(dir);
+
+            Assert.Equal(2, loader.Nombres.Count);
+            Assert.Equal("José", loader.Nombres[0].Nombre);
+            Assert.Equal("M",    loader.Nombres[0].Genero);
+            Assert.Equal("F",    loader.Nombres[1].Genero);
+
+            Assert.Equal(2, loader.Apellidos.Count);
+            Assert.Equal(new[] { "García", "López" }, loader.Apellidos);
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [Fact]
     public void Load_AfinidadesParteAfinesPorPipe()
     {
         var dir = CreateTempDir(new()

@@ -21,6 +21,12 @@ public class SimulationSettings
     /// </summary>
     public double MedicoCabeceraProbMin { get; set; } = 0.70;
     public double MedicoCabeceraProbMax { get; set; } = 0.90;
+    /// <summary>
+    /// Probabilidad de que una visita recurrente de un paciente con condición crónica conocida sea un
+    /// control de esa MISMA condición (continuidad longitudinal) en lugar de un motivo agudo nuevo y
+    /// aleatorio. Solo aplica si el paciente ya arrastra ≥1 diagnóstico crónico. Def. 0.70.
+    /// </summary>
+    public double SeguimientoCronicoProb { get; set; } = 0.70;
     public string Locale { get; set; } = "es";
     public int RandomSeed { get; set; } = 42;
     public string ClinicType { get; set; } = "ConsultaExterna";
@@ -31,6 +37,24 @@ public class SimulationSettings
     public ComorbiditySettings Comorbidity { get; set; } = new();
     public ClimateSettings Climate { get; set; } = new();
     public AllergySettings Allergy { get; set; } = new();
+    public RecurrenceSettings Recurrence { get; set; } = new();
+}
+
+/// <summary>
+/// Intervalo mínimo clínicamente plausible entre dos visitas del mismo paciente. Evita que un
+/// recurrente vuelva a consulta externa día tras día. La banda depende de si el paciente arrastra una
+/// condición crónica (control mensual/trimestral) o no (seguimiento agudo de 1–3 semanas).
+/// </summary>
+public class RecurrenceSettings
+{
+    /// <summary>Días mínimos para volver si NO es crónico (seguimiento agudo).</summary>
+    public int MinDiasAgudo { get; set; } = 7;
+    /// <summary>Días máximos del seguimiento agudo.</summary>
+    public int MaxDiasAgudo { get; set; } = 21;
+    /// <summary>Días mínimos para el control de una condición crónica.</summary>
+    public int MinDiasCronico { get; set; } = 30;
+    /// <summary>Días máximos del control crónico.</summary>
+    public int MaxDiasCronico { get; set; } = 120;
 }
 
 public class AllergySettings

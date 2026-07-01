@@ -78,6 +78,24 @@ public class EpidemiologySelectorTests
     }
 
     [Fact]
+    public void RollSeguimientoCronico_ProbabilidadLimite()
+    {
+        var (_, selector) = CreateSelector();
+        Assert.False(selector.RollSeguimientoCronico(0.0)); // nunca
+        Assert.True(selector.RollSeguimientoCronico(1.0));  // siempre
+    }
+
+    [Fact]
+    public void RollSeguimientoCronico_FrecuenciaAproximada()
+    {
+        var (_, selector) = CreateSelector();
+        int si = 0;
+        const int n = 1000;
+        for (int i = 0; i < n; i++) if (selector.RollSeguimientoCronico(0.70)) si++;
+        Assert.InRange(si, 640, 760); // ~70%
+    }
+
+    [Fact]
     public void SelectCategoria_DevuelveCategoriasConocidas()
     {
         var (_, selector) = CreateSelector();

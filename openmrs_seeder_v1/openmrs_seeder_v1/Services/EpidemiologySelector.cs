@@ -54,6 +54,12 @@ public class EpidemiologySelector
     /// <summary>Factor inicial por paciente: con probabilidad <paramref name="pCommon"/> apunta a común.</summary>
     public bool RollPreferCommon(double pCommon) => _rng.NextDouble() < pCommon;
 
+    /// <summary>
+    /// Decide si una visita recurrente es un control de una condición crónica ya conocida del paciente
+    /// (con probabilidad <paramref name="p"/>) en lugar de un motivo agudo nuevo.
+    /// </summary>
+    public bool RollSeguimientoCronico(double p) => _rng.NextDouble() < p;
+
     public string SelectCategoria(string ageGroup, string gender, string? climate = null, bool? preferCommon = null)
     {
         var candidates = _catalogs.EpidemiologyProfile
