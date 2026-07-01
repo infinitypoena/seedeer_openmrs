@@ -162,7 +162,8 @@ Crear visitas con hora realista del día y registrar signos vitales coherentes c
 | PA diastólica (mmHg) | `5086AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA` |
 | Temperatura (°C) | `5088AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA` |
 | Pulso (lpm) | `5087AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA` |
-| SpO2 (%) | `5242AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA` |
+| Frecuencia respiratoria (rpm) | `5242AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA` (hiAbsolute=99) |
+| SpO2 (%) | `5092AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA` (⚠️ NO `5242`, que es frecuencia respiratoria) |
 
 ### Entregables
 - [ ] `Models/Api/VisitRequest.cs`, `EncounterRequest.cs`, `ObsRequest.cs`

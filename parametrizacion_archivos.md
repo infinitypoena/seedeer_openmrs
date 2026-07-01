@@ -15,7 +15,7 @@ Todo el comportamiento del simulador se controla desde aquí.
     "RestApi": {
       "BaseUrl": "http://localhost/openmrs/ws/rest/v1",
       "Username": "admin",
-      "Password": "Admin123"
+      "Password": "Prueba01$$xD"
     },
     "DirectDb": {
       "Server": "localhost",

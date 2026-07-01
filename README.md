@@ -172,8 +172,8 @@ Elimina todos los pacientes con prefijo `SIM-` y sus visitas asociadas.
 Para cada paciente generado, el simulador ejecuta en orden:
 
 ```
-PatientSeeder → AllergySeeder → VisitSeeder → VitalsSeeder
-            → ConsultaSeeder → LabOrderSeeder → PrescriptionSeeder → VisitCloseSeeder
+PatientSeeder → AllergySeeder → VisitSeeder → VitalsSeeder → ConsultaSeeder
+            → ConditionSeeder → LabOrderSeeder → PrescriptionSeeder → VisitCloseSeeder
 ```
 
 Todos los datos quedan vinculados en OpenMRS como si hubieran sido ingresados manualmente.
@@ -193,6 +193,10 @@ En `openmrs_seeder_v1/openmrs_seeder_v1/catalogs/`:
 | `alergenos.csv` | Alérgenos (DRUG/FOOD/ENVIRONMENT) con UUIDs verificados |
 | `examenes_clinicos.csv` | Exámenes físicos registrados como observaciones |
 | `motivos_consulta.csv` | Frases de motivo de consulta en español por categoría |
+| `nombres.csv` / `apellidos.csv` | Nombres de pila (por sexo) y apellidos centroamericanos para nombres realistas y únicos |
+| `clima.csv` *(opcional)* | Estación por semana ISO — sesga enfermedades estacionales |
+| `consultorios.csv` *(opcional)* | Consultorios + su médico (ubicación/personal dinámicos) |
+| `comorbilidad_afinidades.csv` *(opcional)* | Clusters de comorbilidad afines por categoría |
 
 Ver `parametrizacion_archivos.md` para el esquema completo de columnas.
 
@@ -232,5 +236,5 @@ dotnet test openmrs_seeder_v1/openmrs_seeder_v1.Tests/openmrs_seeder_v1.Tests.cs
 
 - **C# .NET 10** — ASP.NET Core 10
 - **OpenMRS 3.6.0** via REST API (`/ws/rest/v1`) — sin acceso directo a base de datos
-- **Bogus** (locale `es`) para generación de datos demográficos realistas
+- Nombres de pacientes desde catálogos CSV (`nombres.csv`/`apellidos.csv`, 2 nombres + 2 apellidos centroamericanos); **Bogus** (locale `es`) solo como fallback y para direcciones
 - **Swashbuckle** para Swagger UI

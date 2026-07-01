@@ -1,5 +1,19 @@
 # Detalle del Proyecto: OpenMRS Clinical Simulator API
 
+> **⚠️ Estado actual (jun 2026) — `CLAUDE.md` es la fuente de verdad viva.** Este documento es el
+> snapshot de **diseño** original; varias cifras/estados de abajo quedaron desfasados. Correcciones clave:
+> - **Pipeline completo y funcional** — todas las "Fases" marcadas abajo están **terminadas**. Ya se corrió
+>   el **año 2023 completo** (~4.178 pacientes SIM) y ventanas de 2024.
+> - **Credenciales OpenMRS**: `admin / Prueba01$$xD` (NO `Admin123`). DB MariaDB expuesta en `localhost:3306`
+>   (user `openmrs`, pass en el `.env` del compose).
+> - **Catálogos poblados**, no "de muestra": ~948 diagnósticos (13 categorías, incl. tropicales CA),
+>   ~30 medicamentos verificados, 7 labs, 15 alérgenos. Catálogos extra: `clima.csv`, `consultorios.csv`,
+>   `comorbilidad_afinidades.csv`, `nombres.csv`, `apellidos.csv`.
+> - **Mejoras de realismo añadidas** (ver bullets en `CLAUDE.md`): nombres únicos centroamericanos (2 nombres
+>   + 2 apellidos), continuidad longitudinal de crónicos, espaciamiento realista entre visitas, coherencia
+>   por sexo (columna `sexo`), y localización al español de conceptos CIEL (`scripts/agregar_nombres_es.ps1`).
+> - **UUIDs verificados** de esta instancia: ver la tabla en `CLAUDE.md` (difieren de los "estándar").
+
 ## Descripción General
 
 API REST en **C# ASP.NET Core 10** que actúa como **simulador clínico** para una instancia OpenMRS. Genera datos clínicos realistas en español siguiendo un modelo probabilístico que refleja la operación real de una clínica: volumen diario de pacientes con variación estadística, enfermedades distribuidas por edad y género, y coherencia entre diagnóstico, vitales, laboratorios, exámenes y prescripciones.
@@ -34,7 +48,7 @@ Se conecta a OpenMRS **exclusivamente via REST API** (`/ws/rest/v1`). No escribe
 
 El puerto 3306 **no necesita exponerse** — el simulador usa la REST API del backend.
 
-Credenciales por defecto: `admin / Admin123`
+Credenciales por defecto: `admin / Prueba01$$xD`
 
 ---
 
@@ -49,7 +63,7 @@ Ver `parametrizacion_archivos.md` para referencia completa de todos los parámet
     "RestApi": {
       "BaseUrl": "http://localhost/openmrs/ws/rest/v1",
       "Username": "admin",
-      "Password": "Admin123"
+      "Password": "Prueba01$$xD"
     },
     "DirectDb": {
       "Server": "localhost",
