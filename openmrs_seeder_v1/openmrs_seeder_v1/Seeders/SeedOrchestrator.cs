@@ -92,6 +92,9 @@ public class SeedOrchestrator
             if (ct.IsCancellationRequested) break;
             if (day.TotalPatients == 0) continue;
 
+            // Roster del día: 2-3 médicos "abren consultorio" (clínica pequeña, no siempre están todos)
+            _clinicResources.ActivarMedicosDelDia(rng);
+
             var (estacion, tempC) = _climate.Resolve(day.Date);
 
             _logger.LogInformation("[Orchestrator] ── {Date} | {Nuevos} nuevos, {Recurrentes} recurrentes | clima: {Clima} ──",

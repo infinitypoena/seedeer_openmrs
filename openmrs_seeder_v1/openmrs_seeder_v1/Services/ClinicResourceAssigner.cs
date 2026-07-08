@@ -23,6 +23,8 @@ public class ClinicResourceAssigner
     private readonly Random _rng = new();
 
     private List<(string Location, string Provider)> _consultorios = [];
+    /// <summary>Médicos que atienden HOY (subconjunto de <c>_consultorios</c>, refrescado por día).</summary>
+    private List<(string Location, string Provider)> _consultoriosActivos = [];
     /// <summary>Prob. de la corrida de que un recurrente vuelva con su médico de cabecera.</summary>
     private double _runCabeceraProb;
 
@@ -75,15 +77,48 @@ public class ClinicResourceAssigner
     }
 
     /// <summary>
+    /// Sortea los médicos que atienden HOY: un subconjunto de tamaño aleatorio en
+    /// [<c>MinMedicosPorDia</c>, <c>MaxMedicosPorDia</c>] (recortado al pool). Se llama una vez por
+    /// día desde el orquestador para modelar una clínica pequeña donde no siempre están todos.
+    /// </summary>
+    public void ActivarMedicosDelDia(Random rng)
+    {
+        _consultoriosActivos = SeleccionarActivos(
+            _consultorios, _simSettings.MinMedicosPorDia, _simSettings.MaxMedicosPorDia, rng);
+
+        if (_consultoriosActivos.Count > 0 && _consultoriosActivos.Count < _consultorios.Count)
+            _logger.LogInformation("[Clinic] Médicos de hoy: {N} de {Total} consultorios activos",
+                _consultoriosActivos.Count, _consultorios.Count);
+    }
+
+    /// <summary>
+    /// Selección pura (RNG inyectado) del subconjunto de médicos activos de un día. Elige un tamaño
+    /// aleatorio en [min, max] recortado a [1, pool.Count] y toma esa cantidad de médicos DISTINTOS.
+    /// Pool vacío → lista vacía (modo proveedor único por defecto). Testeable sin red.
+    /// </summary>
+    public static List<(string Location, string Provider)> SeleccionarActivos(
+        IReadOnlyList<(string Location, string Provider)> pool, int min, int max, Random rng)
+    {
+        if (pool.Count == 0) return [];
+        var lo = Math.Clamp(min, 1, pool.Count);
+        var hi = Math.Clamp(max, lo, pool.Count);
+        var n  = rng.Next(lo, hi + 1);
+        return pool.OrderBy(_ => rng.Next()).Take(n).ToList();
+    }
+
+    /// <summary>
     /// Asigna consultorio + médico a la visita y mantiene el médico de cabecera del paciente:
     /// los nuevos estrenan cabecera; los recurrentes vuelven a su cabecera con probabilidad
-    /// <c>_runCabeceraProb</c>, o caen con otro médico en caso contrario.
+    /// <c>_runCabeceraProb</c> —siempre que ese médico esté disponible hoy—, o caen con otro médico.
     /// </summary>
     public void AssignVisit(SimulatedPatient patient)
     {
         var tieneCabecera = !string.IsNullOrEmpty(patient.CabeceraProviderUuid);
+        var activos = _consultoriosActivos.Count > 0 ? _consultoriosActivos : _consultorios;
+        var cabeceraDisponible = tieneCabecera &&
+            activos.Any(c => c.Provider == patient.CabeceraProviderUuid);
 
-        if (UsarCabecera(tieneCabecera, patient.EsNuevo, _rng.NextDouble(), _runCabeceraProb))
+        if (UsarCabecera(cabeceraDisponible, patient.EsNuevo, _rng.NextDouble(), _runCabeceraProb))
         {
             patient.AssignedLocationUuid = patient.CabeceraLocationUuid;
             patient.AssignedProviderUuid = patient.CabeceraProviderUuid;
@@ -106,9 +141,10 @@ public class ClinicResourceAssigner
     public static bool UsarCabecera(bool tieneCabecera, bool esNuevo, double roll, double runProb) =>
         tieneCabecera && !esNuevo && roll < runProb;
 
-    /// <summary>Devuelve un par (ubicación, médico) aleatorio para una visita.</summary>
+    /// <summary>Devuelve un par (ubicación, médico) aleatorio de entre los médicos activos hoy.</summary>
     public (string Location, string Provider) Assign() =>
-        Pick(_consultorios, _settings.Defaults.LocationUuid, _settings.Defaults.ProviderUuid, _rng.Next);
+        Pick(_consultoriosActivos.Count > 0 ? _consultoriosActivos : _consultorios,
+             _settings.Defaults.LocationUuid, _settings.Defaults.ProviderUuid, _rng.Next);
 
     /// <summary>
     /// Selección pura (RNG inyectado) para ser testeable sin red. Si la lista está vacía, cae

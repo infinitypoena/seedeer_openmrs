@@ -77,6 +77,52 @@ public class ClinicResourceAssignerTests
         Assert.False(ClinicResourceAssigner.UsarCabecera(tieneCabecera: false, esNuevo: false, roll: 0.0, runProb: 0.90));
     }
 
+    // ── SeleccionarActivos (roster diario de médicos) ─────────────────────────
+
+    [Fact]
+    public void SeleccionarActivos_TamanoDentroDelRango()
+    {
+        var rng = new Random(123);
+        for (int i = 0; i < 200; i++)
+        {
+            var activos = ClinicResourceAssigner.SeleccionarActivos(Consultorios, 2, 3, rng);
+            Assert.InRange(activos.Count, 2, 3);
+        }
+    }
+
+    [Fact]
+    public void SeleccionarActivos_MinMayorQuePool_SeRecortaAlPool()
+    {
+        var pool = Consultorios.Take(3).ToList();
+        var activos = ClinicResourceAssigner.SeleccionarActivos(pool, 5, 9, new Random(1));
+        Assert.Equal(3, activos.Count);
+    }
+
+    [Fact]
+    public void SeleccionarActivos_PoolVacio_DevuelveVacio()
+    {
+        var activos = ClinicResourceAssigner.SeleccionarActivos([], 2, 3, new Random(1));
+        Assert.Empty(activos);
+    }
+
+    [Fact]
+    public void SeleccionarActivos_MedicosDistintos_SinRepetidos()
+    {
+        var rng = new Random(42);
+        for (int i = 0; i < 200; i++)
+        {
+            var activos = ClinicResourceAssigner.SeleccionarActivos(Consultorios, 2, 4, rng);
+            Assert.Equal(activos.Count, activos.Select(a => a.Provider).Distinct().Count());
+        }
+    }
+
+    [Fact]
+    public void SeleccionarActivos_ElementosPertenecenAlPool()
+    {
+        var activos = ClinicResourceAssigner.SeleccionarActivos(Consultorios, 2, 3, new Random(7));
+        Assert.All(activos, a => Assert.Contains(a, Consultorios));
+    }
+
     // ── ResolvePool (fail-fast) ───────────────────────────────────────────────
 
     private static ConsultorioEntry Entry(string loc, string id) =>

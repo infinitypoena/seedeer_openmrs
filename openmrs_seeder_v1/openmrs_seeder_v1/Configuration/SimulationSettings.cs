@@ -22,6 +22,13 @@ public class SimulationSettings
     public double MedicoCabeceraProbMin { get; set; } = 0.70;
     public double MedicoCabeceraProbMax { get; set; } = 0.90;
     /// <summary>
+    /// Médicos que "abren consultorio" cada día: cada día se sortea un tamaño en [Min, Max]
+    /// (recortado al pool disponible) y solo esos médicos atienden. Modela una clínica pequeña
+    /// donde no siempre están todos. Def. 2–3. Si el pool ≤ Min, todos disponibles (sin efecto).
+    /// </summary>
+    public int MinMedicosPorDia { get; set; } = 2;
+    public int MaxMedicosPorDia { get; set; } = 3;
+    /// <summary>
     /// Probabilidad de que una visita recurrente de un paciente con condición crónica conocida sea un
     /// control de esa MISMA condición (continuidad longitudinal) en lugar de un motivo agudo nuevo y
     /// aleatorio. Solo aplica si el paciente ya arrastra ≥1 diagnóstico crónico. Def. 0.70.
