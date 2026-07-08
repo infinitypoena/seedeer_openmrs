@@ -18,4 +18,22 @@ public class LaboratorioEntry
     public bool AplicaSaludMental { get; set; }
     public bool AplicaGinecoobstetrico { get; set; }
     public bool AplicaTrauma { get; set; }
+
+    // ── Generación de resultado (v1: numeric | coded; panel/imagen/"" = sin resultado) ──
+    /// <summary><c>numeric</c> | <c>coded</c> | <c>panel</c> | <c>imagen</c> (vacío = sin resultado).</summary>
+    public string Datatype { get; set; } = "";
+    /// <summary>Banda numérica normal (inclusive).</summary>
+    public double ResMin { get; set; }
+    public double ResMax { get; set; }
+    /// <summary>Banda numérica anormal (cuando la enfermedad del paciente dispara el examen).</summary>
+    public double ResMinAnormal { get; set; }
+    public double ResMaxAnormal { get; set; }
+    /// <summary>UUID de la respuesta "normal" para tests codificados (p.ej. Negativo).</summary>
+    public string ResNormalUuid { get; set; } = "";
+    /// <summary>UUID de la respuesta "anormal" para tests codificados (p.ej. Positivo).</summary>
+    public string ResAnormalUuid { get; set; } = "";
+    /// <summary>Categorías que hacen anormal el resultado (para numéricos, p.ej. diabetes|endocrino).</summary>
+    public List<string> ResTrigger { get; set; } = [];
+    /// <summary>UUIDs de diagnósticos específicos que hacen anormal el resultado (para codificados disease-specific, p.ej. dengue → NS1 Positivo).</summary>
+    public List<string> ResTriggerDx { get; set; } = [];
 }

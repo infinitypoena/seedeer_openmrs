@@ -111,6 +111,8 @@ Todo el comportamiento del simulador se controla desde aquí.
 | `ReferralProbabilities.DrugOrder` | float (0-1) | Probabilidad base de prescripción de medicamento. |
 | `ReferralProbabilities.Urgent` | float (0-1) | Probabilidad de que una orden de lab sea URGENTE. |
 | `ReferralProbabilities.FollowUp` | float (0-1) | Probabilidad de registrar una cita de control: obs fecha "Return visit date" (`5096`) 7–30 días después de la visita. |
+| `ReferralProbabilities.LabResult` | float (0-1) | Fracción de órdenes de lab numéricas/codificadas que "vuelven" con un resultado el mismo día (obs ligada a la orden). El resto queda pendiente (def. 0.90). Paneles e imágenes nunca registran valor. |
+| `MinMedicosPorDia` / `MaxMedicosPorDia` | int | Roster diario: cada día se activan aleatoriamente entre `Min` y `Max` médicos del pool de `consultorios.csv` (def. 2/3). Pool ≤ Min = todos disponibles. |
 | `Allergy.BaseProbabilityMin` / `BaseProbabilityMax` | float (0-1) | Banda de prevalencia de alergias: cada corrida sortea su valor en `[min,max]` (def. 0.15–0.25, fracción clínicamente documentada del ~25-30% poblacional) → el % de pacientes nuevos alérgicos varía entre corridas. |
 | `Allergy.SecondAllergyProbability` | float (0-1) | Dado que el paciente ya tiene 1 alergia, probabilidad de sumar una 2ª (decaída condicional). |
 | `Allergy.ThirdAllergyProbability` | float (0-1) | Dado que ya tiene 2, probabilidad de sumar una 3ª. |
@@ -252,15 +254,15 @@ SAMPLE_metformina,Metformina,850mg,SAMPLE_oral,false,false,true,false,false,fals
 
 ---
 
-## 5. catalogs/laboratorios.csv — Catálogo de exámenes externos con booleanos
+## 5. catalogs/laboratorios.csv — Catálogo de exámenes externos con booleanos + resultado
 
-Extraído de OpenMRS (concept class Test/LabSet) + columnas booleanas.
+Extraído de OpenMRS (concept class Test/LabSet) + columnas booleanas de categoría + **columnas de resultado** que alimentan `LabResultGenerator` (el resultado se registra como obs ligada a la orden).
 
 ```csv
-ciel_uuid,nombre_es,clase,aplica_respiratorio,aplica_cardiovascular,aplica_diabetes,aplica_digestivo,aplica_osteomuscular,aplica_urologico,aplica_infeccioso,aplica_endocrino
-1019AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hemograma completo,Test,true,true,true,true,true,true,true,false
-887AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Glucemia en ayunas,Test,false,true,true,false,false,false,false,true
-159799AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hemoglobina glicosilada HbA1c,Test,false,false,true,false,false,false,false,true
+ciel_uuid,nombre_es,clase,aplica_respiratorio,...,aplica_trauma,datatype,res_min,res_max,res_min_anormal,res_max_anormal,res_normal_uuid,res_anormal_uuid,res_trigger,res_trigger_dx
+160912AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Glucemia en ayunas,Test,false,...,false,numeric,70,99,126,260,,,diabetes|endocrino,
+58b969e7-77ef-4941-a0ec-72372a2fa716,Antígeno NS1 dengue,Test,false,...,false,coded,,,,,664AAAA...(Negativo),703AAAA...(Positivo),,142592AAAA...|61304dd2...(dengue)
+1019AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hemograma completo,Test,true,...,true,panel,,,,,,,,
 ```
 
 | Columna | Descripción |
@@ -269,6 +271,14 @@ ciel_uuid,nombre_es,clase,aplica_respiratorio,aplica_cardiovascular,aplica_diabe
 | `nombre_es` | Nombre del examen en español |
 | `clase` | `Test`, `LabSet`, `Lab Findings` |
 | `aplica_CATEGORIA` | `true`/`false` — si este lab es coherente para esa categoría diagnóstica |
+| `datatype` | `numeric` \| `coded` \| `panel` \| `imagen` (vacío = sin resultado; solo numeric/coded generan valor) |
+| `res_min` / `res_max` | Banda numérica **normal** (inclusive) |
+| `res_min_anormal` / `res_max_anormal` | Banda numérica **anormal** (cuando la enfermedad dispara el examen) |
+| `res_normal_uuid` / `res_anormal_uuid` | UUID de la respuesta normal/anormal para tests **codificados** (p.ej. Negativo/Positivo) |
+| `res_trigger` | Categorías (`\|`-separadas) que hacen anormal el resultado — típico de numéricos (p.ej. `diabetes\|endocrino`) |
+| `res_trigger_dx` | UUIDs de diagnósticos específicos que disparan el anormal — típico de codificados disease-specific (p.ej. dengue → NS1 Positivo) |
+
+Con disparo presente, el resultado es anormal con prob. `LabResultGenerator.ProbAnormalSiTrigger` (0.80); si no, normal. Paneles (`set`, p.ej. hemograma) e imágenes quedan solo como orden (v1).
 
 ---
 

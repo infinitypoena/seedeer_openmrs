@@ -197,8 +197,22 @@ public class CatalogLoader
         AplicaDermatologico   = B(row, "aplica_dermatologico"),
         AplicaSaludMental     = B(row, "aplica_salud_mental"),
         AplicaGinecoobstetrico= B(row, "aplica_ginecoobstetrico"),
-        AplicaTrauma          = B(row, "aplica_trauma")
+        AplicaTrauma          = B(row, "aplica_trauma"),
+        // Columnas de resultado (opcionales; ausentes = sin resultado)
+        Datatype            = S(row, "datatype").Trim().ToLowerInvariant(),
+        ResMin              = D(row, "res_min"),
+        ResMax              = D(row, "res_max"),
+        ResMinAnormal       = D(row, "res_min_anormal"),
+        ResMaxAnormal       = D(row, "res_max_anormal"),
+        ResNormalUuid       = S(row, "res_normal_uuid"),
+        ResAnormalUuid      = S(row, "res_anormal_uuid"),
+        ResTrigger          = Pipe(row, "res_trigger"),
+        ResTriggerDx        = Pipe(row, "res_trigger_dx")
     };
+
+    /// <summary>Lista separada por '|' (vacío = lista vacía).</summary>
+    private static List<string> Pipe(Dictionary<string, string> row, string key) =>
+        S(row, key).Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
 
     private static ExamenClinicoEntry ParseExamenClinico(Dictionary<string, string> row) => new()
     {

@@ -167,6 +167,12 @@ public class ReferralProbabilitiesSettings
     public double DrugOrder { get; set; } = 0.65;
     public double Urgent { get; set; } = 0.20;
     public double FollowUp { get; set; } = 0.30;
+    /// <summary>
+    /// Fracción de órdenes de laboratorio que "vuelven" con un resultado el mismo día (obs ligada a
+    /// la orden). El resto queda pendiente (sin resultado), como en una clínica real. Def. 0.90.
+    /// Solo aplica a tests numéricos/codificados; paneles e imágenes nunca registran valor en v1.
+    /// </summary>
+    public double LabResult { get; set; } = 0.90;
 }
 
 public class WeekdayWeightsSettings

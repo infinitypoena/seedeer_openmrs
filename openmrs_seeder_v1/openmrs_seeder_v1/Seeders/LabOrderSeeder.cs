@@ -14,6 +14,7 @@ public class LabOrderSeeder
     private readonly CatalogLoader _catalogs;
     private readonly double _labOrderProb;
     private readonly double _urgentProb;
+    private readonly double _labResultProb;
     private readonly Random _rng = new();
     private readonly ILogger<LabOrderSeeder> _logger;
 
@@ -24,12 +25,13 @@ public class LabOrderSeeder
         SimulationSettings simSettings,
         ILogger<LabOrderSeeder> logger)
     {
-        _client       = client;
-        _settings     = settings;
-        _catalogs     = catalogs;
-        _labOrderProb = simSettings.ReferralProbabilities.LabOrder;
-        _urgentProb   = simSettings.ReferralProbabilities.Urgent;
-        _logger       = logger;
+        _client        = client;
+        _settings      = settings;
+        _catalogs      = catalogs;
+        _labOrderProb  = simSettings.ReferralProbabilities.LabOrder;
+        _urgentProb    = simSettings.ReferralProbabilities.Urgent;
+        _labResultProb = simSettings.ReferralProbabilities.LabResult;
+        _logger        = logger;
     }
 
     public async Task SeedAsync(SimulatedPatient patient, CancellationToken ct)
@@ -56,22 +58,36 @@ public class LabOrderSeeder
         var cantidad = _rng.NextDouble() < 0.40 ? 2 : 1;
         var elegidos = candidatos.OrderBy(_ => _rng.Next()).Take(cantidad).ToList();
 
-        int ordenesOk = 0;
+        // Sets para el generador de resultados (categorías + diagnósticos del paciente)
+        var categorias = patient.Categorias as ISet<string> ?? new HashSet<string>(patient.Categorias);
+        var dxUuids    = patient.TodosDiagnosticos.Select(d => d.CielUuid).ToHashSet();
+
+        int ordenesOk = 0, resultadosOk = 0;
         foreach (var lab in elegidos)
         {
             var esUrgente = patient.TodosDiagnosticos.Any(d => d.Severidad == "grave")
                 ? _rng.NextDouble() < 0.50
                 : _rng.NextDouble() < _urgentProb;
 
-            var ok = await PostOrderAsync(patient, lab.CielUuid, esUrgente ? "STAT" : "ROUTINE", ct);
-            if (ok) { ordenesOk++; patient.OrderedConcepts.Add(lab.CielUuid); }
+            var orderUuid = await PostOrderAsync(patient, lab.CielUuid, esUrgente ? "STAT" : "ROUTINE", ct);
+            if (orderUuid is null) continue;
+
+            ordenesOk++;
+            patient.OrderedConcepts.Add(lab.CielUuid);
+
+            // Resultado el mismo día (fracción _labResultProb); solo numéricos/codificados
+            if (_rng.NextDouble() >= _labResultProb) continue;
+            var result = LabResultGenerator.Generar(lab, categorias, dxUuids, _rng);
+            if (result.Tipo == LabResultGenerator.TipoResultado.Ninguno) continue;
+            if (await PostResultObsAsync(patient, lab.CielUuid, orderUuid, result, ct)) resultadosOk++;
         }
 
-        _logger.LogInformation("[LabOrder] {N}/{Total} órdenes de lab para {Id}",
-            ordenesOk, elegidos.Count, patient.Identifier);
+        _logger.LogInformation("[LabOrder] {N}/{Total} órdenes + {R} resultados para {Id}",
+            ordenesOk, elegidos.Count, resultadosOk, patient.Identifier);
     }
 
-    private async Task<bool> PostOrderAsync(SimulatedPatient patient, string conceptUuid, string urgency, CancellationToken ct)
+    /// <summary>Crea la orden y devuelve su UUID (o null si falla).</summary>
+    private async Task<string?> PostOrderAsync(SimulatedPatient patient, string conceptUuid, string urgency, CancellationToken ct)
     {
         var payload = new
         {
@@ -86,12 +102,45 @@ public class LabOrderSeeder
 
         try
         {
-            await _client.PostAsync("order", payload, ct);
-            return true;
+            var json = await _client.PostAsync("order", payload, ct);
+            var doc  = JsonSerializer.Deserialize<JsonElement>(json);
+            return doc.TryGetProperty("uuid", out var uuid) ? uuid.GetString() : null;
         }
         catch (Exception ex)
         {
             _logger.LogError("[LabOrder] Error en orden para {Id}: {Msg}", patient.Identifier, ex.Message);
+            return null;
+        }
+    }
+
+    /// <summary>Registra el resultado como obs ligada a la orden (numérico → número; codificado → UUID de respuesta).</summary>
+    private async Task<bool> PostResultObsAsync(
+        SimulatedPatient patient, string conceptUuid, string orderUuid,
+        LabResultGenerator.LabResult result, CancellationToken ct)
+    {
+        object value = result.Tipo == LabResultGenerator.TipoResultado.Numerico
+            ? result.Numerico!.Value
+            : result.CodedUuid!;
+
+        var payload = new
+        {
+            concept     = conceptUuid,
+            person      = patient.OpenMrsUuid,
+            encounter   = patient.ConsultaEncounterUuid,
+            order       = orderUuid,
+            obsDatetime = VisitSeeder.FormatDatetime(patient.VisitDatetime),
+            value
+        };
+
+        try
+        {
+            await _client.PostAsync("obs", payload, ct);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("[LabOrder] Error en resultado {Concept} para {Id}: {Msg}",
+                conceptUuid, patient.Identifier, ex.Message);
             return false;
         }
     }
