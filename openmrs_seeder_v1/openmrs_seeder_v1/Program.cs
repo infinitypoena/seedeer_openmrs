@@ -10,6 +10,13 @@ var builder = WebApplication.CreateBuilder(args);
 var omrsSettings = builder.Configuration.GetSection("OpenMRS").Get<OpenMrsSettings>()!;
 var simSettings  = builder.Configuration.GetSection("Simulation").Get<SimulationSettings>()!;
 
+// Fail-fast: no arrancar con configuración inválida (una probabilidad fuera de rango o una banda
+// invertida solo se manifestaría como comportamiento raro a mitad de una corrida de horas).
+var violaciones = SettingsValidator.Validate(simSettings, omrsSettings);
+if (violaciones.Count > 0)
+    throw new InvalidOperationException(
+        "Configuración inválida en appsettings.json:\n - " + string.Join("\n - ", violaciones));
+
 builder.Services.AddSingleton(omrsSettings);
 builder.Services.AddSingleton(simSettings);
 
@@ -57,6 +64,13 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 var app = builder.Build();
+
+// Claves del JSON que el binding ignoró en silencio (típicamente parámetros renombrados/obsoletos).
+var clavesDesconocidas = SettingsValidator
+    .FindUnknownKeys(builder.Configuration.GetSection("Simulation"), typeof(SimulationSettings))
+    .Concat(SettingsValidator.FindUnknownKeys(builder.Configuration.GetSection("OpenMRS"), typeof(OpenMrsSettings)));
+foreach (var clave in clavesDesconocidas)
+    app.Logger.LogWarning("Clave de configuración desconocida (ignorada por el binding): {Clave}", clave);
 
 app.UseSwagger();
 app.UseSwaggerUI(c =>

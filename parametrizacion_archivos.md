@@ -8,21 +8,20 @@ Este documento describe todos los archivos de configuración y catálogos del si
 
 Todo el comportamiento del simulador se controla desde aquí.
 
+> **Validación al arranque (fail-fast):** `SettingsValidator` revisa la configuración al iniciar el
+> proceso. Valores inválidos (probabilidades fuera de `[0,1]`, bandas invertidas `Min > Max`,
+> `StartDate > EndDate`, volúmenes ≤ 0…) **impiden arrancar** con un mensaje que lista cada campo
+> violado. Las claves del JSON que no correspondan a ningún parámetro (p. ej. una clave obsoleta de
+> una versión anterior) generan un **warning** en el log — el binding de .NET las ignoraría en
+> silencio.
+
 ```json
 {
   "OpenMRS": {
-    "SeedMode": "RestApi",
     "RestApi": {
       "BaseUrl": "http://localhost/openmrs/ws/rest/v1",
       "Username": "admin",
       "Password": "Prueba01$$xD"
-    },
-    "DirectDb": {
-      "Server": "localhost",
-      "Port": 3306,
-      "Database": "openmrs",
-      "User": "openmrs",
-      "Password": "openmrs"
     },
     "Defaults": {
       "PatientIdentifierTypeUuid": "05a29f94-c0ed-11e2-94be-8c13b969e334",
@@ -41,7 +40,6 @@ Todo el comportamiento del simulador se controla desde aquí.
     "PorcentajeRecurrentes": 30,
     "Locale": "es",
     "RandomSeed": 42,
-    "ClinicType": "ConsultaExterna",
     "HorarioAtencion": {
       "PicoAM": { "Inicio": "08:00", "Fin": "10:00", "Peso": 40 },
       "PicoPM": { "Inicio": "14:00", "Fin": "16:00", "Peso": 30 }
@@ -101,7 +99,6 @@ Todo el comportamiento del simulador se controla desde aquí.
 | `RandomSeed` | int | Semilla para reproducibilidad. Mismo seed = misma simulación. |
 | `CommonProbMin` / `CommonProbMax` | float (0-1) | Factor inicial: cada corrida sortea su P(común) en `[min,max]` (def. 0.75–0.95) → el principal cae mayormente en el pool `comun=true`, variando entre corridas. |
 | `MedicoCabeceraProbMin` / `MedicoCabeceraProbMax` | float (0-1) | Médico de cabecera: cada corrida sortea en `[min,max]` (def. 0.70–0.90) la prob. de que un recurrente vuelva con el mismo médico/consultorio de su primera visita; si no, cae con otro. Requiere `catalogs/consultorios.csv`. |
-| `ClinicType` | string | Perfil del establecimiento: `ConsultaExterna`, `HospitalUrgencias`, `CentroComunitario`. Referencia semántica, no fuerza valores. |
 | `HorarioAtencion.PicoAM/PM` | objeto | Bloque horario pico con peso (% de atenciones). El resto se distribuye uniformemente. |
 | `DemographicProfile.AgeGroups` | array | Distribución etaria. Los `Weight` se normalizan al 100%. |
 | `DemographicProfile.GenderRatio` | objeto | Proporción M/F (se normalizan entre sí). |
@@ -545,7 +542,7 @@ Esto permite:
 | Período de simulación | `appsettings.json` → `StartDate/EndDate` |
 | Volumen de pacientes | `appsettings.json` → `PacientesPorDiaMedio` |
 | Variación estadística diaria | `DailyScheduleGenerator.cs` → parámetro σ del Normal |
-| Tipo de clínica / perfil | `appsettings.json` → `ClinicType` (referencia semántica) |
+| Perfil pediátrico de la clínica | `appsettings.json` → `DemographicProfile.PediatricClinic` |
 | Distribución etaria | `appsettings.json` → `DemographicProfile.AgeGroups` |
 | Volumen por día de semana | `appsettings.json` → `WeekdayWeights` |
 | Qué enfermedades predominan | `epidemiology-profile.csv` → `peso` por categoría |

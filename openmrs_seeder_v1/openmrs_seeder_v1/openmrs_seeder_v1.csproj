@@ -10,7 +10,6 @@
 
   <ItemGroup>
     <PackageReference Include="Bogus" Version="35.*" />
-    <PackageReference Include="MySqlConnector" Version="2.*" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.*" />
   </ItemGroup>
 

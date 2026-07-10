@@ -51,6 +51,7 @@ Key architectural decisions:
 - **Spanish concept names (CIEL localization)**: some CIEL concepts used as diagnoses had **no `es` name in this instance**, so the Spanish UI showed them in English ("Heart failure", "Dengue with warning signs"). `scripts/agregar_nombres_es.ps1` pushes each catalog `nombre_es` as a locale-preferred **synonym** (`POST /concept/{uuid}/name`, additive/idempotent — never deletes) so they render in Spanish; UUIDs/CIEL codes are unchanged. 12 redundant English-only concepts that duplicated an existing Spanish-named concept were **repointed** in the catalog to that concept's UUID (no disease lost). Also resolved 3 rows that had `ciel_uuid=PENDIENTE`. Run `pwsh scripts/agregar_nombres_es.ps1` against a fresh instance to re-apply.
 - **Realistic inter-visit spacing**: a patient cannot return to consulta externa day-after-day. Each pool patient carries `SimulatedPatient.ProximoElegibleDesde`, set after **every** visit (new + recurrent, in `SeedOrchestrator.FijarProximaVisita`, after `RegistrarCronicas` so chronic status is known) via the pure seam `RecurrenceScheduler.ProximaFechaElegible(lastVisit, esCronico, rng, Simulation.Recurrence)`: chronic patients get a **control interval** (`Min/MaxDiasCronico`, def. 30–120 d), non-chronic an **acute follow-up** (`Min/MaxDiasAgudo`, def. 7–21 d). The recurrent-selection filter in `RunAsync` only considers candidates with `day.Date >= ProximoElegibleDesde`. Side effect: on short windows / young pools fewer patients are eligible, so the realized recurrent share can dip slightly below `PorcentajeRecurrentes` (intended — recurrence builds up as the pool ages). Pure decision seam tested in `RecurrenceSchedulerTests`.
 - **Patient birthdate**: `PatientProfileGenerator.GenerateNew(referenceDate)` anchors the birthdate to the **visit/creation date** (not `DateTime.Today`), so age is valid at the (past) visit date — this avoids OpenMRS `startDateCannotFallBeforeTheBirthDate`. Minimum age is `DemographicProfile.MinPatientAgeMonths` (6) — or `PediatricMinAgeMonths` (1) when `PediatricClinic=true`.
+- **Config validation (fail-fast at startup)**: `Configuration/SettingsValidator.cs` (pure static, tested in `SettingsValidatorTests`). `Validate(sim, omrs)` checks ranges/coherence (probabilities in [0,1], `Min ≤ Max` bands, `StartDate ≤ EndDate`, positive volumes, non-negative weights, non-empty `BaseUrl`) — any violation throws in `Program.cs` **before** the app starts, listing every offending field. `FindUnknownKeys(section, type)` walks the bound config sections vs. POCO properties by reflection and logs a **warning** per JSON key the binder would silently ignore (this is how the orphan `ReferralProbabilities:AllergyOnNew` survived a rename unnoticed); it does not descend into dictionary/collection properties (free-form keys like `AgeScaling`). Removed dead config in the same pass: `OpenMRS.SeedMode`, `OpenMRS.DirectDb` (+ unused `MySqlConnector` package) and `Simulation.ClinicType` — the simulator is REST-only and the pediatric case is `DemographicProfile.PediatricClinic`. Candidate v2: move the per-category vitals ranges hardcoded in `VitalsSeeder` to a `vitales_rangos.csv` catalog.
 
 ## Infrastructure
 
@@ -66,7 +67,6 @@ See `parametrizacion_archivos.md` for full parameter reference. Key sections in 
 ```json
 {
   "OpenMRS": {
-    "SeedMode": "RestApi",
     "RestApi": { "BaseUrl": "http://localhost/openmrs/ws/rest/v1", "Username": "admin", "Password": "Prueba01$$xD" }
   },
   "Simulation": {
@@ -75,7 +75,6 @@ See `parametrizacion_archivos.md` for full parameter reference. Key sections in 
     "PacientesPorDiaMedio": 40,
     "PorcentajeRecurrentes": 30,
     "SeguimientoCronicoProb": 0.70,
-    "ClinicType": "ConsultaExterna",
     "ReferralProbabilities": {
       "LabOrder": 0.40, "ClinicalExam": 0.35, "DrugOrder": 0.65,
       "Urgent": 0.20, "FollowUp": 0.30, "LabResult": 0.90

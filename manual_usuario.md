@@ -223,7 +223,6 @@ El archivo de configuración es `appsettings.json` (plantilla: `appsettings.exam
 ```json
 {
   "OpenMRS": {
-    "SeedMode": "RestApi",
     "RestApi": {
       "BaseUrl": "http://localhost/openmrs/ws/rest/v1",
       "Username": "admin",
@@ -234,7 +233,10 @@ El archivo de configuración es `appsettings.json` (plantilla: `appsettings.exam
 }
 ```
 
-`SeedMode` debe ser siempre `"RestApi"` (el modo `DirectDb` no está implementado).
+> **Validación al arranque:** el simulador valida toda la configuración al iniciar. Si un valor es
+> inválido (probabilidad fuera de 0–1, `StartDate` posterior a `EndDate`, banda `Min > Max`…), el
+> proceso **no arranca** y el mensaje de error nombra cada campo violado. Las claves desconocidas
+> (p. ej. un parámetro obsoleto que quedó en el JSON) generan un warning en el log al arrancar.
 
 ### 5.2 UUIDs en `OpenMRS.Defaults`
 

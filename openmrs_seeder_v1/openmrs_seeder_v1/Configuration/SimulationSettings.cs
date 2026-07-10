@@ -43,7 +43,6 @@ public class SimulationSettings
     public int VentanaSeguimientoAgudoDias { get; set; } = 30;
     public string Locale { get; set; } = "es";
     public int RandomSeed { get; set; } = 42;
-    public string ClinicType { get; set; } = "ConsultaExterna";
     public HorarioAtencionSettings HorarioAtencion { get; set; } = new();
     public DemographicProfileSettings DemographicProfile { get; set; } = new();
     public ReferralProbabilitiesSettings ReferralProbabilities { get; set; } = new();

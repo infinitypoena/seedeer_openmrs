@@ -49,11 +49,10 @@ public class SeedController : ControllerBase
             {
                 online   = openmrsOnline,
                 baseUrl  = _omrsSettings.RestApi.BaseUrl,
-                seedMode = _omrsSettings.SeedMode
+                seedMode = "RestApi"
             },
             simulation = new
             {
-                clinicType            = _simSettings.ClinicType,
                 startDate             = _simSettings.StartDate.ToString("yyyy-MM-dd"),
                 endDate               = _simSettings.EndDate.ToString("yyyy-MM-dd"),
                 pacientesPorDiaMedio  = _simSettings.PacientesPorDiaMedio,

@@ -2,9 +2,7 @@ namespace OpenmrsSeeder.Configuration;
 
 public class OpenMrsSettings
 {
-    public string SeedMode { get; set; } = "RestApi";
     public RestApiSettings RestApi { get; set; } = new();
-    public DirectDbSettings DirectDb { get; set; } = new();
     public DefaultsSettings Defaults { get; set; } = new();
 }
 
@@ -12,15 +10,6 @@ public class RestApiSettings
 {
     public string BaseUrl { get; set; } = "";
     public string Username { get; set; } = "";
-    public string Password { get; set; } = "";
-}
-
-public class DirectDbSettings
-{
-    public string Server { get; set; } = "localhost";
-    public int Port { get; set; } = 3306;
-    public string Database { get; set; } = "openmrs";
-    public string User { get; set; } = "openmrs";
     public string Password { get; set; } = "";
 }
 
