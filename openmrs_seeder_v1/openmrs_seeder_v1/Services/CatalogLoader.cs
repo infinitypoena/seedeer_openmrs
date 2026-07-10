@@ -16,6 +16,7 @@ public class CatalogLoader
     public IReadOnlyList<AfinidadEntry> Afinidades { get; private set; } = [];
     public IReadOnlyList<NombreEntry> Nombres { get; private set; } = [];
     public IReadOnlyList<string> Apellidos { get; private set; } = [];
+    public IReadOnlyList<ProgramaEntry> Programas { get; private set; } = [];
 
     /// <summary>Carga directa desde listas — usado en tests unitarios.</summary>
     public void LoadFromLists(
@@ -30,7 +31,8 @@ public class CatalogLoader
         IEnumerable<Models.Catalogs.ConsultorioEntry>? consultorios = null,
         IEnumerable<Models.Catalogs.AfinidadEntry>? afinidades = null,
         IEnumerable<Models.Catalogs.NombreEntry>? nombres = null,
-        IEnumerable<string>? apellidos = null)
+        IEnumerable<string>? apellidos = null,
+        IEnumerable<Models.Catalogs.ProgramaEntry>? programas = null)
     {
         EpidemiologyProfile = epidemiology.ToList().AsReadOnly();
         Diagnosticos        = diagnosticos.ToList().AsReadOnly();
@@ -44,6 +46,7 @@ public class CatalogLoader
         Afinidades          = (afinidades ?? []).ToList().AsReadOnly();
         Nombres             = (nombres ?? []).ToList().AsReadOnly();
         Apellidos           = (apellidos ?? []).ToList().AsReadOnly();
+        Programas           = (programas ?? []).ToList().AsReadOnly();
     }
 
     public void Load(string catalogsPath)
@@ -61,6 +64,7 @@ public class CatalogLoader
         Nombres             = LoadCsv(Path.Combine(catalogsPath, "nombres.csv"),                 ParseNombre);
         Apellidos           = LoadCsv(Path.Combine(catalogsPath, "apellidos.csv"),               ParseApellido)
                                   .Where(a => !string.IsNullOrWhiteSpace(a)).ToList().AsReadOnly();
+        Programas           = LoadCsv(Path.Combine(catalogsPath, "programas.csv"),               ParsePrograma);
     }
 
     private static IReadOnlyList<T> LoadCsv<T>(string path, Func<Dictionary<string, string>, T?> parser)
@@ -266,6 +270,20 @@ public class CatalogLoader
     }
 
     private static string ParseApellido(Dictionary<string, string> row) => S(row, "apellido");
+
+    private static ProgramaEntry? ParsePrograma(Dictionary<string, string> row)
+    {
+        var uuid = S(row, "program_uuid");
+        if (string.IsNullOrWhiteSpace(uuid)) return null;
+        return new ProgramaEntry
+        {
+            ProgramUuid       = uuid,
+            Nombre            = S(row, "program_nombre"),
+            TriggerDx         = Pipe(row, "trigger_dx"),
+            TriggerCategoria  = Pipe(row, "trigger_categoria"),
+            EstadoInicialUuid = S(row, "estado_inicial_uuid")
+        };
+    }
 
     private static AfinidadEntry ParseAfinidad(Dictionary<string, string> row) => new()
     {

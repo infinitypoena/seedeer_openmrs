@@ -22,6 +22,7 @@ public class SeedOrchestrator
     private readonly PrescriptionSeeder _prescriptionSeeder;
     private readonly VisitCloseSeeder _visitCloseSeeder;
     private readonly ConditionSeeder _conditionSeeder;
+    private readonly ProgramEnrollmentSeeder _programSeeder;
     private readonly ClinicResourceAssigner _clinicResources;
 
     private readonly List<SimulatedPatient> _patientPool = [];
@@ -43,6 +44,7 @@ public class SeedOrchestrator
         PrescriptionSeeder prescriptionSeeder,
         VisitCloseSeeder visitCloseSeeder,
         ConditionSeeder conditionSeeder,
+        ProgramEnrollmentSeeder programSeeder,
         ClinicResourceAssigner clinicResources,
         ILogger<SeedOrchestrator> logger)
     {
@@ -60,6 +62,7 @@ public class SeedOrchestrator
         _prescriptionSeeder = prescriptionSeeder;
         _visitCloseSeeder   = visitCloseSeeder;
         _conditionSeeder    = conditionSeeder;
+        _programSeeder      = programSeeder;
         _clinicResources    = clinicResources;
         _logger             = logger;
     }
@@ -188,6 +191,7 @@ public class SeedOrchestrator
                     // Compartir historial de órdenes y lista de problemas con el paciente original
                     OrderedConcepts = base_.OrderedConcepts,
                     ProblemListConcepts = base_.ProblemListConcepts,
+                    EnrolledPrograms = base_.EnrolledPrograms,
                     // Heredar el médico de cabecera (asignado en la primera visita del paciente)
                     CabeceraLocationUuid = base_.CabeceraLocationUuid,
                     CabeceraProviderUuid = base_.CabeceraProviderUuid,
@@ -280,6 +284,7 @@ public class SeedOrchestrator
         await _vitalsSeeder.SeedAsync(patient, ct);
         await _consultaSeeder.SeedAsync(patient, ct);
         await _conditionSeeder.SeedAsync(patient, ct);
+        await _programSeeder.SeedAsync(patient, ct);
         await _labOrderSeeder.SeedAsync(patient, ct);
         await _prescriptionSeeder.SeedAsync(patient, ct);
         await _visitCloseSeeder.SeedAsync(patient, ct);

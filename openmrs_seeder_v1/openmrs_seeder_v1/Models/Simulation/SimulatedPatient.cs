@@ -55,6 +55,12 @@ public class SimulatedPatient
     /// <summary>Conceptos ya agregados a la lista de problemas (condition) — evita duplicados entre visitas.</summary>
     public HashSet<string> ProblemListConcepts { get; set; } = [];
     /// <summary>
+    /// UUIDs de programas de atención en los que el paciente ya está inscrito — evita reinscribirlo
+    /// entre visitas recurrentes. Compartida por referencia con la copia recurrente (como
+    /// <see cref="ProblemListConcepts"/>).
+    /// </summary>
+    public HashSet<string> EnrolledPrograms { get; set; } = [];
+    /// <summary>
     /// Diagnósticos crónicos que arrastra el paciente (los <c>EsCronica</c> ya asignados en visitas previas).
     /// Las visitas recurrentes vuelven a uno de estos como motivo de control con alta probabilidad.
     /// Compartida por referencia con la copia recurrente (como <see cref="ProblemListConcepts"/>).
