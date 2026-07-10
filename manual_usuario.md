@@ -24,7 +24,7 @@
 
 ## 1. ¿Qué hace este simulador?
 
-El **OpenMRS Clinical Simulator** es una API REST en .NET 10 que puebla una instancia OpenMRS 3.x con historias clínicas ficticias pero **epidemiológica y clínicamente coherentes**. Está pensado como el "día a día" de una clínica de consulta externa pequeña (el escenario de referencia es una clínica de El Salvador con 3-4 médicos), reproducido a lo largo de un período histórico configurable.
+El **OpenMRS Clinical Simulator** es una aplicación de consola en .NET 10 que puebla una instancia OpenMRS 3.x con historias clínicas ficticias pero **epidemiológica y clínicamente coherentes**. Está pensado como el "día a día" de una clínica de consulta externa pequeña (el escenario de referencia es una clínica de El Salvador con 3-4 médicos), reproducido a lo largo de un período histórico configurable.
 
 En una sola corrida el simulador genera, para cada día del período:
 
@@ -156,7 +156,7 @@ Con la misma `RandomSeed` y la misma configuración, dos corridas generan exacta
 
 ## 3. Requisitos previos
 
-El simulador es una API REST que se conecta a una instancia OpenMRS ya desplegada. OpenMRS puede estar en Docker, local o remoto — solo importa que su REST API responda.
+El simulador es una **aplicación de consola (batch)** que se conecta a una instancia OpenMRS ya desplegada: se ejecuta, corre la simulación completa según `appsettings.json` y termina. OpenMRS puede estar en Docker, local o remoto — solo importa que su REST API responda.
 
 **Opción A — con .NET SDK (recomendada para desarrollo):**
 
@@ -191,12 +191,12 @@ Debe devolver un JSON con información de la instancia. En despliegue local con 
 ```bash
 cp openmrs_seeder_v1/openmrs_seeder_v1/appsettings.example.json \
    openmrs_seeder_v1/openmrs_seeder_v1/appsettings.json
-# Editar appsettings.json: URL y contraseña de tu OpenMRS
+# Editar appsettings.json: URL y contraseña de tu OpenMRS, y la ventana StartDate/EndDate
 
 dotnet run --project openmrs_seeder_v1/openmrs_seeder_v1/openmrs_seeder_v1.csproj
 ```
 
-El simulador queda en **`http://localhost:5197/swagger`** (Swagger UI permite ejecutar todos los endpoints sin cliente HTTP adicional).
+**La simulación arranca de inmediato** según la parametrización, muestra el progreso en consola y el proceso termina al completarse. No hay servidor web ni pasos intermedios.
 
 ### 4.3 Opción B: ejecutar con Docker
 
@@ -205,12 +205,12 @@ cd docker
 cp .env.example .env
 # Editar .env con la URL de OpenMRS y la contraseña
 
-docker compose -f docker/docker-compose.yml up --build
+docker compose -f docker/docker-compose.yml run --rm seeder
 ```
 
-> **OpenMRS en el mismo host que Docker:** usar `host.docker.internal` (Windows/Mac) o la IP del gateway Docker, habitualmente `172.17.0.1` (Linux), en `OPENMRS_URL`.
+El contenedor corre la simulación y termina (es un job, no un servicio). Para limpiar datos: `docker compose -f docker/docker-compose.yml run --rm -i seeder clear`.
 
-Para detener: `docker compose -f docker/docker-compose.yml down`
+> **OpenMRS en el mismo host que Docker:** usar `host.docker.internal` (Windows/Mac) o la IP del gateway Docker, habitualmente `172.17.0.1` (Linux), en `OPENMRS_URL`.
 
 ---
 
@@ -362,93 +362,50 @@ Un paciente nuevo con pipeline completo genera entre **15 y 30 requests**:
 
 ---
 
-## 7. Cómo usar la API
+## 7. Cómo ejecutar el simulador
 
-### 7.1 Verificar que todo está listo
+### 7.1 Correr una simulación
 
-```
-GET http://localhost:5197/api/seed/status
-```
-
-```json
-{
-  "openmrs": { "online": true, "baseUrl": "http://localhost/openmrs/ws/rest/v1", "seedMode": "RestApi" },
-  "simulation": { "startDate": "2024-01-01", "endDate": "2024-12-31", "pacientesPorDiaMedio": 15 },
-  "catalogs": {
-    "epidemiologyProfile": 47,
-    "diagnosticos": 948,
-    "medicamentos": 30,
-    "laboratorios": 27,
-    "examenesClinicos": 0,
-    "alergenos": 15,
-    "motivosConsulta": 37
-  }
-}
+```bash
+dotnet run --project openmrs_seeder_v1/openmrs_seeder_v1/openmrs_seeder_v1.csproj
 ```
 
-- `"online": false` → OpenMRS no responde (ver §13).
-- `"diagnosticos": 0` (o cualquier catálogo en 0 que no debería) → los CSV no se copiaron al build (ver §13).
-- `"examenesClinicos": 0` es el estado normal actual (catálogo vacío a propósito, ver §8).
-
-### 7.2 Iniciar una simulación
+No hay pasos intermedios: el proceso valida la configuración, muestra un **resumen inicial** y ejecuta la corrida completa. Salida típica:
 
 ```
-POST http://localhost:5197/api/seed/run
-Content-Type: application/json
-
-{}
+info: Seeder[0]
+      OpenMRS: ONLINE (http://localhost/openmrs/ws/rest/v1) | Ventana: 2025-04-01 → 2025-04-07 | 15 pac/día medio, 30% recurrentes, seed 42
+info: Seeder[0]
+      Catálogos: 948 diagnósticos, 30 medicamentos, 27 laboratorios, 21 alérgenos, 3 consultorios, 2 programas
+info: Seeder[0]
+      Progreso: 16% | día 1/7 (2025-04-02) | 16 pacientes | 0 errores
+info: Seeder[0]
+      Progreso: 50% | día 3/7 (2025-04-04) | 35 pacientes | 0 errores
+...
+info: Seeder[0]
+      Resumen final: etapa 'completado' | 57 pacientes creados | 6/7 días | 0 errores
 ```
 
-Respuesta inmediata `202 Accepted`:
+- El **resumen inicial** reemplaza al viejo `GET /status`: estado de OpenMRS, ventana, volumen y conteos de catálogos. Si OpenMRS no responde, el proceso termina sin tocar datos.
+- El **progreso** se imprime cada ~15 segundos (porcentaje, fecha simulada, pacientes, errores).
+- El **resumen final** lista los errores no fatales uno a uno (el pipeline continúa con el siguiente paciente ante errores individuales).
+- **Ctrl+C** cancela limpiamente: los datos ya insertados persisten y se imprime el resumen parcial.
 
-```json
-{ "runId": "3fa85f64-5717-4562-b3fc-2c963f66afa6" }
+**Exit codes** (útiles para scripts/automatización):
+
+| Código | Significado |
+|:------:|-------------|
+| `0` | Corrida completada (puede haber errores por-paciente, listados en el resumen) |
+| `1` | Fallo del proceso completo (etapa `error`) |
+| `2` | OpenMRS inaccesible o argumento CLI inválido — no se tocó ningún dato |
+
+### 7.2 Limpiar los datos del simulador
+
+```bash
+dotnet run --project openmrs_seeder_v1/openmrs_seeder_v1/openmrs_seeder_v1.csproj -- clear
 ```
 
-**Guardar el `runId`** — es el único identificador del progreso y vive solo en memoria.
-
-### 7.3 Monitorear el progreso
-
-```
-GET http://localhost:5197/api/seed/progress/{runId}
-```
-
-```json
-{
-  "runId": "3fa85f64-...",
-  "porcentaje": 42,
-  "etapa": "simulando",
-  "pacientesCreados": 1680,
-  "diasProcesados": 306,
-  "totalDias": 730,
-  "fechaActual": "2024-11-03",
-  "completado": false,
-  "errores": [],
-  "inicio": "2026-07-10T10:00:00Z"
-}
-```
-
-| Campo | Descripción |
-|-------|-------------|
-| `etapa` | `"iniciando"` → `"simulando"` → `"completado"` / `"error"` |
-| `fechaActual` | Fecha **simulada** en proceso (no la del servidor) |
-| `errores` | Errores no fatales — el pipeline continúa con el siguiente paciente |
-| `completado` | `true` al terminar (con o sin errores) |
-
-- `completado=true` + `porcentaje=100` → éxito.
-- `completado=true` + `etapa="error"` → falló el proceso completo (raro): revisar `errores`.
-
-### 7.4 Limpiar los datos del simulador
-
-```
-DELETE http://localhost:5197/api/seed/clear
-```
-
-```json
-{ "pacientesVoided": 500, "visitasVoided": 498 }
-```
-
-Marca como `voided` (borrado lógico) a todos los pacientes `SIM-` y sus visitas. Es **lento a propósito** (rate limiting de 200 ms/paciente para no saturar OpenMRS). Ver §11 para qué se limpia y qué no.
+Cuenta los pacientes `SIM-`, **pide confirmación** (`¿Continuar? (s/N)`) y solo entonces anula (void, borrado lógico) cada paciente y sus visitas. Es **lento a propósito** (rate limiting de 200 ms/paciente para no saturar OpenMRS). Responder `N` (o Enter) aborta sin tocar nada. Ver §11 para qué se limpia y qué no.
 
 ---
 
@@ -485,7 +442,7 @@ Supongamos que se quiere agregar **"otitis media aguda"**:
    ```
    Tomar el `uuid` del resultado correcto y **abrir el concepto para confirmar que es la enfermedad correcta** (ha habido UUIDs "válidos pero de otra enfermedad").
 2. **Agregar la fila** a `diagnosticos.csv`: categoría `respiratorio` (o `infeccioso`), severidad `leve`, `aplica_0_14=true` (es pediátrica), pesos, `comun=true` si debe ser frecuente, `cronica=false`.
-3. **Recompilar y reiniciar**; verificar en `GET /api/seed/status` que el conteo subió.
+3. **Recompilar**; verificar en el resumen inicial de la siguiente ejecución que el conteo subió.
 
 ### 8.3 Cómo agregar una categoría nueva
 
@@ -562,7 +519,7 @@ Con `clima.csv` presente y `Climate.SeasonalBoost` alto (p. ej. 4.0), las semana
 
 1. Extraer UUIDs reales: `GET /ws/rest/v1/drug?v=full` (o el query SQL de §12).
 2. Agregar filas a `medicamentos.csv` con `drug_uuid` **y** `concept_uuid` (DrugOrder exige ambos) y las columnas `aplica_*`.
-3. Recompilar y verificar el conteo en `/api/seed/status`.
+3. Recompilar y verificar el conteo en el resumen inicial de la consola.
 
 ---
 
@@ -636,7 +593,7 @@ La latencia típica en instancia local es 80–150 ms/request. La corrida es sec
 - Visitas y encuentros llevan `SEEDED_BY_SIMULATOR` en la descripción; las citas, en `comments`.
 - Los médicos generados llevan identificador **`SIM-MED-*`**.
 
-### Qué limpia `DELETE /api/seed/clear` (y qué no)
+### Qué limpia el subcomando `clear` (y qué no)
 
 | Dato | ¿Se limpia? |
 |------|-------------|
@@ -695,14 +652,14 @@ La carpeta `querys/` del repositorio incluye `visita_detalle.sql`, un set de que
 
 ## 13. Solución de problemas
 
-### `"online": false` en el status
+### `OpenMRS: OFFLINE` en el resumen inicial (exit code 2)
 
 1. Probar desde donde corre el simulador: `curl -u admin:<password> http://<host>/openmrs/ws/rest/v1/session`
 2. OpenMRS en Docker puede tardar 10–15 min en el primer arranque (`docker compose ps` → esperar `healthy`).
 3. Simulador en Docker: la URL no puede ser `localhost` — usar `host.docker.internal` (Win/Mac) o `172.17.0.1` (Linux).
 4. La URL debe terminar en `/ws/rest/v1` sin slash final extra.
 
-### Errores de UUID en `errores` del progress
+### Errores de UUID en el resumen final
 
 Mensajes `404`, `Invalid UUID`, `Resource does not exist` → los UUIDs de `OpenMRS.Defaults` (o de un catálogo) no corresponden a esta instancia. Verificar con los endpoints de §5.2. Estos errores no detienen el pipeline.
 
@@ -710,9 +667,9 @@ Mensajes `404`, `Invalid UUID`, `Resource does not exist` → los UUIDs de `Open
 
 Los CSV no se copiaron al directorio de salida → `dotnet build` y verificar que exista `bin/Debug/net10.0/catalogs/diagnosticos.csv`.
 
-### La simulación termina con `etapa: "error"` muy pronto
+### La simulación termina con exit code 1 (`etapa 'error'`) muy pronto
 
-Fallo del proceso completo (no de un paciente). Causas típicas: OpenMRS caído a mitad de corrida; catálogos vacíos; UUID de provider/location inválido; **un médico de `consultorios.csv` no se pudo crear/verificar** (el arranque es fail-fast a propósito: aborta antes de generar datos con un médico inexistente). El mensaje exacto está en `errores`.
+Fallo del proceso completo (no de un paciente). Causas típicas: OpenMRS caído a mitad de corrida; catálogos vacíos; UUID de provider/location inválido; **un médico de `consultorios.csv` no se pudo crear/verificar** (el arranque es fail-fast a propósito: aborta antes de generar datos con un médico inexistente). El mensaje exacto se lista en el resumen final.
 
 ### Las horas aparecen desfasadas en la UI de O3
 
@@ -732,7 +689,7 @@ El concepto no admite decimales (`concept_numeric.allow_decimal=0`). El generado
 - Verificar que el servicio existe: `GET /appointmentService/all/default`.
 - Solo ~30% de las visitas (las que disparan `FollowUp`) generan cita.
 
-### `DELETE /clear` es muy lento
+### El subcomando `clear` es muy lento
 
 Rate limiting intencional (200 ms/paciente) para no saturar OpenMRS. Para 1.000 pacientes: ~3-4 minutos como mínimo.
 
@@ -744,11 +701,11 @@ Para quien quiera extender el simulador sin romper su coherencia:
 
 **Solo REST, nunca SQL directo.** Compatibilidad con cualquier despliegue y respeto de las validaciones de negocio de OpenMRS (Luhn en identificadores, integridad referencial, rangos absolutos de conceptos numéricos). El costo es la velocidad: la corrida va a la latencia HTTP de la instancia.
 
-**Ejecución en background con `runId`.** `POST /run` devuelve `202` al instante; una corrida larga no puede sostener una conexión HTTP abierta. El progreso vive en memoria: si el proceso se reinicia a mitad de corrida, el tracking se pierde (los datos ya insertados persisten).
+**Ejecución batch directa.** El proceso ES la corrida: `dotnet run` valida, ejecuta y termina con exit code. Sin servidor web, sin Swagger, sin `runId` que sondear — el progreso se imprime en consola y el estado vive lo que vive el proceso. Si se interrumpe (Ctrl+C o caída), los datos ya insertados persisten y una nueva ejecución crea una población nueva (o se limpia antes con `clear`).
 
 **Catálogos CSV, no código.** Cualquier persona puede ampliar el conocimiento clínico (diagnósticos, pesos, fármacos, programas) editando CSVs, sin tocar C#. La contracara: los UUIDs de los CSV son de **una instancia concreta** y deben verificarse al migrar a otra.
 
-**Seams puros y testeables.** Toda decisión probabilística o de clasificación (selección de diagnóstico, comorbilidades, vitales, resultados de lab, clasificación de citas, roster de médicos, elegibilidad de recurrentes) está aislada en funciones puras con RNG inyectado, cubiertas por la suite de tests (`dotnet test`, 118 tests). Las llamadas HTTP quedan en la cáscara de los seeders.
+**Seams puros y testeables.** Toda decisión probabilística o de clasificación (selección de diagnóstico, comorbilidades, vitales, resultados de lab, clasificación de citas, roster de médicos, elegibilidad de recurrentes) está aislada en funciones puras con RNG inyectado, cubiertas por la suite de tests (`dotnet test`, 128 tests). Las llamadas HTTP quedan en la cáscara de los seeders.
 
 **Estado compartido del paciente en el pool.** Las colecciones del paciente (problem list, programas, citas pendientes, crónicas activas) se comparten **por referencia** entre la copia del pool y la copia de cada visita recurrente — así la historia del paciente es acumulativa a lo largo de la simulación.
 

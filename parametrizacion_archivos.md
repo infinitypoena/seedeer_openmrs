@@ -372,14 +372,14 @@ c1000000-0000-0000-0000-000000000012,SIM-MED-C2,Ana Rivas,F
 | `medico_nombre` | Nombre del médico a crear si no existe (ej. "Carlos Méndez"). |
 | `medico_genero` | Género (`M` o `F`) con que se crea la persona en OpenMRS. Vacío = `M`. |
 
-> Los médicos son **datos de referencia** (personal): se reutilizan entre corridas y `DELETE
-> /api/seed/clear` **no** los elimina. El registro del paciente va a `Defaults.RegistrationLocationUuid`
+> Los médicos son **datos de referencia** (personal): se reutilizan entre corridas y el subcomando
+> `clear` **no** los elimina. El registro del paciente va a `Defaults.RegistrationLocationUuid`
 > (Recepción), no a un consultorio. Los recurrentes vuelven a su médico de cabecera según
 > `MedicoCabeceraProbMin/Max`.
 
 > **Fail-fast:** si un médico del catálogo no se puede crear ni encontrar al iniciar la corrida, el
-> seeder **aborta** con un error claro (estado `error` en `GET /api/seed/progress/{runId}`, listando los
-> identificadores) **antes** de crear datos — así no quedan encuentros firmados por "Unknown Provider".
+> seeder **aborta** con un error claro (exit code 1, listando los identificadores en el resumen final)
+> **antes** de crear datos — así no quedan encuentros firmados por "Unknown Provider".
 
 ---
 
@@ -530,7 +530,7 @@ Todos los registros creados por el simulador son identificables:
 - **Visitas/Encounters**: campo `description` contiene `SEEDED_BY_SIMULATOR`
 
 Esto permite:
-- `DELETE /api/seed/clear` → busca pacientes `SIM-*` → void lógico en cascada (visitas, encounters, obs, orders)
+- `dotnet run -- clear` (pide confirmación) → busca pacientes `SIM-*` → void lógico en cascada (visitas, encounters, obs, orders)
 - Re-ejecuciones seguras: pacientes `SIM-` existentes se usan como "recurrentes"
 
 ---
