@@ -1,17 +1,23 @@
 # Detalle del Proyecto: OpenMRS Clinical Simulator API
 
-> **⚠️ Estado actual (jun 2026) — `CLAUDE.md` es la fuente de verdad viva.** Este documento es el
+> **⚠️ Estado actual (jul 2026) — `CLAUDE.md` es la fuente de verdad viva.** Este documento es el
 > snapshot de **diseño** original; varias cifras/estados de abajo quedaron desfasados. Correcciones clave:
 > - **Pipeline completo y funcional** — todas las "Fases" marcadas abajo están **terminadas**. Ya se corrió
->   el **año 2023 completo** (~4.178 pacientes SIM) y ventanas de 2024.
+>   el **año 2023 completo** (~4.178 pacientes SIM), el **año 2024 completo** (escenario clínica pequeña
+>   El Salvador, 3 médicos, ~4.500 visitas) y ventanas de validación ene-mar 2025.
 > - **Credenciales OpenMRS**: `admin / Prueba01$$xD` (NO `Admin123`). DB MariaDB expuesta en `localhost:3306`
 >   (user `openmrs`, pass en el `.env` del compose).
-> - **Catálogos poblados**, no "de muestra": ~948 diagnósticos (13 categorías, incl. tropicales CA),
->   ~30 medicamentos verificados, 7 labs, 15 alérgenos. Catálogos extra: `clima.csv`, `consultorios.csv`,
->   `comorbilidad_afinidades.csv`, `nombres.csv`, `apellidos.csv`.
+> - **Catálogos poblados**, no "de muestra": ~950 diagnósticos (13 categorías, incl. tropicales CA),
+>   ~30 medicamentos verificados, 27 labs con columnas de resultado, 15 alérgenos. Catálogos extra:
+>   `clima.csv`, `consultorios.csv`, `comorbilidad_afinidades.csv`, `programas.csv`, `nombres.csv`, `apellidos.csv`.
 > - **Mejoras de realismo añadidas** (ver bullets en `CLAUDE.md`): nombres únicos centroamericanos (2 nombres
 >   + 2 apellidos), continuidad longitudinal de crónicos, espaciamiento realista entre visitas, coherencia
->   por sexo (columna `sexo`), y localización al español de conceptos CIEL (`scripts/agregar_nombres_es.ps1`).
+>   por sexo (columna `sexo`), localización al español de conceptos CIEL (`scripts/agregar_nombres_es.ps1`),
+>   roster diario de médicos (2-3/día), **resultados de laboratorio** ligados a la orden (ciclo
+>   orden→resultado coherente con la enfermedad), **inscripción a programas de atención** (VIH, diabetes),
+>   **citas reales en la agenda O3** (Bahmni Appointments: el follow-up agenda cita; al volver se marca
+>   Completed/Missed) y **seguimiento agudo coherente** (el no-crónico vuelve por el MISMO dx: 2,3% → ~62-64%
+>   de pares consecutivos con mismo dx).
 > - **UUIDs verificados** de esta instancia: ver la tabla en `CLAUDE.md` (difieren de los "estándar").
 
 ## Descripción General

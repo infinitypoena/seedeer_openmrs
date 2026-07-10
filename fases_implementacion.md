@@ -146,7 +146,7 @@ GET /api/seed/progress/{runId} → porcentaje aumenta hasta 100%, fechaActual av
 ---
 
 ## FASE 4 — Seeder de visitas + vitales
-**Estado:** `[ ]`
+**Estado:** `[x]`
 **Depende de:** Fase 3
 
 ### Objetivo
@@ -185,7 +185,7 @@ Crear visitas con hora realista del día y registrar signos vitales coherentes c
 ---
 
 ## FASE 5 — Seeder de consulta clínica
-**Estado:** `[ ]`
+**Estado:** `[x]`
 **Depende de:** Fase 4, Fase 2
 
 ### Objetivo
@@ -220,7 +220,7 @@ Crear el encounter ADULTINITIAL con diagnóstico coherente con el perfil epidemi
 ---
 
 ## FASE 6 — Seeder de órdenes de laboratorio
-**Estado:** `[ ]`
+**Estado:** `[x]`
 **Depende de:** Fase 5, Fase 2
 
 ### Objetivo
@@ -244,7 +244,7 @@ Crear órdenes de exámenes externos coherentes con el diagnóstico elegido.
 ---
 
 ## FASE 7 — Prescripciones + Alergias
-**Estado:** `[ ]`
+**Estado:** `[x]`
 **Depende de:** Fase 5, Fase 2
 
 ### Objetivo
@@ -273,7 +273,7 @@ Crear prescripciones coherentes con el diagnóstico y registrar alergias para pa
 ---
 
 ## FASE 8 — SeedOrchestrator + cierre de visitas
-**Estado:** `[ ]`
+**Estado:** `[x]`
 **Depende de:** Fases 3-7
 
 ### Objetivo
@@ -299,7 +299,7 @@ GET /api/seed/progress/{runId} → progreso hasta 100% con etapa y fecha actual
 ---
 
 ## FASE 9 — Endpoint de limpieza
-**Estado:** `[ ]`
+**Estado:** `[x]`
 **Depende de:** Fase 3+
 
 ### Objetivo
@@ -361,3 +361,9 @@ manual_usuario.md existe en la raíz del proyecto junto con fases_implementacion
 | 2026-06-18 | 4 | Fase 4 completada: VisitSeeder + VitalsSeeder + pipeline actualizado |
 | 2026-06-19 | 5 | Fase 5 completada: ConsultaSeeder (ADULTINITIAL + dx + certeza + motivo + examen clínico) |
 | 2026-06-19 | 10 | Fase 10 completada: manual_usuario.md con sección detallada de manejo del tiempo |
+| 2026-06 | 6-9 | Fases 6-9 completadas: LabOrderSeeder, PrescriptionSeeder + AllergySeeder, SeedOrchestrator + VisitCloseSeeder, DELETE /clear. Validación superada; corridas de año completo (2023 y 2024) |
+| 2026-06/07 | — | Iteración de realismo (post-fases, ver bullets en CLAUDE.md): comorbilidad, clima estacional, consultorios + médico de cabecera, problem list (crónicas), nombres únicos centroamericanos, continuidad de crónicos, espaciamiento entre visitas, coherencia por sexo, localización es de conceptos CIEL |
+| 2026-07 | — | Roster diario de médicos (2-3/día) + resultados de laboratorio ligados a la orden (ciclo orden→resultado) |
+| 2026-07 | — | Inscripción a programas de atención (HIV Care and Treatment, Diabetes Education) vía POST /programenrollment |
+| 2026-07 | — | Citas reales en la agenda O3 (Bahmni Appointments): FollowUp agenda cita; al volver el paciente se marca Completed/Missed. Fix precisión ASAT/amilasa (allow_decimal=0) |
+| 2026-07-10 | — | Seguimiento agudo coherente: el no-crónico que vuelve retorna por el MISMO dx agudo (2,3% → ~62-64% de pares consecutivos con mismo dx; verificado en corridas feb/mar 2025) |
