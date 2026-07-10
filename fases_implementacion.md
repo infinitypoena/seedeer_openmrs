@@ -342,7 +342,7 @@ Crear documentación de usuario completa con énfasis especial en el manejo del 
 
 ### Verificación
 ```
-manual_usuario.md existe en la raíz del proyecto junto con fases_implementacion.md y detalle-seeder.md
+manual_usuario.md existe en la raíz del proyecto junto con fases_implementacion.md
 ```
 
 ---

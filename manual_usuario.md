@@ -644,7 +644,10 @@ JOIN concept_name cn ON c.concept_id = cn.concept_id
 WHERE cn.locale = 'es' AND c.class_id = 5 AND c.retired = 0;  -- 5 = Test
 ```
 
-La carpeta `querys/` del repositorio incluye `visita_detalle.sql`, un set de queries de **verificación y QA** de los datos generados (volumen por día, coherencia de vitales, top de diagnósticos, reparto por médico…).
+La carpeta `querys/` del repositorio incluye:
+
+- `visita_detalle.sql` — queries de **verificación y QA** de los datos generados (volumen por día, coherencia de vitales, top de diagnósticos, reparto por médico…).
+- `borrar_simulacion.sql` — **borrado duro** por SQL de todos los pacientes `SIM-` y su rastro clínico. Es el complemento extremo del subcomando `clear` (que hace borrado *lógico*/void): úsalo solo cuando quieras eliminar físicamente los datos simulados, con OpenMRS detenido o bajo tu responsabilidad.
 
 > Si se cambia un UUID en un CSV: recompilar y reiniciar el simulador (los catálogos se cargan una vez al arranque).
 

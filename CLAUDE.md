@@ -168,5 +168,6 @@ These were confirmed via `GET /ws/rest/v1/concept?q=...` against this specific i
 ## Key Design Docs
 
 - `parametrizacion_archivos.md` — full parameter and CSV schema reference
-- `detalle-seeder.md` — project overview, stack, endpoints, data model
-- `fases_implementacion.md` — implementation phases with deliverables and verification steps
+- `manual_usuario.md` — user manual: capability tour with examples, setup, use cases, troubleshooting
+- `fases_implementacion.md` — implementation phases with deliverables and change log
+- `enfermedades-centroamerica.md` — research doc: 300 Central-American diseases with methodology/references (catalog provenance)
