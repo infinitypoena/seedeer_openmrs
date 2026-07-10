@@ -62,6 +62,9 @@ Key architectural decisions:
 - OpenMRS 3.6.0 Reference Application (O3)
 - MariaDB 10.11 — port 3306 does NOT need to be exposed (REST API mode)
 - Credentials: `admin / Prueba01$$xD`
+- **Timezone**: backend runs with `TZ: America/El_Salvador` (UTC−6, set in the distro compose) and the seeder sends every datetime with `Simulation.UtcOffset = "-06:00"` — both must match so wall-clock times read as local in the UI. Data seeded *before* this change (with `+0000`) displays shifted −6 h until regenerated. ⚠️ After recreating backend/frontend, the **gateway may go `unhealthy` (502)** — `docker compose restart gateway`.
+- **Locale**: `default_locale = es` (global property) + `SPA_DEFAULT_LOCALE: es` (frontend env) — UI defaults to Spanish.
+- **Backups**: `scripts/backup_openmrs.ps1` (mariadb-dump --single-transaction + gzip + retention; restore instructions in the script header). Output in `backups/` (gitignored).
 
 ## Configuration
 

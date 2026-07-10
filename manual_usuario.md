@@ -651,6 +651,17 @@ La carpeta `querys/` del repositorio incluye:
 
 > Si se cambia un UUID en un CSV: recompilar y reiniciar el simulador (los catálogos se cargan una vez al arranque).
 
+### Respaldo de la base de datos
+
+`scripts/backup_openmrs.ps1` hace un `mariadb-dump` consistente (sin detener la instancia), lo comprime con fecha en `backups/` y aplica retención:
+
+```powershell
+pwsh scripts/backup_openmrs.ps1                       # respaldo con retención de 7 copias
+pwsh scripts/backup_openmrs.ps1 -Destino D:\resp -Retencion 14
+```
+
+Las instrucciones de **restore** están en el encabezado del script (requiere detener el backend). Para automatizarlo, programar ese comando en el Programador de tareas de Windows. La carpeta `backups/` está en `.gitignore`.
+
 ---
 
 ## 13. Solución de problemas

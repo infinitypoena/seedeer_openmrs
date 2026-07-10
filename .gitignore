@@ -22,6 +22,9 @@ docker/.env
 .DS_Store
 Thumbs.db
 
+# ── Respaldos de la BD (scripts/backup_openmrs.ps1) ───────────────────────────
+backups/
+
 # ── Publicación y NuGet ───────────────────────────────────────────────────────
 publish/
 *.nupkg

@@ -33,6 +33,9 @@ if (violaciones.Count > 0)
     throw new InvalidOperationException(
         "Configuración inválida en appsettings.json:\n - " + string.Join("\n - ", violaciones));
 
+// Offset UTC de todas las fechas enviadas (lanza FormatException si es inválido — fail-fast)
+VisitSeeder.UtcOffset = VisitSeeder.NormalizarOffset(simSettings.UtcOffset);
+
 builder.Services.AddSingleton(omrsSettings);
 builder.Services.AddSingleton(simSettings);
 

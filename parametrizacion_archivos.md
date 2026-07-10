@@ -96,6 +96,7 @@ Todo el comportamiento del simulador se controla desde aquí.
 | `Recurrence.MinDiasAgudo` / `MaxDiasAgudo` | int (días) | Intervalo mínimo/máximo para que un paciente **no crónico** vuelva (seguimiento agudo, def. 7–21). Evita retornos día-a-día. |
 | `Recurrence.MinDiasCronico` / `MaxDiasCronico` | int (días) | Intervalo del **control crónico** (def. 30–120). En ventanas cortas la proporción real de recurrentes puede quedar algo bajo `PorcentajeRecurrentes`. |
 | `Locale` | string | Locale de Bogus (solo fallback de nombres si faltan `nombres.csv`/`apellidos.csv`). `"es"` = español. |
+| `UtcOffset` | string | Offset UTC de TODAS las fechas enviadas a OpenMRS (`"±HH:mm"`, p.ej. `"-06:00"` El Salvador). Debe coincidir con la `TZ` del backend para que las horas se lean como hora local en la UI. Vacío = UTC (histórico). ⚠️ Cambiarlo desalinea los datos ya insertados con el offset anterior — aplicar antes de regenerar. |
 | `RandomSeed` | int | Semilla para reproducibilidad. Mismo seed = misma simulación. |
 | `CommonProbMin` / `CommonProbMax` | float (0-1) | Factor inicial: cada corrida sortea su P(común) en `[min,max]` (def. 0.75–0.95) → el principal cae mayormente en el pool `comun=true`, variando entre corridas. |
 | `MedicoCabeceraProbMin` / `MedicoCabeceraProbMax` | float (0-1) | Médico de cabecera: cada corrida sortea en `[min,max]` (def. 0.70–0.90) la prob. de que un recurrente vuelva con el mismo médico/consultorio de su primera visita; si no, cae con otro. Requiere `catalogs/consultorios.csv`. |

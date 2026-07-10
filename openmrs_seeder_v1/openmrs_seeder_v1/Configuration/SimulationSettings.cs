@@ -42,6 +42,13 @@ public class SimulationSettings
     /// <summary>Días de vigencia del episodio agudo desde su última visita (def. 30).</summary>
     public int VentanaSeguimientoAgudoDias { get; set; } = 30;
     public string Locale { get; set; } = "es";
+    /// <summary>
+    /// Offset UTC de las fechas enviadas a OpenMRS ("±HH:mm", p.ej. "-06:00" El Salvador).
+    /// Debe coincidir con la TZ del backend para que las horas se lean como hora local.
+    /// Vacío = UTC (comportamiento histórico). ⚠️ Cambiarlo desalinea los datos ya insertados
+    /// con el offset anterior — pensado para aplicarse antes de regenerar.
+    /// </summary>
+    public string UtcOffset { get; set; } = "";
     public int RandomSeed { get; set; } = 42;
     public HorarioAtencionSettings HorarioAtencion { get; set; } = new();
     public DemographicProfileSettings DemographicProfile { get; set; } = new();
