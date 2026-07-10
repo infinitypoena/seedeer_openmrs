@@ -415,6 +415,25 @@ López
 
 ---
 
+## 10b. catalogs/direcciones.csv — Direcciones salvadoreñas coherentes
+
+**Opcional.** Una fila por zona residencial (colonia/barrio/cantón). El generador elige por `peso`
+— la mayoría de pacientes vive cerca de la clínica (área metropolitana de San Salvador) y hay una
+cola de municipios lejanos, como la captación real de una consulta externa.
+
+| Columna | Descripción |
+|---------|-------------|
+| `departamento` | Departamento (→ `state_province` en OpenMRS). |
+| `municipio` | Municipio (→ `city_village`). |
+| `zona` | Colonia/Barrio/Cantón, tal cual encabeza el `address1` (p.ej. "Colonia Zacamil"). |
+| `peso` | Peso relativo de la zona (mayor = más pacientes de allí). |
+
+El `address1` final añade detalle urbano ("Colonia Zacamil, pasaje C, casa #8"); los **cantones**
+(rurales) van sin numeración. `country` = "El Salvador". **Archivo ausente/vacío = fallback Bogus**
+(calles genéricas y país "España", comportamiento histórico).
+
+---
+
 ## 10. catalogs/comorbilidad_afinidades.csv — Clusters de comorbilidad
 
 **Opcional.** Por cada categoría, las categorías clínicamente afines que reciben el `AffinityBoost`

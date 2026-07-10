@@ -38,6 +38,10 @@ public class SimulatedPatient
             : (string.IsNullOrEmpty(Categoria) ? [] : [Categoria]);
     public string Address1 { get; set; } = "";
     public string City { get; set; } = "";
+    /// <summary>Departamento (state_province). Vacío = fallback Bogus sin catálogo de direcciones.</summary>
+    public string StateProvince { get; set; } = "";
+    /// <summary>País de residencia. Vacío = comportamiento histórico ("España" en PatientSeeder).</summary>
+    public string Country { get; set; } = "";
     public bool EsNuevo { get; set; } = true;
     /// <summary>UUID de la visita creada en OpenMRS</summary>
     public string VisitUuid { get; set; } = "";

@@ -204,4 +204,66 @@ public class PatientProfileGeneratorTests
 
         Assert.InRange(masculinos, 200, 300); // 40%-60%
     }
+
+    // ---- Direcciones salvadoreñas (direcciones.csv) ----
+
+    private static PatientProfileGenerator GenConDirecciones(params DireccionEntry[] direcciones)
+    {
+        var c = new CatalogLoader();
+        c.LoadFromLists([], [], [], [], [], [], [], direcciones: direcciones);
+        return new PatientProfileGenerator(new SimulationSettings { RandomSeed = 42 }, c);
+    }
+
+    [Fact]
+    public void GenerateNew_ConCatalogoDeDirecciones_DireccionSalvadorenaCoherente()
+    {
+        var gen = GenConDirecciones(
+            new DireccionEntry { Departamento = "San Salvador", Municipio = "Mejicanos", Zona = "Colonia Zacamil", Peso = 5 });
+
+        var p = gen.GenerateNew();
+
+        Assert.Equal("El Salvador", p.Country);
+        Assert.Equal("San Salvador", p.StateProvince);
+        Assert.Equal("Mejicanos", p.City);
+        Assert.StartsWith("Colonia Zacamil", p.Address1);
+        Assert.Contains("casa #", p.Address1); // zona urbana → detalle de casa
+    }
+
+    [Fact]
+    public void GenerateNew_ZonaRural_CantonSinNumeroDeCasa()
+    {
+        var gen = GenConDirecciones(
+            new DireccionEntry { Departamento = "San Salvador", Municipio = "Apopa", Zona = "Cantón Joya Galana", Peso = 1 });
+
+        var p = gen.GenerateNew();
+
+        Assert.Equal("Cantón Joya Galana", p.Address1);
+    }
+
+    [Fact]
+    public void GenerateNew_ElPesoConcentraLosMunicipios()
+    {
+        var gen = GenConDirecciones(
+            new DireccionEntry { Departamento = "San Salvador", Municipio = "Cercano", Zona = "Colonia A", Peso = 20 },
+            new DireccionEntry { Departamento = "Usulután",     Municipio = "Lejano",  Zona = "Barrio B",  Peso = 1 });
+
+        int cercanos = 0;
+        for (int i = 0; i < 200; i++)
+            if (gen.GenerateNew().City == "Cercano") cercanos++;
+
+        Assert.True(cercanos > 160, $"El municipio de peso 20 debería dominar; salió {cercanos}/200");
+    }
+
+    [Fact]
+    public void GenerateNew_SinCatalogo_FallbackBogusYPaisVacio()
+    {
+        var gen = CreateGen(); // catálogos vacíos
+
+        var p = gen.GenerateNew();
+
+        Assert.False(string.IsNullOrWhiteSpace(p.Address1)); // Bogus sigue dando dirección
+        Assert.False(string.IsNullOrWhiteSpace(p.City));
+        Assert.Equal("", p.Country);        // vacío → PatientSeeder usa el histórico "España"
+        Assert.Equal("", p.StateProvince);
+    }
 }

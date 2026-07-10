@@ -34,6 +34,7 @@ public class PatientProfileGenerator
         var gender   = PickGender();
         var ageGroup = PickAgeGroup();
         var (given, secondGiven, family, secondFamily) = GenerateName(gender);
+        var (address1, city, departamento, pais) = GenerateAddress();
 
         return new SimulatedPatient
         {
@@ -45,10 +46,44 @@ public class PatientProfileGenerator
             Gender           = gender,
             BirthDate        = GenerateBirthDate(ageGroup, refDate),
             AgeGroup         = ageGroup,
-            Address1         = _faker.Address.StreetAddress(),
-            City             = _faker.Address.City(),
+            Address1         = address1,
+            City             = city,
+            StateProvince    = departamento,
+            Country          = pais,
             EsNuevo          = true
         };
+    }
+
+    /// <summary>
+    /// Dirección salvadoreña coherente desde <c>direcciones.csv</c>: zona (colonia/barrio/cantón)
+    /// elegida por peso — la mayoría cerca de la clínica (área metropolitana), cola de municipios
+    /// lejanos — con detalle de casa/pasaje para las zonas urbanas. Catálogo vacío = fallback Bogus
+    /// (comportamiento histórico, país vacío → "España" en PatientSeeder).
+    /// </summary>
+    private (string address1, string city, string departamento, string pais) GenerateAddress()
+    {
+        var direcciones = _catalogs.Direcciones;
+        if (direcciones.Count == 0)
+            return (_faker.Address.StreetAddress(), _faker.Address.City(), "", "");
+
+        var total = direcciones.Sum(d => d.Peso);
+        var pick = _rng.NextDouble() * total;
+        double acumulado = 0;
+        var elegida = direcciones[^1];
+        foreach (var d in direcciones)
+        {
+            acumulado += d.Peso;
+            if (pick <= acumulado) { elegida = d; break; }
+        }
+
+        // Los cantones (rurales) no llevan numeración de casa; las zonas urbanas sí
+        var address1 = elegida.Zona.StartsWith("Cantón", StringComparison.OrdinalIgnoreCase)
+            ? elegida.Zona
+            : _rng.NextDouble() < 0.30
+                ? $"{elegida.Zona}, pasaje {(char)('A' + _rng.Next(0, 8))}, casa #{_rng.Next(1, 61)}"
+                : $"{elegida.Zona}, casa #{_rng.Next(1, 121)}";
+
+        return (address1, elegida.Municipio, elegida.Departamento, "El Salvador");
     }
 
     /// <summary>

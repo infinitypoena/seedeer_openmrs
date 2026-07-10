@@ -48,10 +48,12 @@ public class PatientSeeder
                 {
                     new
                     {
-                        address1    = patient.Address1,
-                        cityVillage = patient.City,
-                        country     = "España",
-                        preferred   = true
+                        address1      = patient.Address1,
+                        cityVillage   = patient.City,
+                        stateProvince = patient.StateProvince,
+                        // Vacío = fallback histórico Bogus (catálogo de direcciones ausente)
+                        country       = string.IsNullOrEmpty(patient.Country) ? "España" : patient.Country,
+                        preferred     = true
                     }
                 }
             },

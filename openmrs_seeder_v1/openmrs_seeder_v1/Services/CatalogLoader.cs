@@ -17,6 +17,7 @@ public class CatalogLoader
     public IReadOnlyList<NombreEntry> Nombres { get; private set; } = [];
     public IReadOnlyList<string> Apellidos { get; private set; } = [];
     public IReadOnlyList<ProgramaEntry> Programas { get; private set; } = [];
+    public IReadOnlyList<DireccionEntry> Direcciones { get; private set; } = [];
 
     /// <summary>Carga directa desde listas — usado en tests unitarios.</summary>
     public void LoadFromLists(
@@ -32,7 +33,8 @@ public class CatalogLoader
         IEnumerable<Models.Catalogs.AfinidadEntry>? afinidades = null,
         IEnumerable<Models.Catalogs.NombreEntry>? nombres = null,
         IEnumerable<string>? apellidos = null,
-        IEnumerable<Models.Catalogs.ProgramaEntry>? programas = null)
+        IEnumerable<Models.Catalogs.ProgramaEntry>? programas = null,
+        IEnumerable<Models.Catalogs.DireccionEntry>? direcciones = null)
     {
         EpidemiologyProfile = epidemiology.ToList().AsReadOnly();
         Diagnosticos        = diagnosticos.ToList().AsReadOnly();
@@ -47,6 +49,7 @@ public class CatalogLoader
         Nombres             = (nombres ?? []).ToList().AsReadOnly();
         Apellidos           = (apellidos ?? []).ToList().AsReadOnly();
         Programas           = (programas ?? []).ToList().AsReadOnly();
+        Direcciones         = (direcciones ?? []).ToList().AsReadOnly();
     }
 
     public void Load(string catalogsPath)
@@ -65,6 +68,7 @@ public class CatalogLoader
         Apellidos           = LoadCsv(Path.Combine(catalogsPath, "apellidos.csv"),               ParseApellido)
                                   .Where(a => !string.IsNullOrWhiteSpace(a)).ToList().AsReadOnly();
         Programas           = LoadCsv(Path.Combine(catalogsPath, "programas.csv"),               ParsePrograma);
+        Direcciones         = LoadCsv(Path.Combine(catalogsPath, "direcciones.csv"),             ParseDireccion);
     }
 
     private static IReadOnlyList<T> LoadCsv<T>(string path, Func<Dictionary<string, string>, T?> parser)
@@ -282,6 +286,19 @@ public class CatalogLoader
             TriggerDx         = Pipe(row, "trigger_dx"),
             TriggerCategoria  = Pipe(row, "trigger_categoria"),
             EstadoInicialUuid = S(row, "estado_inicial_uuid")
+        };
+    }
+
+    private static DireccionEntry? ParseDireccion(Dictionary<string, string> row)
+    {
+        var municipio = S(row, "municipio");
+        if (string.IsNullOrWhiteSpace(municipio)) return null;
+        return new DireccionEntry
+        {
+            Departamento = S(row, "departamento"),
+            Municipio    = municipio,
+            Zona         = S(row, "zona"),
+            Peso         = Math.Max(1, I(row, "peso"))
         };
     }
 
