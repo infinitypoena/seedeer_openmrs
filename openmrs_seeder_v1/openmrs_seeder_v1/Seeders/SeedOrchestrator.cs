@@ -23,6 +23,7 @@ public class SeedOrchestrator
     private readonly VisitCloseSeeder _visitCloseSeeder;
     private readonly ConditionSeeder _conditionSeeder;
     private readonly ProgramEnrollmentSeeder _programSeeder;
+    private readonly AppointmentSeeder _appointmentSeeder;
     private readonly ClinicResourceAssigner _clinicResources;
 
     private readonly List<SimulatedPatient> _patientPool = [];
@@ -45,6 +46,7 @@ public class SeedOrchestrator
         VisitCloseSeeder visitCloseSeeder,
         ConditionSeeder conditionSeeder,
         ProgramEnrollmentSeeder programSeeder,
+        AppointmentSeeder appointmentSeeder,
         ClinicResourceAssigner clinicResources,
         ILogger<SeedOrchestrator> logger)
     {
@@ -63,6 +65,7 @@ public class SeedOrchestrator
         _visitCloseSeeder   = visitCloseSeeder;
         _conditionSeeder    = conditionSeeder;
         _programSeeder      = programSeeder;
+        _appointmentSeeder  = appointmentSeeder;
         _clinicResources    = clinicResources;
         _logger             = logger;
     }
@@ -192,6 +195,7 @@ public class SeedOrchestrator
                     OrderedConcepts = base_.OrderedConcepts,
                     ProblemListConcepts = base_.ProblemListConcepts,
                     EnrolledPrograms = base_.EnrolledPrograms,
+                    CitasPendientes = base_.CitasPendientes,
                     // Heredar el médico de cabecera (asignado en la primera visita del paciente)
                     CabeceraLocationUuid = base_.CabeceraLocationUuid,
                     CabeceraProviderUuid = base_.CabeceraProviderUuid,
@@ -282,11 +286,15 @@ public class SeedOrchestrator
         patient.VisitUuid = visitUuid;
 
         await _vitalsSeeder.SeedAsync(patient, ct);
+        // El paciente "llegó": resolver sus citas pendientes (Completed si cae cerca, Missed si venció)
+        await _appointmentSeeder.ResolverCitasAsync(patient, ct);
         await _consultaSeeder.SeedAsync(patient, ct);
         await _conditionSeeder.SeedAsync(patient, ct);
         await _programSeeder.SeedAsync(patient, ct);
         await _labOrderSeeder.SeedAsync(patient, ct);
         await _prescriptionSeeder.SeedAsync(patient, ct);
+        // Agendar la cita real del seguimiento decidido en la consulta (si lo hubo)
+        await _appointmentSeeder.SeedAsync(patient, ct);
         await _visitCloseSeeder.SeedAsync(patient, ct);
     }
 }

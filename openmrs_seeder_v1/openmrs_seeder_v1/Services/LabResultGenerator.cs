@@ -41,7 +41,11 @@ public static class LabResultGenerator
             {
                 var (min, max) = anormal ? (lab.ResMinAnormal, lab.ResMaxAnormal) : (lab.ResMin, lab.ResMax);
                 if (max < min) (min, max) = (max, min);
-                var valor = Math.Round(rng.NextDouble() * (max - min) + min, 1);
+                // Banda con límites enteros → valor entero: conceptos con allow_decimal=false (p.ej.
+                // ASAT, amilasa) rechazan decimales con Obs.error.precision, y un entero es válido
+                // aunque el concepto sí admita decimales. Bandas decimales (HbA1c) conservan 1 decimal.
+                var decimales = double.IsInteger(min) && double.IsInteger(max) ? 0 : 1;
+                var valor = Math.Round(rng.NextDouble() * (max - min) + min, decimales);
                 return new LabResult(TipoResultado.Numerico, valor, null);
             }
             case "coded":

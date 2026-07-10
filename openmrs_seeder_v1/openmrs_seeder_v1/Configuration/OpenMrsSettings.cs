@@ -52,4 +52,11 @@ public class DefaultsSettings
     public string DaysConceptUuid { get; set; } = "1072AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
     /// <summary>CIEL concept UUID para unidad "Tablet(s)" (dosis de prescripciones)</summary>
     public string TabletConceptUuid { get; set; } = "1513AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+    /// <summary>
+    /// UUID del servicio de citas (Bahmni Appointments) para las citas de seguimiento —
+    /// GET /ws/rest/v1/appointmentService/all/default. Vacío = no se crean citas (feature inactiva).
+    /// </summary>
+    public string AppointmentServiceUuid { get; set; } = "";
+    /// <summary>UUID del tipo de servicio de la cita (p.ej. "Short follow-up"). Opcional.</summary>
+    public string AppointmentServiceTypeUuid { get; set; } = "";
 }

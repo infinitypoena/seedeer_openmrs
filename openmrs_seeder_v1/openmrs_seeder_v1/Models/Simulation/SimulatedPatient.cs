@@ -2,6 +2,9 @@ using OpenmrsSeeder.Models.Catalogs;
 
 namespace OpenmrsSeeder.Models.Simulation;
 
+/// <summary>Cita agendada aún sin resolver (Scheduled): UUID en OpenMRS + fecha programada.</summary>
+public readonly record struct CitaPendiente(string Uuid, DateTime Fecha);
+
 public class SimulatedPatient
 {
     public string Identifier { get; set; } = "";
@@ -60,6 +63,17 @@ public class SimulatedPatient
     /// <see cref="ProblemListConcepts"/>).
     /// </summary>
     public HashSet<string> EnrolledPrograms { get; set; } = [];
+    /// <summary>
+    /// Fecha de retorno decidida en la consulta de ESTA visita (obs "Return visit date").
+    /// La consume <c>AppointmentSeeder</c> para agendar la cita real. Null = sin seguimiento.
+    /// </summary>
+    public DateTime? FechaSeguimiento { get; set; }
+    /// <summary>
+    /// Citas agendadas aún en estado Scheduled. Al volver el paciente se resuelven (Completed si
+    /// cae cerca de la fecha, Missed si ya venció). Compartida por referencia con la copia
+    /// recurrente (como <see cref="ProblemListConcepts"/>).
+    /// </summary>
+    public List<CitaPendiente> CitasPendientes { get; set; } = [];
     /// <summary>
     /// Diagnósticos crónicos que arrastra el paciente (los <c>EsCronica</c> ya asignados en visitas previas).
     /// Las visitas recurrentes vuelven a uno de estos como motivo de control con alta probabilidad.

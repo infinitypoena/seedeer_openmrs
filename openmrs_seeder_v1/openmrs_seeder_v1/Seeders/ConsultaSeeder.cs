@@ -60,10 +60,12 @@ public class ConsultaSeeder
         if (debeExamen)
             await SeedExamenClinicoAsync(patient, encounterUuid, ct);
 
-        // Nota de seguimiento: cita de control 7–30 días después (obs fecha "Return visit date")
+        // Nota de seguimiento: cita de control 7–30 días después (obs fecha "Return visit date").
+        // La fecha queda en el paciente para que AppointmentSeeder agende la cita real en la agenda.
         if (_rng.NextDouble() < _followUpProb)
         {
             var returnDate = patient.VisitDatetime.AddDays(_rng.Next(7, 31));
+            patient.FechaSeguimiento = returnDate;
             await PostObsDateAsync(patient.Identifier, patient.OpenMrsUuid, encounterUuid,
                 ReturnVisitDateUuid, returnDate, patient.VisitDatetime, ct);
         }

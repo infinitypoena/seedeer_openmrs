@@ -45,6 +45,20 @@ public class SimulationSettings
     public ClimateSettings Climate { get; set; } = new();
     public AllergySettings Allergy { get; set; } = new();
     public RecurrenceSettings Recurrence { get; set; } = new();
+    public AppointmentsSettings Appointments { get; set; } = new();
+}
+
+/// <summary>
+/// Parámetros de las citas reales (módulo Bahmni Appointments). La cita se crea cuando dispara el
+/// FollowUp existente (la cita ES el seguimiento materializado); aquí solo va la resolución.
+/// </summary>
+public class AppointmentsSettings
+{
+    /// <summary>
+    /// Días de tolerancia para considerar CUMPLIDA una cita pendiente cuando el paciente vuelve
+    /// (|fecha cita − fecha visita| ≤ tolerancia → Completed; anterior a la ventana → Missed).
+    /// </summary>
+    public int ToleranciaDias { get; set; } = 3;
 }
 
 /// <summary>

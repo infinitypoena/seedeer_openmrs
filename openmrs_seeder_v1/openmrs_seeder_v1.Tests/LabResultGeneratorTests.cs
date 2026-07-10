@@ -121,6 +121,36 @@ public class LabResultGeneratorTests
     }
 
     [Fact]
+    public void Numerico_BandaEntera_DevuelveEntero()
+    {
+        // Conceptos con allow_decimal=false (ASAT, amilasa) rechazan decimales
+        // (Obs.error.precision): banda con límites enteros → valor entero.
+        var lab = Numerico(); // bandas 70-99 / 126-260, todas enteras
+        var rng = new Random(8);
+        for (int i = 0; i < 300; i++)
+        {
+            var v = Generar(lab, new HashSet<string> { "diabetes" }, SinDx, rng).Numerico!.Value;
+            Assert.True(double.IsInteger(v), $"Se esperaba entero, llegó {v}");
+        }
+    }
+
+    [Fact]
+    public void Numerico_BandaDecimal_ConservaUnDecimal()
+    {
+        // HbA1c 4.0–5.6: límite decimal → se conserva 1 decimal (no siempre entero).
+        var lab = new LaboratorioEntry { Datatype = "numeric", ResMin = 4.0, ResMax = 5.6 };
+        var rng = new Random(9);
+        var vioDecimal = false;
+        for (int i = 0; i < 300; i++)
+        {
+            var v = Generar(lab, SinCategorias, SinDx, rng).Numerico!.Value;
+            Assert.InRange(v, 4.0, 5.6);
+            if (!double.IsInteger(v)) vioDecimal = true;
+        }
+        Assert.True(vioDecimal);
+    }
+
+    [Fact]
     public void Numerico_RangoInvertido_SeCorrige()
     {
         // Defensa: si min>max en el catálogo, no debe lanzar ni salir del rango

@@ -110,7 +110,8 @@ Todo el comportamiento del simulador se controla desde aquí.
 | `ReferralProbabilities.ClinicalExam` | float (0-1) | Probabilidad base de examen en consultorio (obs inmediata). |
 | `ReferralProbabilities.DrugOrder` | float (0-1) | Probabilidad base de prescripción de medicamento. |
 | `ReferralProbabilities.Urgent` | float (0-1) | Probabilidad de que una orden de lab sea URGENTE. |
-| `ReferralProbabilities.FollowUp` | float (0-1) | Probabilidad de registrar una cita de control: obs fecha "Return visit date" (`5096`) 7–30 días después de la visita. |
+| `ReferralProbabilities.FollowUp` | float (0-1) | Probabilidad de registrar una cita de control: obs fecha "Return visit date" (`5096`) 7–30 días después de la visita **+ cita real en la agenda** (Bahmni Appointments) con el médico/consultorio de la visita, si `Defaults.AppointmentServiceUuid` está configurado. |
+| `Appointments.ToleranciaDias` | int (días) | Resolución de citas al volver el paciente: cita a ±tolerancia de la visita → `Completed`; anterior a la ventana → `Missed` (no-show); futura → sigue `Scheduled` (def. 3). |
 | `ReferralProbabilities.LabResult` | float (0-1) | Fracción de órdenes de lab numéricas/codificadas que "vuelven" con un resultado el mismo día (obs ligada a la orden). El resto queda pendiente (def. 0.90). Paneles e imágenes nunca registran valor. |
 | `MinMedicosPorDia` / `MaxMedicosPorDia` | int | Roster diario: cada día se activan aleatoriamente entre `Min` y `Max` médicos del pool de `consultorios.csv` (def. 2/3). Pool ≤ Min = todos disponibles. |
 | `Allergy.BaseProbabilityMin` / `BaseProbabilityMax` | float (0-1) | Banda de prevalencia de alergias: cada corrida sortea su valor en `[min,max]` (def. 0.15–0.25, fracción clínicamente documentada del ~25-30% poblacional) → el % de pacientes nuevos alérgicos varía entre corridas. |
