@@ -17,6 +17,9 @@ public class EpidemiologySelector
     private readonly Dictionary<bool, HashSet<string>> _categoriasPorComun;
     /// <summary>categoría → categorías clínicamente afines (clusters de comorbilidad, desde catálogo).</summary>
     private readonly Dictionary<string, List<string>> _afinidades;
+    /// <summary>uuid del dx → veces elegido en la corrida (amortiguación anti-repetición).</summary>
+    private readonly Dictionary<string, int> _usosDx = new();
+    private readonly double _repeticionDamping;
 
     public EpidemiologySelector(CatalogLoader catalogs, SimulationSettings settings)
     {
@@ -26,6 +29,7 @@ public class EpidemiologySelector
         _seasonalBoost = settings.Climate.SeasonalBoost;
         _commonProbMin = settings.CommonProbMin;
         _commonProbMax = settings.CommonProbMax;
+        _repeticionDamping = settings.Variedad.RepeticionDamping;
 
         _afinidades = _catalogs.Afinidades.ToDictionary(
             a => a.Categoria, a => a.Afines, StringComparer.OrdinalIgnoreCase);
@@ -50,6 +54,17 @@ public class EpidemiologySelector
     /// </summary>
     public double DrawRunCommonProbability() =>
         _commonProbMin + (_commonProbMax - _commonProbMin) * _rng.NextDouble();
+
+    /// <summary>Reinicia los contadores de uso de la amortiguación anti-repetición (1× por corrida).</summary>
+    public void ResetUsos() => _usosDx.Clear();
+
+    /// <summary>
+    /// Seam puro de la amortiguación anti-repetición: el peso efectivo de un dx decae con cada uso
+    /// en la corrida (peso / (1 + damping × usos)) para que la selección explore la cola larga del
+    /// catálogo. damping ≤ 0 = sin efecto.
+    /// </summary>
+    public static double PesoConDamping(double peso, int usos, double damping) =>
+        damping <= 0 || usos <= 0 ? peso : peso / (1.0 + damping * usos);
 
     /// <summary>Factor inicial por paciente: con probabilidad <paramref name="pCommon"/> apunta a común.</summary>
     public bool RollPreferCommon(double pCommon) => _rng.NextDouble() < pCommon;
@@ -127,21 +142,30 @@ public class EpidemiologySelector
             if (filtrado.Count > 0) candidates = filtrado;
         }
 
-        // Las enfermedades favorecidas por la estación activa pesan más
+        // Las enfermedades favorecidas por la estación activa pesan más; las ya elegidas en la
+        // corrida pesan menos (amortiguación anti-repetición → más variedad en la cola larga)
         double Peso(DiagnosticoEntry d)
         {
             var baseP = gender == "M" ? d.PesoM : d.PesoF;
-            return baseP * (climate is not null && d.Clima.Contains(climate) ? _seasonalBoost : 1.0);
+            var conClima = baseP * (climate is not null && d.Clima.Contains(climate) ? _seasonalBoost : 1.0);
+            return PesoConDamping(conClima, _usosDx.GetValueOrDefault(d.CielUuid), _repeticionDamping);
         }
 
-        var total = candidates.Sum(Peso);
+        var elegido = ElegirPonderado(candidates, Peso);
+        _usosDx[elegido.CielUuid] = _usosDx.GetValueOrDefault(elegido.CielUuid) + 1;
+        return elegido;
+    }
+
+    private DiagnosticoEntry ElegirPonderado(List<DiagnosticoEntry> candidates, Func<DiagnosticoEntry, double> peso)
+    {
+        var total = candidates.Sum(peso);
         if (total == 0) return candidates[_rng.Next(candidates.Count)];
 
         var pick = _rng.NextDouble() * total;
         double cumulative = 0;
         foreach (var dx in candidates)
         {
-            cumulative += Peso(dx);
+            cumulative += peso(dx);
             if (pick <= cumulative) return dx;
         }
         return candidates.Last();

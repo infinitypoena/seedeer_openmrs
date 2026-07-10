@@ -81,6 +81,7 @@ public class SeedOrchestrator
 
         // Factor inicial: esta corrida se inclina a común con esta probabilidad (varía entre corridas)
         var runCommonP = _epiSelector.DrawRunCommonProbability();
+        _epiSelector.ResetUsos(); // amortiguación anti-repetición: contadores limpios por corrida
 
         _logger.LogInformation("[Orchestrator] Iniciando run {RunId} — {Dias} días con pacientes | P(común) de la corrida: {P:P0}",
             runId, diasConPacientes, runCommonP);

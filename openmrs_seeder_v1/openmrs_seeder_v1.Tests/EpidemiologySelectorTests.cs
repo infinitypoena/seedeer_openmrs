@@ -73,6 +73,9 @@ public class EpidemiologySelectorTests
         catalogs.LoadFromLists(epidemiology, diagnosticos, [], [], [], [], [], afinidades: afinidades);
 
         settings ??= new SimulationSettings { RandomSeed = 42 };
+        // Damping apagado: estos tests verifican pesos/boosts en aislamiento; la amortiguación
+        // anti-repetición tiene sus propios tests (SelectorConDosDx).
+        settings.Variedad = new VariedadSettings { RepeticionDamping = 0 };
         var selector = new EpidemiologySelector(catalogs, settings);
         return (catalogs, selector);
     }
@@ -350,5 +353,91 @@ public class EpidemiologySelectorTests
         Assert.True(gripe > 0 && bronquitis > 0);
         Assert.True(gripe < bronquitis * 2 && bronquitis < gripe * 2,
             $"Sin clima el reparto debería ser parejo; gripe={gripe}, bronquitis={bronquitis}");
+    }
+
+    // ---- Amortiguación anti-repetición (variedad) ----
+
+    [Theory]
+    [InlineData(100, 0, 0.25, 100)]   // sin usos → peso intacto
+    [InlineData(100, 4, 0.25, 50)]    // 100 / (1 + 0.25·4) = 50
+    [InlineData(100, 10, 0, 100)]     // damping 0 = feature apagada
+    [InlineData(10, 12, 0.25, 2.5)]   // 10 / (1 + 3) = 2.5
+    public void PesoConDamping_DecaeConLosUsos(double peso, int usos, double damping, double esperado)
+    {
+        Assert.Equal(esperado, EpidemiologySelector.PesoConDamping(peso, usos, damping), 3);
+    }
+
+    [Fact]
+    public void PesoConDamping_EsMonotonoDecreciente()
+    {
+        var anterior = double.MaxValue;
+        for (int usos = 0; usos <= 20; usos++)
+        {
+            var actual = EpidemiologySelector.PesoConDamping(50, usos, 0.25);
+            Assert.True(actual <= anterior, $"Con {usos} usos el peso subió: {actual} > {anterior}");
+            anterior = actual;
+        }
+    }
+
+    private static EpidemiologySelector SelectorConDosDx(double damping)
+    {
+        var catalogs = new CatalogLoader();
+        var dx = new List<DiagnosticoEntry>
+        {
+            new() { CielUuid = "uuid-dominante", NombreEs = "Dominante", Categoria = "respiratorio",
+                    Severidad = "leve", Aplica0_14 = true, PesoM = 100, PesoF = 100 },
+            new() { CielUuid = "uuid-raro", NombreEs = "Raro", Categoria = "respiratorio",
+                    Severidad = "leve", Aplica0_14 = true, PesoM = 1, PesoF = 1 },
+        };
+        catalogs.LoadFromLists([], dx, [], [], [], [], []);
+        return new EpidemiologySelector(catalogs, new SimulationSettings
+        {
+            RandomSeed = 42,
+            Variedad = new VariedadSettings { RepeticionDamping = damping }
+        });
+    }
+
+    [Fact]
+    public void SelectDiagnostico_ConDamping_ExploraLaColaLarga()
+    {
+        var selector = SelectorConDosDx(damping: 5.0);
+
+        int raros = 0;
+        for (int i = 0; i < 200; i++)
+            if (selector.SelectDiagnostico("respiratorio", "0-14", "M")?.CielUuid == "uuid-raro") raros++;
+
+        // El dominante (peso 100 vs 1) decae con cada uso → el raro debe aparecer con regularidad
+        // (equilibrio teórico ~1:√(100/1) ≈ 18% de los sorteos)
+        Assert.True(raros >= 15, $"Con damping el dx raro debería explorarse; apareció {raros}/200 veces");
+    }
+
+    [Fact]
+    public void SelectDiagnostico_SinDamping_ElDominanteAcapara()
+    {
+        var selector = SelectorConDosDx(damping: 0);
+
+        int raros = 0;
+        for (int i = 0; i < 200; i++)
+            if (selector.SelectDiagnostico("respiratorio", "0-14", "M")?.CielUuid == "uuid-raro") raros++;
+
+        // Sin damping, el peso 100:1 mantiene al raro casi invisible (comportamiento anterior, ~1%)
+        Assert.True(raros <= 8, $"Sin damping el raro no debería aparecer casi nunca; apareció {raros}/200");
+    }
+
+    [Fact]
+    public void ResetUsos_ReiniciaLaAmortiguacion()
+    {
+        var selector = SelectorConDosDx(damping: 5.0);
+        for (int i = 0; i < 30; i++) selector.SelectDiagnostico("respiratorio", "0-14", "M");
+
+        selector.ResetUsos();
+
+        // Tras el reset, el dominante vuelve a pesar 100:1 → las primeras selecciones lo favorecen
+        int dominantesTrasReset = 0;
+        for (int i = 0; i < 5; i++)
+            if (selector.SelectDiagnostico("respiratorio", "0-14", "M")?.CielUuid == "uuid-dominante")
+                dominantesTrasReset++;
+        Assert.True(dominantesTrasReset >= 4,
+            $"Tras ResetUsos el dominante debería volver a acaparar; salió {dominantesTrasReset}/5");
     }
 }

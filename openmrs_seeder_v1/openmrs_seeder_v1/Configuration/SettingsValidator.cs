@@ -99,6 +99,9 @@ public static class SettingsValidator
         // Citas
         NoNegativo(sim.Appointments.ToleranciaDias, "Appointments.ToleranciaDias");
 
+        // Variedad
+        NoNegativo(sim.Variedad.RepeticionDamping, "Variedad.RepeticionDamping");
+
         // Pesos por día de semana
         var w = sim.WeekdayWeights;
         NoNegativo(w.Monday, "WeekdayWeights.Monday");

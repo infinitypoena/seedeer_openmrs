@@ -52,6 +52,22 @@ public class SimulationSettings
     public AllergySettings Allergy { get; set; } = new();
     public RecurrenceSettings Recurrence { get; set; } = new();
     public AppointmentsSettings Appointments { get; set; } = new();
+    public VariedadSettings Variedad { get; set; } = new();
+}
+
+/// <summary>
+/// Variación de diagnósticos dentro de una corrida. Sin esto, los dx de mayor peso acaparan la
+/// selección y la cola larga del catálogo (~950 dx) apenas se explora.
+/// </summary>
+public class VariedadSettings
+{
+    /// <summary>
+    /// Amortiguación anti-repetición: cada vez que un dx sale en la corrida su peso efectivo baja
+    /// (peso / (1 + damping × usos)), empujando la selección hacia diagnósticos aún no vistos.
+    /// No altera el perfil epidemiológico (la categoría se sortea igual por edad/sexo/clima) ni las
+    /// visitas de control crónico/agudo (repiten dx a propósito, fuera del selector). 0 = desactivado.
+    /// </summary>
+    public double RepeticionDamping { get; set; } = 0.25;
 }
 
 /// <summary>
