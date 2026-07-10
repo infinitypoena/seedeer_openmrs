@@ -132,6 +132,40 @@ public class EpidemiologySelectorTests
     }
 
     [Fact]
+    public void RollSeguimientoAgudo_ProbabilidadLimite()
+    {
+        var (_, selector) = CreateSelector();
+        Assert.False(selector.RollSeguimientoAgudo(0.0)); // nunca
+        Assert.True(selector.RollSeguimientoAgudo(1.0));  // siempre
+    }
+
+    [Theory]
+    [InlineData(10, 30, true)]   // dentro de la ventana
+    [InlineData(30, 30, true)]   // borde exacto
+    [InlineData(31, 30, false)]  // justo fuera
+    [InlineData(0, 30, true)]    // mismo día
+    public void EpisodioAgudoVigente_RespetaVentana(int diasTranscurridos, int ventana, bool esperado)
+    {
+        var episodio = new DateOnly(2025, 3, 1);
+        var visita   = episodio.AddDays(diasTranscurridos);
+        Assert.Equal(esperado, EpidemiologySelector.EpisodioAgudoVigente(episodio, visita, ventana));
+    }
+
+    [Fact]
+    public void EpisodioAgudoVigente_SinEpisodio_EsFalso()
+    {
+        Assert.False(EpidemiologySelector.EpisodioAgudoVigente(null, new DateOnly(2025, 3, 1), 30));
+    }
+
+    [Fact]
+    public void EpisodioAgudoVigente_VisitaAnteriorAlEpisodio_EsFalso()
+    {
+        // Defensa: una fecha de visita anterior al episodio no puede ser su control.
+        var episodio = new DateOnly(2025, 3, 10);
+        Assert.False(EpidemiologySelector.EpisodioAgudoVigente(episodio, episodio.AddDays(-5), 30));
+    }
+
+    [Fact]
     public void SelectCategoria_DevuelveCategoriasConocidas()
     {
         var (_, selector) = CreateSelector();

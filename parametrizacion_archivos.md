@@ -93,6 +93,8 @@ Todo el comportamiento del simulador se controla desde aquí.
 | `PacientesPorDiaMedio` | int | Promedio de pacientes por día hábil. Se aplica variación σ ≈ 20% con distribución normal (Box-Muller). |
 | `PorcentajeRecurrentes` | int (0-100) | % de visitas de pacientes ya existentes (controles, crónicos). |
 | `SeguimientoCronicoProb` | float (0-1) | Continuidad longitudinal: prob. (def. 0.70) de que una visita recurrente de un paciente con condición crónica conocida sea un **control de esa misma condición** en vez de un motivo agudo nuevo. Solo aplica si el paciente arrastra ≥1 dx crónico. |
+| `SeguimientoAgudoProb` | float (0-1) | Espejo agudo: prob. (def. 0.70) de que un recurrente NO crónico que vuelve dentro de la ventana de su episodio agudo regrese por el **mismo dx** (control/mejoría) en vez de una enfermedad aleatoria. El control cierra el episodio. |
+| `VentanaSeguimientoAgudoDias` | int (días) | Vigencia del episodio agudo desde su última visita (def. 30). Fuera de la ventana el retorno vuelve a ser un motivo nuevo. |
 | `Recurrence.MinDiasAgudo` / `MaxDiasAgudo` | int (días) | Intervalo mínimo/máximo para que un paciente **no crónico** vuelva (seguimiento agudo, def. 7–21). Evita retornos día-a-día. |
 | `Recurrence.MinDiasCronico` / `MaxDiasCronico` | int (días) | Intervalo del **control crónico** (def. 30–120). En ventanas cortas la proporción real de recurrentes puede quedar algo bajo `PorcentajeRecurrentes`. |
 | `Locale` | string | Locale de Bogus (solo fallback de nombres si faltan `nombres.csv`/`apellidos.csv`). `"es"` = español. |

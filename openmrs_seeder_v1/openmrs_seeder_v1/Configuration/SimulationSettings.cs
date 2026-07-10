@@ -34,6 +34,13 @@ public class SimulationSettings
     /// aleatorio. Solo aplica si el paciente ya arrastra ≥1 diagnóstico crónico. Def. 0.70.
     /// </summary>
     public double SeguimientoCronicoProb { get; set; } = 0.70;
+    /// <summary>
+    /// Prob. de que un recurrente NO crónico que vuelve dentro de la ventana de su episodio agudo
+    /// regrese por el MISMO dx (control/evolución) en vez de una enfermedad aleatoria nueva.
+    /// </summary>
+    public double SeguimientoAgudoProb { get; set; } = 0.70;
+    /// <summary>Días de vigencia del episodio agudo desde su última visita (def. 30).</summary>
+    public int VentanaSeguimientoAgudoDias { get; set; } = 30;
     public string Locale { get; set; } = "es";
     public int RandomSeed { get; set; } = 42;
     public string ClinicType { get; set; } = "ConsultaExterna";

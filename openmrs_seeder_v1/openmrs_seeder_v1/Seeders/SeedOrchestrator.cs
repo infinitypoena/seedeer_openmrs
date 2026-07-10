@@ -138,6 +138,7 @@ public class SeedOrchestrator
                 await ProcesarVisitaAsync(patient, day.Date, tracker, runId, ct);
 
                 RegistrarCronicas(patient, patient);
+                RegistrarEpisodioAgudo(patient, patient, day.Date, fueControlAgudo: false);
                 FijarProximaVisita(patient, day.Date, rng);
                 lock (_poolLock) _patientPool.Add(patient);
                 tracker.Update(runId, r => r.PacientesCreados++);
@@ -170,11 +171,22 @@ public class SeedOrchestrator
 
                 // Continuidad longitudinal: si el paciente ya arrastra una condición crónica, con alta
                 // probabilidad esta visita es un CONTROL de esa misma condición (no un motivo nuevo).
+                // Si no, y tiene un episodio AGUDO abierto dentro de su ventana, con alta probabilidad
+                // vuelve por ese mismo dx (control/mejoría) — el de neumonía no regresa con dermatitis.
                 DiagnosticoEntry? dxSeguimiento = null;
+                var esControlAgudo = false;
                 if (base_.CronicasActivas.Count > 0 &&
                     _epiSelector.RollSeguimientoCronico(_settings.SeguimientoCronicoProb))
                 {
                     dxSeguimiento = base_.CronicasActivas[rng.Next(base_.CronicasActivas.Count)];
+                }
+                else if (base_.UltimoDxAgudo is not null &&
+                         EpidemiologySelector.EpisodioAgudoVigente(
+                             base_.FechaUltimoDxAgudo, day.Date, _settings.VentanaSeguimientoAgudoDias) &&
+                         _epiSelector.RollSeguimientoAgudo(_settings.SeguimientoAgudoProb))
+                {
+                    dxSeguimiento = base_.UltimoDxAgudo;
+                    esControlAgudo = true;
                 }
 
                 var recurrente = new SimulatedPatient
@@ -217,6 +229,7 @@ public class SeedOrchestrator
 
                 // Persistir en el paciente original cualquier crónica nueva surgida en esta visita.
                 RegistrarCronicas(base_, recurrente);
+                RegistrarEpisodioAgudo(base_, recurrente, day.Date, esControlAgudo);
                 FijarProximaVisita(base_, day.Date, rng);
             }
 
@@ -251,6 +264,27 @@ public class SeedOrchestrator
             if (poolPatient.CronicasActivas.Any(c => c.CielUuid == dx.CielUuid)) continue;
             poolPatient.CronicasActivas.Add(dx);
         }
+    }
+
+    /// <summary>
+    /// Mantiene en el pool el episodio agudo abierto del paciente: una visita con dx primario agudo
+    /// lo abre/renueva; su visita de CONTROL lo cierra (evita loops infinitos del mismo dx); un
+    /// control crónico no lo toca (expira solo por ventana).
+    /// </summary>
+    private static void RegistrarEpisodioAgudo(
+        SimulatedPatient poolPatient, SimulatedPatient visitPatient, DateOnly visita, bool fueControlAgudo)
+    {
+        if (fueControlAgudo)
+        {
+            poolPatient.UltimoDxAgudo = null;
+            poolPatient.FechaUltimoDxAgudo = null;
+            return;
+        }
+
+        var dx = visitPatient.Diagnostico;
+        if (dx is null || dx.EsCronica) return;
+        poolPatient.UltimoDxAgudo = dx;
+        poolPatient.FechaUltimoDxAgudo = visita;
     }
 
     /// <summary>

@@ -60,6 +60,22 @@ public class EpidemiologySelector
     /// </summary>
     public bool RollSeguimientoCronico(double p) => _rng.NextDouble() < p;
 
+    /// <summary>
+    /// Decide si una visita recurrente es el control del episodio AGUDO abierto del paciente
+    /// (mismo dx, mejoría/persistencia) en vez de una enfermedad aleatoria nueva. Espejo de
+    /// <see cref="RollSeguimientoCronico"/> para no crónicos.
+    /// </summary>
+    public bool RollSeguimientoAgudo(double p) => _rng.NextDouble() < p;
+
+    /// <summary>
+    /// Seam puro: ¿el episodio agudo sigue vigente en la fecha de la visita? (última visita del
+    /// episodio a ≤ <paramref name="ventanaDias"/> días). Null = sin episodio abierto.
+    /// </summary>
+    public static bool EpisodioAgudoVigente(DateOnly? fechaEpisodio, DateOnly fechaVisita, int ventanaDias) =>
+        fechaEpisodio is not null &&
+        fechaVisita >= fechaEpisodio.Value &&
+        fechaVisita.DayNumber - fechaEpisodio.Value.DayNumber <= ventanaDias;
+
     public string SelectCategoria(string ageGroup, string gender, string? climate = null, bool? preferCommon = null)
     {
         var candidates = _catalogs.EpidemiologyProfile

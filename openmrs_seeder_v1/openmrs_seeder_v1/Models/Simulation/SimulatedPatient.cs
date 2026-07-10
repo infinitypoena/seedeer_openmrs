@@ -85,6 +85,15 @@ public class SimulatedPatient
     /// Se fija tras cada visita con <see cref="Services.RecurrenceScheduler"/>; <c>null</c> = elegible ya.
     /// </summary>
     public DateOnly? ProximoElegibleDesde { get; set; }
+    /// <summary>
+    /// Episodio agudo abierto (dx primario NO crónico de la última visita). Si el paciente vuelve
+    /// dentro de la ventana (<c>VentanaSeguimientoAgudoDias</c>), con alta probabilidad regresa por
+    /// este mismo dx (control) en vez de una enfermedad aleatoria. Se cierra tras su visita de control.
+    /// Solo vive en el objeto del pool (se escribe vía <c>SeedOrchestrator.RegistrarEpisodioAgudo</c>).
+    /// </summary>
+    public DiagnosticoEntry? UltimoDxAgudo { get; set; }
+    /// <summary>Fecha de la visita que abrió/renovó el episodio agudo.</summary>
+    public DateOnly? FechaUltimoDxAgudo { get; set; }
     /// <summary>Consultorio (location) asignado a esta visita por ClinicResourceAssigner. Null = usar default.</summary>
     public string? AssignedLocationUuid { get; set; }
     /// <summary>Médico (provider) asignado a esta visita. Null = usar ProviderUuid por defecto.</summary>
