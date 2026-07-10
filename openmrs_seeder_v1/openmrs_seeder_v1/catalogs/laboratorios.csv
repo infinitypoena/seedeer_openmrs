@@ -8,7 +8,7 @@ ciel_uuid,nombre_es,clase,aplica_respiratorio,aplica_cardiovascular,aplica_diabe
 653AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Transaminasa AST,Test,false,false,false,true,false,false,true,false,false,false,false,false,false,numeric,10,40,60,300,,,digestivo|infeccioso,
 654AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Transaminasa ALT,Test,false,false,false,true,false,false,true,false,false,false,false,false,false,numeric,10,40,60,300,,,digestivo|infeccioso,
 58b969e7-77ef-4941-a0ec-72372a2fa716,Antígeno NS1 dengue (prueba rápida),Test,false,false,false,false,false,false,true,false,false,false,false,false,false,coded,,,,,664AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,703AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,,142592AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA|142590AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA|142591AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA|61304dd2-7f0c-4933-9f31-c1a909200a71|67acf134-be8a-49ae-b90b-e8bb4a158494
-85077AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hormona estimulante de la tiroides (TSH),Test,false,false,false,false,false,false,false,true,false,false,false,false,false,numeric,0.4,4.0,6.0,20.0,,,endocrino,
+161505AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hormona estimulante de la tiroides (TSH),Test,false,false,false,false,false,false,false,true,false,false,false,false,false,numeric,0.4,4.0,6.0,20.0,,,endocrino,
 159825AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Ácido úrico en suero,Test,false,false,false,false,true,false,false,false,false,false,false,false,false,numeric,3.5,7.0,8.0,12.0,,,osteomuscular,
 161500AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Proteína C reactiva,Test,false,false,false,false,true,false,true,false,false,false,false,false,false,numeric,0,5,20,150,,,infeccioso|osteomuscular,
 123484AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Urocultivo,Test,false,false,false,false,false,true,false,false,false,false,false,true,false,panel,,,,,,,,

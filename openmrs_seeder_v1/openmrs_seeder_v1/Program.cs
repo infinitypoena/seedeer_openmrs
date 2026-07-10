@@ -36,6 +36,13 @@ if (violaciones.Count > 0)
 builder.Services.AddSingleton(omrsSettings);
 builder.Services.AddSingleton(simSettings);
 
+// Contador preciso de errores de operación: cada LogError de cualquier componente (obs rechazada,
+// orden fallida…) se contabiliza por fuente, para que el resumen final no diga "0 errores" cuando
+// en realidad se perdieron ítems.
+var errorTally = new ErrorTally();
+builder.Services.AddSingleton(errorTally);
+builder.Logging.AddProvider(new ErrorTallyLoggerProvider(errorTally));
+
 // Servicios singleton (stateless, seguros para reusar)
 builder.Services.AddSingleton<SeedProgressTracker>();
 builder.Services.AddSingleton<CatalogLoader>();
@@ -138,6 +145,7 @@ async Task<int> EjecutarSimulacionAsync()
 
     var runId = tracker.CreateRun();
     tracker.Update(runId, r => { r.Etapa = "iniciando"; r.Porcentaje = 0; });
+    errorTally.Reset();
 
     // Reporter: imprime el avance cada 15 s mientras la corrida está en curso
     using var reporterCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token);
@@ -151,9 +159,9 @@ async Task<int> EjecutarSimulacionAsync()
                 var r = tracker.GetRun(runId);
                 if (r is null) continue;
                 logger.LogInformation(
-                    "Progreso: {Pct}% | día {Dias}/{Total} ({Fecha}) | {Pacientes} pacientes | {Errores} errores",
+                    "Progreso: {Pct}% | día {Dias}/{Total} ({Fecha}) | {Pacientes} pacientes | {Errores} errores de proceso | {Operacion} errores de operación",
                     r.Porcentaje, r.DiasProcesados, r.TotalDias, r.FechaActual,
-                    r.PacientesCreados, r.Errores.Count);
+                    r.PacientesCreados, r.Errores.Count, errorTally.Total);
             }
         }
         catch (OperationCanceledException) { /* fin normal */ }
@@ -184,10 +192,18 @@ async Task<int> EjecutarSimulacionAsync()
 
     var run = tracker.GetRun(runId)!;
     logger.LogInformation(
-        "Resumen final: etapa '{Etapa}' | {Pacientes} pacientes creados | {Dias}/{Total} días | {Errores} errores",
-        run.Etapa, run.PacientesCreados, run.DiasProcesados, run.TotalDias, run.Errores.Count);
+        "Resumen final: etapa '{Etapa}' | {Pacientes} pacientes creados | {Dias}/{Total} días | " +
+        "{Errores} errores de proceso | {Operacion} errores de operación",
+        run.Etapa, run.PacientesCreados, run.DiasProcesados, run.TotalDias,
+        run.Errores.Count, errorTally.Total);
     foreach (var error in run.Errores)
-        logger.LogWarning("  - {Error}", error);
+        logger.LogWarning("  [proceso] {Error}", error);
+    if (errorTally.Total > 0)
+    {
+        logger.LogWarning("Errores de operación por componente: {Desglose}", errorTally.Desglose());
+        foreach (var mensaje in errorTally.Mensajes)
+            logger.LogWarning("  {Mensaje}", mensaje);
+    }
 
     return run.Etapa == "error" ? 1 : 0;
 }
