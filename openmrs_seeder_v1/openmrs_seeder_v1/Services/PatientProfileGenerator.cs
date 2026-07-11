@@ -14,6 +14,7 @@ public class PatientProfileGenerator
     // Pools de nombres del catálogo (lazy: el CatalogLoader se carga después del constructor).
     private List<string>? _nombresM;
     private List<string>? _nombresF;
+    private List<string>? _apellidos;
 
     public PatientProfileGenerator(SimulationSettings settings, CatalogLoader catalogs)
     {
@@ -94,7 +95,7 @@ public class PatientProfileGenerator
     private (string given, string secondGiven, string family, string secondFamily) GenerateName(string gender)
     {
         var nombres   = PoolNombres(gender);
-        var apellidos = _catalogs.Apellidos;
+        var apellidos = _apellidos ??= _catalogs.Apellidos.Distinct().ToList();
 
         if (nombres.Count == 0 || apellidos.Count == 0)
         {
@@ -114,15 +115,21 @@ public class PatientProfileGenerator
     {
         var first = pool[_rng.Next(pool.Count)];
         if (pool.Count == 1) return (first, "");
-        string second;
-        do { second = pool[_rng.Next(pool.Count)]; } while (second == first);
-        return (first, second);
+        // Tope de intentos: un pool con valores repetidos no debe poder colgar el generador
+        // (los pools se deduplican al cargar, pero este guard lo hace imposible por construcción).
+        for (int intento = 0; intento < 20; intento++)
+        {
+            var second = pool[_rng.Next(pool.Count)];
+            if (second != first) return (first, second);
+        }
+        return (first, "");
     }
 
     private List<string> PoolNombres(string gender)
     {
-        _nombresM ??= _catalogs.Nombres.Where(n => n.Genero == "M").Select(n => n.Nombre).ToList();
-        _nombresF ??= _catalogs.Nombres.Where(n => n.Genero == "F").Select(n => n.Nombre).ToList();
+        // Distinct: un nombre duplicado en el CSV no debe sesgar la selección ni romper el par distinto
+        _nombresM ??= _catalogs.Nombres.Where(n => n.Genero == "M").Select(n => n.Nombre).Distinct().ToList();
+        _nombresF ??= _catalogs.Nombres.Where(n => n.Genero == "F").Select(n => n.Nombre).Distinct().ToList();
         return gender == "M" ? _nombresM : _nombresF;
     }
 

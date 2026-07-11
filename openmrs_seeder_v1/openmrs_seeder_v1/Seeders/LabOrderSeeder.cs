@@ -15,7 +15,7 @@ public class LabOrderSeeder
     private readonly double _labOrderProb;
     private readonly double _urgentProb;
     private readonly double _labResultProb;
-    private readonly Random _rng = new();
+    private readonly Random _rng;
     private readonly ILogger<LabOrderSeeder> _logger;
 
     public LabOrderSeeder(
@@ -31,6 +31,7 @@ public class LabOrderSeeder
         _labOrderProb  = simSettings.ReferralProbabilities.LabOrder;
         _urgentProb    = simSettings.ReferralProbabilities.Urgent;
         _labResultProb = simSettings.ReferralProbabilities.LabResult;
+        _rng = new Random(simSettings.RandomSeed + 14);
         _logger        = logger;
     }
 

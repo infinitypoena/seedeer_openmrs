@@ -20,7 +20,7 @@ public class ClinicResourceAssigner
     private readonly SimulationSettings _simSettings;
     private readonly CatalogLoader _catalogs;
     private readonly ILogger<ClinicResourceAssigner> _logger;
-    private readonly Random _rng = new();
+    private readonly Random _rng;
 
     private List<(string Location, string Provider)> _consultorios = [];
     /// <summary>Médicos que atienden HOY (subconjunto de <c>_consultorios</c>, refrescado por día).</summary>
@@ -38,6 +38,7 @@ public class ClinicResourceAssigner
         _client      = client;
         _settings    = settings;
         _simSettings = simSettings;
+        _rng = new Random(simSettings.RandomSeed + 18);
         _catalogs    = catalogs;
         _logger      = logger;
     }

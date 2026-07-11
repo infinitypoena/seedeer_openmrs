@@ -255,6 +255,32 @@ public class PatientProfileGeneratorTests
     }
 
     [Fact]
+    public void GenerateNew_CatalogoConDuplicados_NoSeCuelga()
+    {
+        // Antes, un pool con >1 elementos todos idénticos colgaba PickDistinctPair (do/while infinito)
+        var nombres = new List<NombreEntry>
+        {
+            new() { Nombre = "María", Genero = "F" },
+            new() { Nombre = "María", Genero = "F" },
+            new() { Nombre = "María", Genero = "F" },
+            new() { Nombre = "José",  Genero = "M" },
+            new() { Nombre = "José",  Genero = "M" },
+        };
+        var apellidos = new List<string> { "Pérez", "Pérez", "Pérez" };
+        var c = new CatalogLoader();
+        c.LoadFromLists([], [], [], [], [], [], [], nombres: nombres, apellidos: apellidos);
+        var gen = new PatientProfileGenerator(new SimulationSettings { RandomSeed = 42 }, c);
+
+        for (int i = 0; i < 50; i++)
+        {
+            var p = gen.GenerateNew(); // no debe colgarse
+            Assert.NotEmpty(p.GivenName);
+            Assert.NotEmpty(p.FamilyName);
+            Assert.Equal("", p.SecondFamilyName); // pool deduplicado a 1 → sin segundo apellido
+        }
+    }
+
+    [Fact]
     public void GenerateNew_SinCatalogo_FallbackBogusYPaisVacio()
     {
         var gen = CreateGen(); // catálogos vacíos

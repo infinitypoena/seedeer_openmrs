@@ -21,7 +21,7 @@ public class VitalsSeeder
     private readonly OpenMrsRestClient _client;
     private readonly OpenMrsSettings _settings;
     private readonly ClimateSettings _climate;
-    private readonly Random _rng = new();
+    private readonly Random _rng;
     private readonly ILogger<VitalsSeeder> _logger;
 
     public VitalsSeeder(OpenMrsRestClient client, OpenMrsSettings settings, SimulationSettings simSettings, ILogger<VitalsSeeder> logger)
@@ -29,6 +29,7 @@ public class VitalsSeeder
         _client   = client;
         _settings = settings;
         _climate  = simSettings.Climate;
+        _rng = new Random(simSettings.RandomSeed + 12);
         _logger   = logger;
     }
 

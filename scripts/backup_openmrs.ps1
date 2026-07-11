@@ -18,20 +18,23 @@
   #   docker start openmrs-distro-referenceapplication-360-backend-1
 
 .NOTAS
-  La contraseña de root se lee de la variable de entorno OPENMRS_DB_ROOT_PASSWORD
-  si existe; si no, se usa la de la instancia local de desarrollo.
+  La contraseña de root se pasa por el parámetro -RootPassword o por la variable de
+  entorno OPENMRS_DB_ROOT_PASSWORD. Nunca se embebe en el script (va a git).
 #>
 param(
     [string]$Contenedor = 'openmrs-distro-referenceapplication-360-db-1',
     [string]$BaseDatos  = 'openmrs',
     [string]$Destino    = (Join-Path $PSScriptRoot '..\backups'),
-    [int]$Retencion     = 7   # nº de copias a conservar
+    [int]$Retencion     = 7,   # nº de copias a conservar
+    [string]$RootPassword = ''
 )
 
 $ErrorActionPreference = 'Stop'
 
-$rootPass = $env:OPENMRS_DB_ROOT_PASSWORD
-if (-not $rootPass) { $rootPass = 'obcxUqNDprPWg0e1BhO36wLV' }  # instancia local de desarrollo
+$rootPass = if ($RootPassword) { $RootPassword } else { $env:OPENMRS_DB_ROOT_PASSWORD }
+if (-not $rootPass) {
+    throw "Falta la contraseña de root de MariaDB: pásala con -RootPassword o define OPENMRS_DB_ROOT_PASSWORD. (Está en el .env / MYSQL_ROOT_PASSWORD del compose de la distro.)"
+}
 
 # Verificar que el contenedor está corriendo
 $estado = docker inspect -f '{{.State.Running}}' $Contenedor 2>$null

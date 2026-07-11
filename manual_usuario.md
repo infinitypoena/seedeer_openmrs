@@ -571,7 +571,9 @@ La fecha de nacimiento se ancla a la **fecha de la visita simulada** (no a la fe
 
 ### 10.7 Reproducibilidad con RandomSeed
 
-Los generadores usan seeds derivadas (`RandomSeed`, `+1`, `+2`, `+3`…), de modo que la misma configuración produce exactamente la misma corrida. Ojo: **dos corridas distintas con la misma seed** generan los mismos nombres → si no se limpia entre corridas habrá homónimos (con identificadores `SIM-` distintos).
+**Todos** los componentes aleatorios usan seeds derivadas de `RandomSeed` con offset fijo: agenda diaria (`+0`), perfil de paciente (`+1`/`+2`), selector epidemiológico (`+3`), orquestador — qué recurrentes vuelven, roster del día, espaciamiento — (`+10`), y cada seeder (alergias `+11`, vitales `+12`, consulta `+13`, labs `+14`, prescripciones `+15`, cierre de visita `+16`, citas `+17`, consultorios `+18`). Misma configuración + misma seed = **misma corrida completa** (verificado: dos corridas con la misma seed producen los mismos pacientes, con las mismas horas de visita y los mismos diagnósticos).
+
+Ojo: **dos corridas distintas con la misma seed** generan los mismos nombres → si no se limpia entre corridas habrá homónimos (con identificadores `SIM-` distintos). Para poblaciones diferentes, cambiar la seed.
 
 ### 10.8 Velocidad y estimación de duración
 

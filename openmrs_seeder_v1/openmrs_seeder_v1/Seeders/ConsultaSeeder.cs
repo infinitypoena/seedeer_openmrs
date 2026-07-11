@@ -19,7 +19,7 @@ public class ConsultaSeeder
     private readonly CatalogLoader _catalogs;
     private readonly double _clinicalExamProb;
     private readonly double _followUpProb;
-    private readonly Random _rng = new();
+    private readonly Random _rng;
     private readonly ILogger<ConsultaSeeder> _logger;
 
     public ConsultaSeeder(
@@ -33,6 +33,7 @@ public class ConsultaSeeder
         _settings         = settings;
         _catalogs         = catalogs;
         _clinicalExamProb = simSettings.ReferralProbabilities.ClinicalExam;
+        _rng = new Random(simSettings.RandomSeed + 13);
         _followUpProb     = simSettings.ReferralProbabilities.FollowUp;
         _logger           = logger;
     }

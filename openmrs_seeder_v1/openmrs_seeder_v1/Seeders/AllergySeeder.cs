@@ -16,7 +16,7 @@ public class AllergySeeder
     private readonly CatalogLoader _catalogs;
     private readonly Configuration.AllergySettings _settings;
     private readonly double _runAllergyProb;
-    private readonly Random _rng = new();
+    private readonly Random _rng;
     private readonly ILogger<AllergySeeder> _logger;
 
     public AllergySeeder(
@@ -28,6 +28,7 @@ public class AllergySeeder
         _client   = client;
         _catalogs = catalogs;
         _settings = simSettings.Allergy;
+        _rng = new Random(simSettings.RandomSeed + 11);
         _logger   = logger;
 
         // Prevalencia de la corrida: una vez por instancia (AllergySeeder es Transient → una por corrida),

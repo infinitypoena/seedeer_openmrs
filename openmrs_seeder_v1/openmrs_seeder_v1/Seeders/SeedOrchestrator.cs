@@ -74,7 +74,8 @@ public class SeedOrchestrator
     {
         var days             = _schedule.Generate();
         var diasConPacientes = days.Count(d => d.TotalPatients > 0);
-        var rng              = new Random();
+        // Seed fija: decide recurrentes/roster/espaciamiento — sin ella la reproducibilidad se rompe
+        var rng              = new Random(_settings.RandomSeed + 10);
 
         // Asegurar consultorios + médicos (idempotente) antes de repartir visitas
         await _clinicResources.InitializeAsync(ct);
@@ -203,6 +204,8 @@ public class SeedOrchestrator
                     AgeGroup      = base_.AgeGroup,
                     Address1      = base_.Address1,
                     City          = base_.City,
+                    StateProvince = base_.StateProvince,
+                    Country       = base_.Country,
                     EsNuevo       = false,
                     // Compartir historial de órdenes y lista de problemas con el paciente original
                     OrderedConcepts = base_.OrderedConcepts,

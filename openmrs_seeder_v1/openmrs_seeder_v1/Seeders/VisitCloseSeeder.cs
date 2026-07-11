@@ -7,12 +7,13 @@ namespace OpenmrsSeeder.Seeders;
 public class VisitCloseSeeder
 {
     private readonly OpenMrsRestClient _client;
-    private readonly Random _rng = new();
+    private readonly Random _rng;
     private readonly ILogger<VisitCloseSeeder> _logger;
 
-    public VisitCloseSeeder(OpenMrsRestClient client, ILogger<VisitCloseSeeder> logger)
+    public VisitCloseSeeder(OpenMrsRestClient client, Configuration.SimulationSettings simSettings, ILogger<VisitCloseSeeder> logger)
     {
         _client = client;
+        _rng    = new Random(simSettings.RandomSeed + 16);
         _logger = logger;
     }
 

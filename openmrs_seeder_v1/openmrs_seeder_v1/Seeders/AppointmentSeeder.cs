@@ -19,7 +19,7 @@ public class AppointmentSeeder
     private readonly OpenMrsRestClient _client;
     private readonly OpenMrsSettings _settings;
     private readonly int _toleranciaDias;
-    private readonly Random _rng = new();
+    private readonly Random _rng;
     private readonly ILogger<AppointmentSeeder> _logger;
 
     public AppointmentSeeder(
@@ -31,6 +31,7 @@ public class AppointmentSeeder
         _client         = client;
         _settings       = settings;
         _toleranciaDias = simSettings.Appointments.ToleranciaDias;
+        _rng = new Random(simSettings.RandomSeed + 17);
         _logger         = logger;
     }
 

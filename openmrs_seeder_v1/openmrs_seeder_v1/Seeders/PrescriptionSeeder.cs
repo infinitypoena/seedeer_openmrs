@@ -14,7 +14,7 @@ public class PrescriptionSeeder
     private readonly OpenMrsSettings _settings;
     private readonly CatalogLoader _catalogs;
     private readonly double _drugOrderProb;
-    private readonly Random _rng = new();
+    private readonly Random _rng;
     private readonly ILogger<PrescriptionSeeder> _logger;
 
     public PrescriptionSeeder(
@@ -28,6 +28,7 @@ public class PrescriptionSeeder
         _settings      = settings;
         _catalogs      = catalogs;
         _drugOrderProb = simSettings.ReferralProbabilities.DrugOrder;
+        _rng = new Random(simSettings.RandomSeed + 15);
         _logger        = logger;
     }
 

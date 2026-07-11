@@ -22,12 +22,17 @@ public class DataCleaner
         _logger = logger;
     }
 
-    /// <summary>Cuenta los pacientes SIM- existentes (para el mensaje de confirmación).</summary>
-    public async Task<int> ContarPacientesSimAsync(CancellationToken ct)
+    /// <summary>
+    /// Cuenta los pacientes SIM- existentes para el mensaje de confirmación.
+    /// ⚠️ OpenMRS capea totalCount en 1000: devuelve (conteo, esCotaInferior) para que el prompt
+    /// diga "al menos 1000" y no subestime la operación que se está confirmando.
+    /// </summary>
+    public async Task<(int Total, bool EsCotaInferior)> ContarPacientesSimAsync(CancellationToken ct)
     {
         var json = await _client.GetAsync("patient?identifier=SIM-&v=default&limit=1&totalCount=true", ct);
         var doc = JsonSerializer.Deserialize<JsonElement>(json);
-        return doc.TryGetProperty("totalCount", out var total) ? total.GetInt32() : 0;
+        var total = doc.TryGetProperty("totalCount", out var t) ? t.GetInt32() : 0;
+        return (total, total >= 1000);
     }
 
     public async Task<(int PacientesVoided, int VisitasVoided)> ClearAsync(CancellationToken ct)

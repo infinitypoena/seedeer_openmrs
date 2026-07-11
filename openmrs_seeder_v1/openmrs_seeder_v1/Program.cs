@@ -168,6 +168,11 @@ async Task<int> EjecutarSimulacionAsync()
             }
         }
         catch (OperationCanceledException) { /* fin normal */ }
+        catch (Exception ex)
+        {
+            // El reporter es cosmético: un fallo suyo no debe tumbar el cierre de la corrida
+            logger.LogWarning("Reporter de progreso detenido por error: {Msg}", ex.Message);
+        }
     });
 
     try
@@ -215,7 +220,7 @@ async Task<int> EjecutarLimpiezaAsync()
 {
     var cleaner = host.Services.GetRequiredService<DataCleaner>();
 
-    var total = await cleaner.ContarPacientesSimAsync(cts.Token);
+    var (total, esCotaInferior) = await cleaner.ContarPacientesSimAsync(cts.Token);
     if (total == 0)
     {
         logger.LogInformation("No hay pacientes SIM- que limpiar.");
@@ -223,7 +228,8 @@ async Task<int> EjecutarLimpiezaAsync()
     }
 
     // La fricción que antes daba el DELETE explícito ahora es una confirmación interactiva.
-    Console.Write($"Se anularán (void) {total} pacientes SIM- y todas sus visitas. ¿Continuar? (s/N): ");
+    var cantidad = esCotaInferior ? $"al menos {total}" : total.ToString();
+    Console.Write($"Se anularán (void) {cantidad} pacientes SIM- y todas sus visitas. ¿Continuar? (s/N): ");
     var respuesta = Console.ReadLine()?.Trim().ToLowerInvariant();
     if (respuesta is not ("s" or "si" or "sí"))
     {
