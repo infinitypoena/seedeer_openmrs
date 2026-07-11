@@ -426,7 +426,7 @@ Los catálogos viven en `openmrs_seeder_v1/openmrs_seeder_v1/catalogs/` y son **
 | `alergenos.csv` | 15 | Completo | Alérgenos DRUG/FOOD/ENVIRONMENT verificados |
 | `motivos_consulta.csv` | 37 | Completo | Frases de motivo de consulta en español por categoría |
 | `nombres.csv` / `apellidos.csv` | ~155 / ~200 | Completo | Nombres y apellidos centroamericanos (2+2 por paciente) |
-| `direcciones.csv` | ~55 | Opcional | Colonias/barrios/cantones de El Salvador con peso (captación de la clínica); ausente = direcciones genéricas |
+| `direcciones.csv` | ~142 | Opcional | Colonias/barrios/cantones de los 14 departamentos de El Salvador, con peso (captación de la clínica); ausente = direcciones genéricas |
 | `consultorios.csv` | 3-4 | Opcional | Consultorios + médico; vacío = un solo médico/locación por defecto |
 | `programas.csv` | 2 | Opcional | Programas de atención y sus disparadores (dx o categoría) |
 | `clima.csv` | 52 | Opcional | Estación por semana ISO; ausente = sin estacionalidad |

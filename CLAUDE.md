@@ -123,7 +123,7 @@ All under `catalogs/`. See `parametrizacion_archivos.md` for column schemas.
 | `programas.csv` | Manual + `GET /program` | Programas de atención OpenMRS (`program_uuid,program_nombre,trigger_dx,trigger_categoria,estado_inicial_uuid`) | UUIDs instance-specific; `trigger_dx`/`trigger_categoria` separados por `\|`; `estado_inicial_uuid` opcional; absent/empty = feature inactiva |
 | `nombres.csv` | Manual | Nombres de pila por género (`nombre,genero`) | ~155 nombres centroamericanos M/F; ausente = fallback a Bogus (un solo nombre) |
 | `apellidos.csv` | Manual | Apellidos (`apellido`) | ~200 apellidos hispanos/centroamericanos; se usan como primer y segundo apellido; ausente = fallback a Bogus |
-| `direcciones.csv` | Manual | **Opcional** direcciones salvadoreñas (`departamento,municipio,zona,peso`) | ~55 colonias/barrios/cantones reales; peso concentra el área metropolitana de San Salvador (captación de la clínica); ausente = fallback Bogus/España |
+| `direcciones.csv` | Manual | **Opcional** direcciones salvadoreñas (`departamento,municipio,zona,peso`) | ~142 colonias/barrios/cantones reales cubriendo los **14 departamentos** (~68 municipios); peso concentra el área metropolitana de San Salvador (captación de la clínica); ausente = fallback Bogus/España |
 
 ## Verified UUID Mappings (this OpenMRS instance)
 
