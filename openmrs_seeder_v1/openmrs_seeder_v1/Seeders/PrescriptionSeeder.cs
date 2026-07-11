@@ -90,7 +90,11 @@ public class PrescriptionSeeder
             quantity      = (double)duracion,
             quantityUnits = _settings.Defaults.TabletConceptUuid,
             duration      = duracion,
-            durationUnits = _settings.Defaults.DaysConceptUuid
+            durationUnits = _settings.Defaults.DaysConceptUuid,
+            // Sin esto OpenMRS usa el reloj real: la orden quedaba fechada el día de la corrida,
+            // no el de la visita simulada (y el autoexpire se calculaba desde hoy). Debe coincidir
+            // con el datetime del encounter de consulta (no puede ser anterior a él).
+            dateActivated = VisitSeeder.FormatDatetime(ConsultaSeeder.FechaConsulta(patient))
         };
 
         try

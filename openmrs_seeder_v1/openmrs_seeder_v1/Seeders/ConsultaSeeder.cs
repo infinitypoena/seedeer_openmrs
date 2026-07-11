@@ -76,6 +76,13 @@ public class ConsultaSeeder
             patient.Diagnostico?.EsComun, patient.Comorbilidades.Count);
     }
 
+    /// <summary>
+    /// Momento del encounter de consulta (30 min después de la llegada). Las órdenes de lab y
+    /// prescripciones deben fechar su <c>dateActivated</c> con ESTE valor: OpenMRS rechaza órdenes
+    /// activadas antes que su encounter (<c>Order.error.encounterDatetimeAfterDateActivated</c>).
+    /// </summary>
+    public static DateTime FechaConsulta(SimulatedPatient patient) => patient.VisitDatetime.AddMinutes(30);
+
     // ── Helpers privados ──────────────────────────────────────────────────────
 
     private async Task<string?> CreateEncounterAsync(SimulatedPatient patient, CancellationToken ct)
@@ -95,7 +102,7 @@ public class ConsultaSeeder
             encounterType      = _settings.Defaults.ConsultaEncounterTypeUuid,
             patient            = patient.OpenMrsUuid,
             visit              = patient.VisitUuid,
-            encounterDatetime  = VisitSeeder.FormatDatetime(patient.VisitDatetime.AddMinutes(30)),
+            encounterDatetime  = VisitSeeder.FormatDatetime(FechaConsulta(patient)),
             location           = patient.AssignedLocationUuid ?? _settings.Defaults.LocationUuid,
             encounterProviders = new[]
             {

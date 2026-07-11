@@ -182,7 +182,11 @@ public class LabOrderSeeder
             encounter   = patient.ConsultaEncounterUuid,
             orderer     = patient.AssignedProviderUuid ?? _settings.Defaults.ProviderUuid,
             careSetting = _settings.Defaults.OutpatientCareSettingUuid,
-            urgency
+            urgency,
+            // Sin esto OpenMRS usa el reloj real: la orden quedaba fechada el día de la corrida,
+            // no el de la visita simulada. Debe coincidir con el datetime del encounter de consulta
+            // (no puede ser anterior a él).
+            dateActivated = VisitSeeder.FormatDatetime(ConsultaSeeder.FechaConsulta(patient))
         };
 
         try
