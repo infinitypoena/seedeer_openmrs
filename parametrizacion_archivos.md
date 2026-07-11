@@ -432,6 +432,18 @@ El `address1` final añade detalle urbano ("Colonia Zacamil, pasaje C, casa #8")
 (rurales) van sin numeración. `country` = "El Salvador". **Archivo ausente/vacío = fallback Bogus**
 (calles genéricas y país "España", comportamiento histórico).
 
+**Criterio de pesos — anillos de distancia (la clínica está en el municipio de San Salvador):**
+
+| Anillo | Zonas | Cuota objetivo | Pesos |
+|:------:|-------|:--------------:|-------|
+| 0 | San Salvador municipio | ~45 % | 8–20 |
+| 1 | Colindantes (Mejicanos, Soyapango, Ciudad Delgado, Cuscatancingo, Ayutuxtepeque, San Marcos) | ~28 % | 5–18 |
+| 2 | Resto del AMSS + metro La Libertad (Apopa, Ilopango, Santa Tecla, Antiguo Cuscatlán…) | ~18 % | 2–6 |
+| 3 | Interior del país (viaje de 1–3 h — caso ocasional) | ~9 % | 1 (2 en cabeceras con hospital de referencia: Santa Ana, San Miguel, Cojutepeque, Zacatecoluca) |
+
+Si el escenario "muda" la clínica a otra ciudad, basta reponderar el CSV con este mismo criterio
+(mayor peso = más cerca de la clínica); no hay que tocar código.
+
 ---
 
 ## 10. catalogs/comorbilidad_afinidades.csv — Clusters de comorbilidad
