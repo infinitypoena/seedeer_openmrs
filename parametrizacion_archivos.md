@@ -227,6 +227,9 @@ ciel_uuid,nombre_es,categoria,severidad,aplica_0_14,aplica_15_29,aplica_30_44,ap
 | `comun` | `true` → pertenece al pool de enfermedades frecuentes (sesgo de selección inicial) |
 | `vital_fiebre` *(opcional)* | `true` → fuerza fiebre en los vitales aunque la categoría no sea febril (p.ej. apendicitis, pielonefritis). Vacío = neutro |
 | `vital_imc` *(opcional)* | `alto` (sobrepeso/obesidad) o `bajo` (desnutrición/caquexia: TB, cáncer, hipertiroidismo, VIH…) para fijar el IMC objetivo. **Gana sobre la categoría.** Vacío = neutro |
+| `vital_pa` *(opcional)* | `alta` → banda hipertensiva (140-180/90-110) aunque la categoría no sea cardiovascular (preeclampsia/eclampsia, enfermedad renal, Cushing, hipertiroidismo). Vacío = neutro |
+| `vital_fc` *(opcional)* | `alta` → taquicardia 100-130 (hipertiroidismo, anemia, hipovolemia/hemorragia) o `baja` → bradicardia 42-58 (hipotiroidismo, bloqueos AV). **Gana incluso sobre la taquicardia febril.** Vacío = neutro |
+| `vital_spo2` *(opcional)* | `baja` → SpO2 88-94 fuera de respiratorio (insuficiencia cardíaca, TEP). ⚠️ La anemia NO va aquí (satura normal). Vacío = neutro |
 | `sexo` *(opcional)* | `M` o `F` → el dx **solo** aparece en ese sexo (exclusión dura: embarazo/eclampsia = F, próstata/testículo = M). Vacío = ambos. Se puebla con `scripts/ajustar_diagnosticos.ps1` (reglas por palabra clave) |
 
 > **Fuente**: Query SQL sobre `concept` + `concept_name` en la DB OpenMRS. Las columnas `aplica_*`, `peso_*`, `requiere_*` y `vital_*` se agregan manualmente. Las columnas `vital_*` son **opcionales** (el loader tolera su ausencia → comportamiento neutro gobernado por la categoría). Ver queries en `fases_implementacion.md` Fase 2.
@@ -555,14 +558,17 @@ motivos_consulta.csv
 
 Los signos vitales se derivan (`VitalsSeeder.ComputeVitals`) de la **unión de categorías** de
 **todos** los diagnósticos del paciente (primario + comorbilidades), la **peor severidad**, y
-los overrides opcionales por enfermedad (`vital_fiebre`, `vital_imc`). El override gana sobre
-la categoría.
+los overrides opcionales por enfermedad (`vital_fiebre`, `vital_imc`, `vital_pa`, `vital_fc`,
+`vital_spo2`). El override gana sobre la categoría.
 
 | Condición | Ajuste en vitales |
 |-----------|-------------------|
-| `cardiovascular` | PA 140-180 / 90-110 mmHg; pulso 80-110 |
+| `cardiovascular` o `vital_pa=alta` | PA 140-180 / 90-110 mmHg; pulso 80-110 (solo categoría) |
 | `infeccioso`, `respiratorio` (≥moderado) o `vital_fiebre=true` | Temperatura 37.5-39.5°C (hasta 40 si grave); pulso 90-120; FR elevada |
 | `respiratorio` grave / moderado | SpO2 88-93 / 92-96% |
+| `vital_fc=alta` (hipertiroidismo, anemia, hipovolemia) | Pulso 100-130 — gana sobre fiebre/categoría |
+| `vital_fc=baja` (hipotiroidismo, bloqueos) | Pulso 42-58 — gana sobre fiebre/categoría |
+| `vital_spo2=baja` (insuf. cardíaca, TEP) | SpO2 88-94% aunque no sea respiratorio |
 | `diabetes`, `endocrino` o `vital_imc=alto` | IMC objetivo 27-38 (sobrepeso/obesidad) |
 | `vital_imc=bajo` (TB, cáncer, hipertiroidismo, VIH…) | IMC objetivo 16-19 (bajo peso) |
 | Resto | IMC 18.5-27; temperatura/pulso/FR/SpO2 normales con variación |

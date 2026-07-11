@@ -119,9 +119,15 @@ public class VitalsSeeder
         var imcOverride  = dxs.Any(d => d.VitalImc == "alto") ? "alto"
                          : dxs.Any(d => d.VitalImc == "bajo") ? "bajo"
                          : null;
+        var paOverride   = dxs.Any(d => d.VitalPa == "alta") ? "alta" : null;
+        var fcOverride   = dxs.Any(d => d.VitalFc == "alta") ? "alta"
+                         : dxs.Any(d => d.VitalFc == "baja") ? "baja"
+                         : null;
+        var spo2Override = dxs.Any(d => d.VitalSpo2 == "baja") ? "baja" : null;
 
         var v = ComputeVitals(patient.Categorias, severityRank, patient.Gender, patient.AgeGroup,
-            fiebre, imcOverride, patient.TempAmbienteC, _climate, _rng);
+            fiebre, imcOverride, patient.TempAmbienteC, _climate, _rng,
+            paOverride, fcOverride, spo2Override);
 
         return new Dictionary<string, double>
         {
@@ -163,7 +169,10 @@ public class VitalsSeeder
         string? imcOverride,
         double? tempAmbienteC,
         ClimateSettings climate,
-        Random rng)
+        Random rng,
+        string? paOverride = null,
+        string? fcOverride = null,
+        string? spo2Override = null)
     {
         var cats = categorias as ISet<string> ?? new HashSet<string>(categorias);
         bool Has(string c) => cats.Contains(c);
@@ -187,8 +196,8 @@ public class VitalsSeeder
         var imc    = Rand(imcMin, imcMax);
         var weight = Math.Round(imc * Math.Pow(height / 100.0, 2), 1);
 
-        // ── Presión arterial ──
-        var (sysMin, sysMax, diaMin, diaMax) = Has("cardiovascular")
+        // ── Presión arterial (el override por enfermedad gana sobre la categoría) ──
+        var (sysMin, sysMax, diaMin, diaMax) = paOverride == "alta" || Has("cardiovascular")
             ? (140.0, 180.0, 90.0, 110.0)
             : (100.0, 130.0, 60.0,  85.0);
         var systolic  = Math.Round(Rand(sysMin, sysMax));
@@ -202,8 +211,10 @@ public class VitalsSeeder
             temp += Math.Min(climate.TempVitalsMaxC, (ambiente - climate.ComfortTempC) * climate.TempVitalsFactorC);
         temp = Math.Round(temp, 1);
 
-        // ── Pulso (taquicardia con fiebre o cardiopatía) ──
-        var (pMin, pMax) = febril ? (90.0, 120.0)
+        // ── Pulso (el override por enfermedad gana; si no: taquicardia con fiebre o cardiopatía) ──
+        var (pMin, pMax) = fcOverride == "alta" ? (100.0, 130.0)
+                         : fcOverride == "baja" ? (42.0, 58.0)
+                         : febril ? (90.0, 120.0)
                          : Has("cardiovascular") ? (80.0, 110.0)
                          : (60.0, 100.0);
         var pulse = Math.Round(Rand(pMin, pMax));
@@ -214,8 +225,9 @@ public class VitalsSeeder
             : (12.0, 20.0);
         var respRate = Math.Min(99.0, Math.Round(Rand(frMin, frMax)));
 
-        // ── SpO2 (baja según severidad respiratoria); concepto 5092 (hiAbsolute=100) ──
-        var (sMin, sMax) = Has("respiratorio") && severityRank >= 3 ? (88.0, 93.0)
+        // ── SpO2 (el override por enfermedad gana; si no: baja según severidad respiratoria); concepto 5092 ──
+        var (sMin, sMax) = spo2Override == "baja" ? (88.0, 94.0)
+                         : Has("respiratorio") && severityRank >= 3 ? (88.0, 93.0)
                          : Has("respiratorio") && severityRank >= 2 ? (92.0, 96.0)
                          : (95.0, 99.0);
         var spo2 = Math.Round(Rand(sMin, sMax));

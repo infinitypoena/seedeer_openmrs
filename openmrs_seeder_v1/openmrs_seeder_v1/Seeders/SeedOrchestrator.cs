@@ -26,8 +26,8 @@ public class SeedOrchestrator
     private readonly AppointmentSeeder _appointmentSeeder;
     private readonly ClinicResourceAssigner _clinicResources;
 
+    // La corrida es secuencial (un solo hilo, await tras await): el pool no necesita lock.
     private readonly List<SimulatedPatient> _patientPool = [];
-    private readonly Lock _poolLock = new();
     private readonly ILogger<SeedOrchestrator> _logger;
 
     public SeedOrchestrator(
@@ -142,13 +142,12 @@ public class SeedOrchestrator
                 RegistrarCronicas(patient, patient);
                 RegistrarEpisodioAgudo(patient, patient, day.Date, fueControlAgudo: false);
                 FijarProximaVisita(patient, day.Date, rng);
-                lock (_poolLock) _patientPool.Add(patient);
+                _patientPool.Add(patient);
                 tracker.Update(runId, r => r.PacientesCreados++);
             }
 
             // ── Pacientes recurrentes ─────────────────────────────────────────
-            List<SimulatedPatient> poolSnapshot;
-            lock (_poolLock) poolSnapshot = [.. _patientPool];
+            List<SimulatedPatient> poolSnapshot = [.. _patientPool];
 
             // Excluir pacientes ya visitados hoy (nuevos del mismo día)
             var uuidsHoy = new HashSet<string>(
@@ -246,9 +245,7 @@ public class SeedOrchestrator
         // Cierre de agenda: las citas vencidas de pacientes que nunca volvieron pasan a Missed
         if (!ct.IsCancellationRequested)
         {
-            List<SimulatedPatient> poolFinal;
-            lock (_poolLock) poolFinal = [.. _patientPool];
-            await _appointmentSeeder.SweepMissedAsync(poolFinal, DateOnly.FromDateTime(_settings.EndDate), ct);
+            await _appointmentSeeder.SweepMissedAsync(_patientPool, DateOnly.FromDateTime(_settings.EndDate), ct);
         }
 
         var run = tracker.GetRun(runId);

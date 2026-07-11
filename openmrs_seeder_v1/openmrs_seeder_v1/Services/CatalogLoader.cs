@@ -160,6 +160,9 @@ public class CatalogLoader
         EsComun               = B(row, "comun"),
         VitalFiebre           = B(row, "vital_fiebre"),
         VitalImc              = S(row, "vital_imc").ToLowerInvariant(),
+        VitalPa               = S(row, "vital_pa").ToLowerInvariant(),
+        VitalFc               = S(row, "vital_fc").ToLowerInvariant(),
+        VitalSpo2             = S(row, "vital_spo2").ToLowerInvariant(),
         Sexo                  = S(row, "sexo").Trim().ToUpperInvariant() is "M" or "F" ? S(row, "sexo").Trim().ToUpperInvariant() : ""
     };
 

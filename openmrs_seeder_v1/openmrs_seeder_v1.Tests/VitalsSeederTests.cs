@@ -11,11 +11,13 @@ public class VitalsSeederTests
     /// <summary>Ejecuta ComputeVitals N veces (semilla fija) y devuelve los resultados.</summary>
     private static IEnumerable<VitalsSeeder.VitalSigns> Run(
         string[] categorias, int sev = 1, string gender = "M", string ageGroup = "30-44",
-        bool fiebre = false, string? imc = null, int n = 500)
+        bool fiebre = false, string? imc = null, int n = 500,
+        string? pa = null, string? fc = null, string? spo2 = null)
     {
         var rng = new Random(123);
         for (var i = 0; i < n; i++)
-            yield return VitalsSeeder.ComputeVitals(categorias, sev, gender, ageGroup, fiebre, imc, null, NoClima, rng);
+            yield return VitalsSeeder.ComputeVitals(categorias, sev, gender, ageGroup, fiebre, imc, null, NoClima, rng,
+                pa, fc, spo2);
     }
 
     private static double Imc(VitalsSeeder.VitalSigns v) => v.WeightKg / Math.Pow(v.HeightCm / 100.0, 2);
@@ -113,5 +115,60 @@ public class VitalsSeederTests
             Assert.InRange(v.HeightCm, 90, 160);
             Assert.InRange(Imc(v), 13.5, 20.5);
         });
+    }
+
+    // ── Overrides por enfermedad: vital_pa / vital_fc / vital_spo2 ────────────
+
+    [Fact]
+    public void OverridePaAlta_HipertensionFueraDeCardiovascular()
+    {
+        // p.ej. preeclampsia (ginecoobstetrico): sin override daría PA normal
+        Assert.All(Run(["ginecoobstetrico"], pa: "alta"), v =>
+        {
+            Assert.InRange(v.Systolic, 140, 180);
+            Assert.InRange(v.Diastolic, 90, 110);
+        });
+        // Sin override, la misma categoría es normotensa
+        Assert.All(Run(["ginecoobstetrico"]), v => Assert.InRange(v.Systolic, 100, 130));
+    }
+
+    [Fact]
+    public void OverrideFcAlta_TaquicardiaSinFiebre()
+    {
+        // p.ej. hipertiroidismo/anemia: taquicardia sin estar febril
+        Assert.All(Run(["endocrino"], fc: "alta"), v =>
+        {
+            Assert.InRange(v.Pulse, 100, 130);
+            Assert.True(v.TempC < 37.5); // no febril
+        });
+    }
+
+    [Fact]
+    public void OverrideFcBaja_GanaSobreLaFiebre()
+    {
+        // p.ej. hipotiroidismo con cuadro febril intercurrente: el override manda (bradicardia)
+        Assert.All(Run(["infeccioso"], fc: "baja"), v => Assert.InRange(v.Pulse, 42, 58));
+    }
+
+    [Fact]
+    public void OverrideSpo2Baja_DesaturaFueraDeRespiratorio()
+    {
+        // p.ej. insuficiencia cardíaca (cardiovascular): sin override la SpO2 sería 95-99
+        Assert.All(Run(["cardiovascular"], spo2: "baja"), v => Assert.InRange(v.SpO2, 88, 94));
+        Assert.All(Run(["cardiovascular"]), v => Assert.InRange(v.SpO2, 95, 99));
+    }
+
+    [Fact]
+    public void SinOverrides_ComportamientoIdentico()
+    {
+        // Misma semilla con y sin parámetros nuevos (null) → misma secuencia de vitales
+        var rngA = new Random(77); var rngB = new Random(77);
+        for (int i = 0; i < 200; i++)
+        {
+            var a = VitalsSeeder.ComputeVitals(["respiratorio"], 2, "F", "45-64", false, null, null, NoClima, rngA);
+            var b = VitalsSeeder.ComputeVitals(["respiratorio"], 2, "F", "45-64", false, null, null, NoClima, rngB,
+                null, null, null);
+            Assert.Equal(a, b);
+        }
     }
 }

@@ -5,6 +5,9 @@
 # (no reescribe categoría/pesos/edad a ciegas). Ajusta, por nombre de enfermedad:
 #   • vital_imc   = bajo (caquexia/adelgazamiento) | alto (obesidad/retención)
 #   • vital_fiebre= true para entidades febriles agudas (sepsis, abscesos, etc.)
+#   • vital_pa    = alta para hipertensoras no-cardiovasculares (preeclampsia, renal…)
+#   • vital_fc    = alta (hipertiroidismo, anemia, hipovolemia) | baja (hipotiroidismo, bloqueos)
+#   • vital_spo2  = baja para desaturación fuera de respiratorio (insuf. cardíaca, TEP)
 #   • cronica     = true para enfermedades claramente crónicas no marcadas
 #   • severidad   = grave para entidades inequívocamente letales mal marcadas
 # Solo AÑADE/eleva; nunca quita una cronica ni baja una severidad ya puesta.
@@ -34,6 +37,15 @@ $cronList = @('epoc','enfisema','cirrosis','vih','sida','artritis reumatoide','l
     'esclerosis multiple','enfermedad de parkinson','epilepsia','hipotiroidismo','hipertiroidismo',
     'osteoporosis','insuficiencia renal cronica','enfermedad renal cronica','nefropatia diabetica',
     'retinopatia diabetica','hiperplasia prostatica','psoriasis','glaucoma','fibromialgia','demencia','alzheimer')
+# Overrides de vitales por enfermedad (fuera de su categoría "natural").
+$paAlta = @('preeclamp','eclampsia','hipertension gestacional','nefropatia','glomerulonefritis',
+    'sindrome nefritico','insuficiencia renal','enfermedad renal','feocromocitoma','cushing','hipertiroidismo')
+$fcAlta = @('hipertiroidismo','tirotoxicosis','anemia','fibrilacion auricular','taquicardia','taquiarritmia',
+    'deshidratacion','hipovolemia','shock','choque','hemorragia','embolia pulmonar','tromboembolia')
+$fcBaja = @('hipotiroidismo','bradicardia','bradiarritmia','bloqueo auriculoventricular','bloqueo av')
+# OJO: la anemia NO baja la SpO2 (satura normal con menos hemoglobina) — no va aquí.
+$spo2Baja = @('insuficiencia cardiaca','edema agudo de pulmon','embolia pulmonar','tromboembolia pulmonar')
+
 $grave = @('sepsis','septic','shock','choque','infarto agudo','hemorragia','embolia pulmonar',
     'tromboembolia pulmonar','perforacion','peritonitis','meningitis bacteriana','estado epileptico',
     'status epileptic','falciparum','cetoacidosis','insuficiencia respiratoria aguda',
@@ -51,7 +63,7 @@ $sexoM = @('prostat','testicul','escrot','epididim','orquitis','varicocele','hid
     'prepucio','fimosis','balanitis','priapismo','peneana','del pene')
 
 $rows = Import-Csv -Path $Csv
-$chg = [ordered]@{ imc = 0; fiebre = 0; cronica = 0; severidad = 0; sexo = 0 }
+$chg = [ordered]@{ imc = 0; fiebre = 0; cronica = 0; severidad = 0; sexo = 0; pa = 0; fc = 0; spo2 = 0 }
 
 foreach ($r in $rows) {
     $n = Fold $r.nombre_es
@@ -70,6 +82,17 @@ foreach ($r in $rows) {
     }
     # vital_fiebre
     if ($r.vital_fiebre -ne 'true' -and (Hit $n $fiebre)) { $r.vital_fiebre = 'true'; $chg.fiebre++ }
+    # vital_pa / vital_fc / vital_spo2 (columnas nuevas): asegurar que existan, solo asignar si vacías
+    foreach ($col in 'vital_pa','vital_fc','vital_spo2') {
+        if ($null -eq $r.PSObject.Properties[$col]) { $r | Add-Member -NotePropertyName $col -NotePropertyValue '' }
+    }
+    if ([string]::IsNullOrWhiteSpace($r.vital_pa) -and (Hit $n $paAlta)) { $r.vital_pa = 'alta'; $chg.pa++ }
+    # 'fetal' excluido: la taquicardia fetal es del feto, no del pulso de la madre (la paciente).
+    if ([string]::IsNullOrWhiteSpace($r.vital_fc) -and -not $n.Contains('fetal')) {
+        if     (Hit $n $fcBaja) { $r.vital_fc = 'baja'; $chg.fc++ }
+        elseif (Hit $n $fcAlta) { $r.vital_fc = 'alta'; $chg.fc++ }
+    }
+    if ([string]::IsNullOrWhiteSpace($r.vital_spo2) -and (Hit $n $spo2Baja)) { $r.vital_spo2 = 'baja'; $chg.spo2++ }
     # cronica (solo añadir)
     if ($r.cronica -ne 'true' -and ($n.Contains('cronic') -or (Hit $n $cronList))) { $r.cronica = 'true'; $chg.cronica++ }
     # severidad (solo elevar a grave)
@@ -78,4 +101,4 @@ foreach ($r in $rows) {
 
 $rows | Export-Csv -Path $Csv -NoTypeInformation -Encoding utf8 -UseQuotes AsNeeded
 "Filas: $($rows.Count)"
-"Cambios -> vital_imc:$($chg.imc)  vital_fiebre:$($chg.fiebre)  cronica:$($chg.cronica)  severidad:$($chg.severidad)  sexo:$($chg.sexo)"
+"Cambios -> vital_imc:$($chg.imc)  vital_fiebre:$($chg.fiebre)  cronica:$($chg.cronica)  severidad:$($chg.severidad)  sexo:$($chg.sexo)  vital_pa:$($chg.pa)  vital_fc:$($chg.fc)  vital_spo2:$($chg.spo2)"
