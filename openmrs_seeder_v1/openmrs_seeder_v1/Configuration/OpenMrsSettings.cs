@@ -48,4 +48,11 @@ public class DefaultsSettings
     public string AppointmentServiceUuid { get; set; } = "";
     /// <summary>UUID del tipo de servicio de la cita (p.ej. "Short follow-up"). Opcional.</summary>
     public string AppointmentServiceTypeUuid { get; set; } = "";
+    /// <summary>UUID del person attribute type "Telephone Number" (String). Vacío = no se registra teléfono.</summary>
+    public string TelephoneAttributeTypeUuid { get; set; } = "";
+    /// <summary>
+    /// UUID del person attribute type "Civil Status" (formato Concept: el value debe ser el UUID de
+    /// un answer del concepto Estado civil 1054). Vacío = no se registra estado civil.
+    /// </summary>
+    public string CivilStatusAttributeTypeUuid { get; set; } = "";
 }

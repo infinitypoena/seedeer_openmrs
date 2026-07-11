@@ -36,6 +36,8 @@ public class PatientProfileGenerator
         var ageGroup = PickAgeGroup();
         var (given, secondGiven, family, secondFamily) = GenerateName(gender);
         var (address1, city, departamento, pais) = GenerateAddress();
+        var birthDate = GenerateBirthDate(ageGroup, refDate);
+        var edad      = EdadEnAnios(birthDate, refDate);
 
         return new SimulatedPatient
         {
@@ -45,14 +47,72 @@ public class PatientProfileGenerator
             FamilyName       = family,
             SecondFamilyName = secondFamily,
             Gender           = gender,
-            BirthDate        = GenerateBirthDate(ageGroup, refDate),
+            BirthDate        = birthDate,
             AgeGroup         = ageGroup,
+            Telefono         = GenerarTelefono(_rng),
+            EstadoCivilUuid  = GenerarEstadoCivil(edad, _rng),
             Address1         = address1,
             City             = city,
             StateProvince    = departamento,
             Country          = pais,
             EsNuevo          = true
         };
+    }
+
+    // ── Atributos de persona (teléfono + estado civil) ────────────────────────
+
+    // Answers del concepto CIEL "Estado civil" (1054), verificados en esta instancia.
+    public const string EstadoCivilSoltero    = "1057AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"; // No casado anteriormente
+    public const string EstadoCivilCasado     = "5555AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+    public const string EstadoCivilAcompanado = "1060AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"; // Vive con su pareja
+    public const string EstadoCivilViudo      = "1059AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+    public const string EstadoCivilDivorciado = "1058AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+    public const string EstadoCivilSeparado   = "1056AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+
+    /// <summary>Teléfono salvadoreño sintético: móvil 7###-#### (~80 %) o fijo 2###-#### (~20 %).</summary>
+    public static string GenerarTelefono(Random rng)
+    {
+        var prefijo = rng.NextDouble() < 0.80 ? 7 : 2;
+        return $"{prefijo}{rng.Next(0, 1000):000}-{rng.Next(0, 10000):0000}";
+    }
+
+    /// <summary>
+    /// Estado civil coherente con la edad (seam puro): menores siempre solteros; con la edad crece
+    /// casado/acompañado y en 65+ aparece viudez. Devuelve el UUID del answer del concepto 1054.
+    /// </summary>
+    public static string GenerarEstadoCivil(int edad, Random rng)
+    {
+        if (edad < 18) return EstadoCivilSoltero;
+
+        // (uuid, peso) por franja — pesos relativos, no necesitan sumar 1.
+        (string Uuid, double Peso)[] pesos = edad switch
+        {
+            < 30 => [(EstadoCivilSoltero, 0.62), (EstadoCivilCasado, 0.18), (EstadoCivilAcompanado, 0.18),
+                     (EstadoCivilSeparado, 0.02)],
+            < 45 => [(EstadoCivilSoltero, 0.25), (EstadoCivilCasado, 0.42), (EstadoCivilAcompanado, 0.20),
+                     (EstadoCivilDivorciado, 0.06), (EstadoCivilSeparado, 0.06), (EstadoCivilViudo, 0.01)],
+            < 65 => [(EstadoCivilSoltero, 0.14), (EstadoCivilCasado, 0.50), (EstadoCivilAcompanado, 0.14),
+                     (EstadoCivilDivorciado, 0.08), (EstadoCivilSeparado, 0.08), (EstadoCivilViudo, 0.06)],
+            _    => [(EstadoCivilSoltero, 0.08), (EstadoCivilCasado, 0.44), (EstadoCivilAcompanado, 0.05),
+                     (EstadoCivilDivorciado, 0.05), (EstadoCivilSeparado, 0.05), (EstadoCivilViudo, 0.33)]
+        };
+
+        var pick = rng.NextDouble() * pesos.Sum(p => p.Peso);
+        double acumulado = 0;
+        foreach (var (uuid, peso) in pesos)
+        {
+            acumulado += peso;
+            if (pick <= acumulado) return uuid;
+        }
+        return pesos[^1].Uuid;
+    }
+
+    /// <summary>Edad cumplida en años a la fecha de referencia.</summary>
+    public static int EdadEnAnios(DateOnly nacimiento, DateOnly referencia)
+    {
+        var edad = referencia.Year - nacimiento.Year;
+        if (referencia < nacimiento.AddYears(edad)) edad--;
+        return Math.Max(0, edad);
     }
 
     /// <summary>

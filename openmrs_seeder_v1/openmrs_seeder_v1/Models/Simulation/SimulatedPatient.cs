@@ -49,6 +49,10 @@ public class SimulatedPatient
         TodosDiagnosticos.Any()
             ? TodosDiagnosticos.Select(d => d.Categoria).Distinct().ToList()
             : (string.IsNullOrEmpty(Categoria) ? [] : [Categoria]);
+    /// <summary>Teléfono salvadoreño sintético (7###-#### móvil / 2###-#### fijo). Vacío = sin atributo.</summary>
+    public string Telefono { get; set; } = "";
+    /// <summary>UUID del answer de Estado civil (concepto 1054) coherente con la edad. Vacío = sin atributo.</summary>
+    public string EstadoCivilUuid { get; set; } = "";
     public string Address1 { get; set; } = "";
     public string City { get; set; } = "";
     /// <summary>Departamento (state_province). Vacío = fallback Bogus sin catálogo de direcciones.</summary>

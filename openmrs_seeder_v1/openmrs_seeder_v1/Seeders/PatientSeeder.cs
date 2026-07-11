@@ -27,6 +27,16 @@ public class PatientSeeder
             ? _settings.Defaults.LocationUuid
             : _settings.Defaults.RegistrationLocationUuid;
 
+        // Atributos de persona (teléfono, estado civil): solo si el attribute type está configurado
+        // Y el generador produjo valor (vacío = feature off, patrón AppointmentServiceUuid).
+        var atributos = new List<object>();
+        if (!string.IsNullOrEmpty(_settings.Defaults.TelephoneAttributeTypeUuid) &&
+            !string.IsNullOrEmpty(patient.Telefono))
+            atributos.Add(new { attributeType = _settings.Defaults.TelephoneAttributeTypeUuid, value = patient.Telefono });
+        if (!string.IsNullOrEmpty(_settings.Defaults.CivilStatusAttributeTypeUuid) &&
+            !string.IsNullOrEmpty(patient.EstadoCivilUuid))
+            atributos.Add(new { attributeType = _settings.Defaults.CivilStatusAttributeTypeUuid, value = patient.EstadoCivilUuid });
+
         var payload = new
         {
             person = new
@@ -55,7 +65,8 @@ public class PatientSeeder
                         country       = string.IsNullOrEmpty(patient.Country) ? "España" : patient.Country,
                         preferred     = true
                     }
-                }
+                },
+                attributes = atributos.Count == 0 ? null : atributos.ToArray()
             },
             identifiers = new object[]
             {

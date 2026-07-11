@@ -292,4 +292,71 @@ public class PatientProfileGeneratorTests
         Assert.Equal("", p.Country);        // vacío → PatientSeeder usa el histórico "España"
         Assert.Equal("", p.StateProvince);
     }
+
+    // ── Atributos de persona (teléfono + estado civil) ────────────────────────
+
+    [Fact]
+    public void GenerarTelefono_FormatoSalvadoreno()
+    {
+        var rng = new Random(20);
+        int moviles = 0;
+        const int N = 1000;
+        for (int i = 0; i < N; i++)
+        {
+            var tel = PatientProfileGenerator.GenerarTelefono(rng);
+            Assert.Matches(@"^[27]\d{3}-\d{4}$", tel);
+            if (tel[0] == '7') moviles++;
+        }
+        Assert.InRange(moviles / (double)N, 0.72, 0.88); // ~80% móvil
+    }
+
+    [Fact]
+    public void GenerarEstadoCivil_MenoresSiempreSolteros()
+    {
+        var rng = new Random(21);
+        for (int edad = 0; edad < 18; edad++)
+            Assert.Equal(PatientProfileGenerator.EstadoCivilSoltero,
+                PatientProfileGenerator.GenerarEstadoCivil(edad, rng));
+    }
+
+    [Fact]
+    public void GenerarEstadoCivil_AdultosMayoriaCasadoOAcompanado_Y_ViudezEnMayores()
+    {
+        var rng = new Random(22);
+        const int N = 2000;
+
+        int enPareja45 = 0, viudos70 = 0, viudos25 = 0;
+        for (int i = 0; i < N; i++)
+        {
+            var e45 = PatientProfileGenerator.GenerarEstadoCivil(50, rng);
+            if (e45 == PatientProfileGenerator.EstadoCivilCasado ||
+                e45 == PatientProfileGenerator.EstadoCivilAcompanado) enPareja45++;
+            if (PatientProfileGenerator.GenerarEstadoCivil(70, rng) == PatientProfileGenerator.EstadoCivilViudo) viudos70++;
+            if (PatientProfileGenerator.GenerarEstadoCivil(25, rng) == PatientProfileGenerator.EstadoCivilViudo) viudos25++;
+        }
+
+        Assert.InRange(enPareja45 / (double)N, 0.55, 0.75); // 45-64: mayoría en pareja (0.64 config.)
+        Assert.InRange(viudos70 / (double)N, 0.25, 0.42);   // 65+: viudez visible (0.33 config.)
+        Assert.Equal(0, viudos25);                          // <30: sin viudos (peso 0)
+    }
+
+    [Fact]
+    public void GenerateNew_TelefonoYEstadoCivilPresentes()
+    {
+        var gen = CreateGen();
+        var p   = gen.GenerateNew(new DateOnly(2025, 6, 15));
+        Assert.Matches(@"^[27]\d{3}-\d{4}$", p.Telefono);
+        Assert.False(string.IsNullOrEmpty(p.EstadoCivilUuid));
+        // Coherencia dura: si el paciente es menor, el estado civil es soltero
+        var edad = PatientProfileGenerator.EdadEnAnios(p.BirthDate, new DateOnly(2025, 6, 15));
+        if (edad < 18) Assert.Equal(PatientProfileGenerator.EstadoCivilSoltero, p.EstadoCivilUuid);
+    }
+
+    [Fact]
+    public void EdadEnAnios_CumpleaniosExactoYPrevio()
+    {
+        var nacimiento = new DateOnly(2000, 6, 15);
+        Assert.Equal(25, PatientProfileGenerator.EdadEnAnios(nacimiento, new DateOnly(2025, 6, 15))); // cumple hoy
+        Assert.Equal(24, PatientProfileGenerator.EdadEnAnios(nacimiento, new DateOnly(2025, 6, 14))); // aún no cumple
+    }
 }
