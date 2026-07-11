@@ -7,6 +7,9 @@ public class ExamenClinicoEntry
     /// <summary>numerico | categorico</summary>
     public string TipoResultado { get; set; } = "";
     public string Unidad { get; set; } = "";
+    /// <summary>Banda del valor numérico (opcional; ambas en 0 = derivar de la unidad, retrocompatible).</summary>
+    public double ResMin { get; set; }
+    public double ResMax { get; set; }
     public bool AplicaRespiratorio { get; set; }
     public bool AplicaCardiovascular { get; set; }
     public bool AplicaDiabetes { get; set; }

@@ -134,7 +134,7 @@ public class ConsultaSeeder
 
         if (examen.TipoResultado == "numerico")
         {
-            var valor = GenerateNumericValue(examen.Unidad, patient.Categoria);
+            var valor = ValorExamenNumerico(examen, patient.Categoria, _rng);
             await PostObsNumericAsync(patient.Identifier, patient.OpenMrsUuid, encounterUuid,
                 examen.CielUuid, valor, patient.VisitDatetime, ct);
         }
@@ -173,16 +173,33 @@ public class ConsultaSeeder
         _ => false
     };
 
-    private double GenerateNumericValue(string unidad, string categoria) => unidad switch
+    /// <summary>
+    /// Seam puro: valor del examen numérico. Si el catálogo trae banda (`res_min/res_max`), manda la
+    /// banda — entero cuando los límites son enteros (Glasgow, escala de dolor, FC fetal; mismo
+    /// criterio de precisión que LabResultGenerator), 1 decimal si no. Sin banda → lógica histórica
+    /// por unidad (retrocompatible).
+    /// </summary>
+    public static double ValorExamenNumerico(Models.Catalogs.ExamenClinicoEntry examen, string categoria, Random rng)
+    {
+        if (examen.ResMax > 0)
+        {
+            var valor = rng.NextDouble() * (examen.ResMax - examen.ResMin) + examen.ResMin;
+            var decimales = double.IsInteger(examen.ResMin) && double.IsInteger(examen.ResMax) ? 0 : 1;
+            return Math.Round(valor, decimales);
+        }
+        return GenerateNumericValue(examen.Unidad, categoria, rng);
+    }
+
+    private static double GenerateNumericValue(string unidad, string categoria, Random rng) => unidad switch
     {
         "mg/dL" => categoria == "diabetes"
-            ? Math.Round(_rng.NextDouble() * 200 + 100, 1)  // 100-300 en diabéticos
-            : Math.Round(_rng.NextDouble() * 60  + 70,  1), // 70-130 normal
+            ? Math.Round(rng.NextDouble() * 200 + 100, 1)  // 100-300 en diabéticos
+            : Math.Round(rng.NextDouble() * 60  + 70,  1), // 70-130 normal
         "%" => categoria == "respiratorio"
-            ? Math.Round(_rng.NextDouble() * 8 + 88, 1)     // 88-96 en respiratorio
-            : Math.Round(_rng.NextDouble() * 5 + 95, 1),    // 95-100 normal
-        "mmHg" => Math.Round(_rng.NextDouble() * 80 + 100), // 100-180
-        _      => Math.Round(_rng.NextDouble() * 0.7 + 0.6, 2) // 0.6-1.3 (ITB)
+            ? Math.Round(rng.NextDouble() * 8 + 88, 1)     // 88-96 en respiratorio
+            : Math.Round(rng.NextDouble() * 5 + 95, 1),    // 95-100 normal
+        "mmHg" => Math.Round(rng.NextDouble() * 80 + 100), // 100-180
+        _      => Math.Round(rng.NextDouble() * 0.7 + 0.6, 2) // 0.6-1.3 (ITB)
     };
 
     private async Task PostObsTextAsync(string identifier, string personUuid, string encounterUuid,

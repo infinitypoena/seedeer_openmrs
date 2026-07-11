@@ -301,6 +301,7 @@ ciel_uuid,nombre_es,tipo_resultado,unidad,aplica_respiratorio,aplica_cardiovascu
 | `nombre_es` | Nombre del examen en español |
 | `tipo_resultado` | `numerico` (registra valor + unidad) o `categorico` (normal / anormal) |
 | `unidad` | Unidad de medida si es numérico (ej: `mg/dL`, `%`, `mmHg`). Vacío si categorico. |
+| `res_min` / `res_max` *(opcional)* | Banda del valor numérico. Si están, **mandan sobre la unidad** (entero si límites enteros — Glasgow, escala de dolor —, 1 decimal si no). Vacías = rango derivado de la unidad (histórico). |
 | `aplica_CATEGORIA` | `true`/`false` — si este examen es coherente para la categoría diagnóstica |
 
 > Si el diagnóstico tiene `requiere_examen_clinico = true`, la probabilidad sube al 90% independientemente del valor de `ClinicalExam`.

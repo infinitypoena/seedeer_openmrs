@@ -238,6 +238,36 @@ El archivo de configuración es `appsettings.json` (plantilla: `appsettings.exam
 > proceso **no arranca** y el mensaje de error nombra cada campo violado. Las claves desconocidas
 > (p. ej. un parámetro obsoleto que quedó en el JSON) generan un warning en el log al arrancar.
 
+### 5.1b Usuario dedicado para el seeder (recomendado)
+
+El simulador funciona con `admin`, pero la buena práctica es un usuario propio (p. ej. `seeder`)
+con **solo los privilegios que el pipeline usa** — así las auditorías de OpenMRS muestran quién
+insertó qué, y la credencial del `appsettings.json` no es la llave maestra de la instancia.
+
+**Qué rol necesita:** en *Administration → Manage Roles* crear un rol `Simulador Clínico` que agrupe
+estos privilegios (todo lo que el seeder escribe/lee):
+
+| Grupo | Privilegios |
+|-------|-------------|
+| Pacientes | Add Patients, Edit Patients, Add Patient Identifiers, Add People, Edit People, Add Person Attributes |
+| Visitas y encuentros | Add Visits, Edit Visits (el cierre hace POST sobre la visita), Add Encounters |
+| Clínica | Add Observations, Add Orders, Add Conditions, Add Allergies, Add Patient Programs |
+| Citas | Manage Appointments (módulo Bahmni Appointments) |
+| Lectura de metadatos | Get Concepts, Get Locations, Get Providers, Get Encounter Types, Get Visit Types, Get Identifier Types, Get Order Frequencies, Get Care Settings, Get Programs |
+| Solo si se usa `clear` | Delete Patients, Delete Visits (el void requiere privilegio de borrado) |
+| Solo si `consultorios.csv` crea médicos | Add Providers (y Add People, ya listado) |
+
+**Cómo crearlo:** *Administration → Manage Users → Add User* → asignarle el rol anterior (y
+`Provider` NO es necesario: los médicos son providers aparte). Después, en `appsettings.json`:
+
+```json
+"RestApi": { "Username": "seeder", "Password": "<la del usuario>" }
+```
+
+> Truco práctico: si un privilegio falta, OpenMRS responde `403` con el nombre del privilegio
+> requerido en el mensaje — añadirlo al rol y reintentar. La lista de arriba cubre el pipeline
+> completo actual (visitas, obs, órdenes, condiciones, alergias, programas y citas).
+
 ### 5.2 UUIDs en `OpenMRS.Defaults`
 
 Estos UUIDs identifican los metadatos de **tu** instancia (tipos de encuentro, tipo de visita, locaciones, servicio de citas…). Los valores del `appsettings.example.json` ya están verificados contra la instancia de referencia (OpenMRS 3.6.0 Reference Application), pero **cada instancia puede tener UUIDs distintos**. La tabla completa con nombre y significado de cada clave está en `CLAUDE.md` § *Verified UUID Mappings*.
@@ -281,7 +311,7 @@ Claves importantes y cómo verificarlas:
 |-----------|:-------:|-------------|
 | `LabOrder` | 0.40 | Ordenar laboratorio (sube a 80% si el dx marca `requiere_lab`) |
 | `DrugOrder` | 0.65 | Prescribir (sube a 90% si `requiere_rx`) |
-| `ClinicalExam` | 0.35 | Examen en consultorio (**inactivo**: catálogo vacío, ver §8) |
+| `ClinicalExam` | 0.35 | Examen en consultorio: obs inmediata coherente (Glasgow, escala de dolor, flujo pico, FC fetal…) |
 | `Urgent` | 0.20 | Urgencia STAT del lab (50% si el dx es grave) |
 | `FollowUp` | 0.30 | Indicar seguimiento → obs "Return visit date" **+ cita en agenda** |
 | `LabResult` | 0.90 | Fracción de órdenes que reciben resultado el mismo día |
@@ -431,7 +461,7 @@ Los catálogos viven en `openmrs_seeder_v1/openmrs_seeder_v1/catalogs/` y son **
 | `programas.csv` | 2 | Opcional | Programas de atención y sus disparadores (dx o categoría) |
 | `clima.csv` | 52 | Opcional | Estación por semana ISO; ausente = sin estacionalidad |
 | `comorbilidad_afinidades.csv` | 13 | Opcional | Qué categorías "atraen" a cuáles como comorbilidad |
-| `examenes_clinicos.csv` | **0** | **Vacío** | Exámenes en consultorio — inactivo (los UUIDs de la instancia resultaron inválidos) |
+| `examenes_clinicos.csv` | 10 | Completo | Exámenes en consultorio (Glasgow, dolor, flujo pico, PHQ-4, FC fetal, altura uterina, reflejos, agudeza visual, monofilamento, edema) — UUIDs verificados con datatype+clase |
 
 ### 8.2 Cómo agregar un diagnóstico (ejemplo completo)
 
