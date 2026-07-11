@@ -631,7 +631,8 @@ La latencia típica en instancia local es 80–150 ms/request. La corrida es sec
 | Dato | ¿Se limpia? |
 |------|-------------|
 | Pacientes `SIM-` y sus visitas/encuentros/obs/órdenes | ✅ void lógico |
-| Alergias, condiciones, inscripciones a programas, citas | ⚠️ No se anulan explícitamente, pero quedan **inaccesibles** al anular al paciente |
+| Citas `Scheduled`/`CheckedIn` | ✅ Se **cancelan** antes de anular al paciente (las `Completed`/`Missed` quedan como historia) |
+| Alergias, condiciones, inscripciones a programas | ⚠️ No se anulan explícitamente, pero quedan **inaccesibles** al anular al paciente |
 | Médicos `SIM-MED-*` y sus consultorios | ❌ Son datos de referencia — se **reutilizan** entre corridas |
 
 ### Reglas de idempotencia

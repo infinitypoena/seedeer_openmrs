@@ -242,6 +242,14 @@ public class SeedOrchestrator
             tracker.Update(runId, r => { r.Porcentaje = pct; r.DiasProcesados = diasProcesados; });
         }
 
+        // Cierre de agenda: las citas vencidas de pacientes que nunca volvieron pasan a Missed
+        if (!ct.IsCancellationRequested)
+        {
+            List<SimulatedPatient> poolFinal;
+            lock (_poolLock) poolFinal = [.. _patientPool];
+            await _appointmentSeeder.SweepMissedAsync(poolFinal, DateOnly.FromDateTime(_settings.EndDate), ct);
+        }
+
         var run = tracker.GetRun(runId);
         _logger.LogInformation(
             "[Orchestrator] Run {RunId} completado — {Pacientes} pacientes creados, {Errores} errores",

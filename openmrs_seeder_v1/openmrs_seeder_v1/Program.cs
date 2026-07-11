@@ -237,8 +237,8 @@ async Task<int> EjecutarLimpiezaAsync()
         return 0;
     }
 
-    var (pacientes, visitas) = await cleaner.ClearAsync(cts.Token);
-    logger.LogInformation("Limpieza completada: {Pacientes} pacientes y {Visitas} visitas anulados.",
-        pacientes, visitas);
+    var (pacientes, visitas, citas) = await cleaner.ClearAsync(cts.Token);
+    logger.LogInformation("Limpieza completada: {Pacientes} pacientes y {Visitas} visitas anulados; {Citas} citas canceladas.",
+        pacientes, visitas, citas);
     return 0;
 }

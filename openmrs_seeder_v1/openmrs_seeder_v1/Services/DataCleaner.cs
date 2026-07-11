@@ -35,10 +35,11 @@ public class DataCleaner
         return (total, total >= 1000);
     }
 
-    public async Task<(int PacientesVoided, int VisitasVoided)> ClearAsync(CancellationToken ct)
+    public async Task<(int PacientesVoided, int VisitasVoided, int CitasCanceladas)> ClearAsync(CancellationToken ct)
     {
         int pacientesVoided = 0;
         int visitasVoided   = 0;
+        int citasCanceladas = 0;
 
         // Iterar páginas hasta agotar resultados
         int startIndex = 0;
@@ -59,6 +60,9 @@ public class DataCleaner
             {
                 if (!p.TryGetProperty("uuid", out var uuidProp)) continue;
                 var patientUuid = uuidProp.GetString()!;
+
+                // Cancelar citas Scheduled/CheckedIn del paciente (una vez anulado quedan huérfanas en la agenda)
+                citasCanceladas += await CancelarCitasAsync(patientUuid, ct);
 
                 // Void visitas del paciente
                 try
@@ -112,6 +116,45 @@ public class DataCleaner
             startIndex += pageSize;
         }
 
-        return (pacientesVoided, visitasVoided);
+        return (pacientesVoided, visitasVoided, citasCanceladas);
+    }
+
+    /// <summary>
+    /// Cancela las citas activas (Scheduled/CheckedIn) del paciente vía el módulo Bahmni Appointments.
+    /// Completed/Missed no se tocan (las transiciones desde estados terminales son rechazadas).
+    /// </summary>
+    private async Task<int> CancelarCitasAsync(string patientUuid, CancellationToken ct)
+    {
+        int canceladas = 0;
+        try
+        {
+            var json = await _client.PostAsync("appointments/search",
+                new { patientUuid, startDate = "2000-01-01T00:00:00.000+0000" }, ct);
+            var doc = JsonSerializer.Deserialize<JsonElement>(json);
+            if (doc.ValueKind != JsonValueKind.Array) return 0;
+
+            foreach (var cita in doc.EnumerateArray())
+            {
+                if (!cita.TryGetProperty("status", out var st) ||
+                    st.GetString() is not ("Scheduled" or "CheckedIn")) continue;
+                if (!cita.TryGetProperty("uuid", out var u)) continue;
+                try
+                {
+                    await _client.PostAsync($"appointments/{u.GetString()}/status-change",
+                        new { toStatus = "Cancelled", onDate = Seeders.VisitSeeder.FormatDatetime(DateTime.Now) }, ct);
+                    canceladas++;
+                }
+                catch (Exception exC)
+                {
+                    _logger.LogWarning("[Clear] No se pudo cancelar cita {Uuid}: {Msg}", u.GetString(), exC.Message);
+                }
+                await Task.Delay(100, ct);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning("[Clear] Error buscando citas de {PUuid}: {Msg}", patientUuid, ex.Message);
+        }
+        return canceladas;
     }
 }

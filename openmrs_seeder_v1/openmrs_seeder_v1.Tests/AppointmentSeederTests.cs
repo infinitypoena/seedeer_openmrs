@@ -75,4 +75,29 @@ public class AppointmentSeederTests
         var (completar, _, _) = AppointmentSeeder.ClasificarCitas(citas, Visita, Tolerancia);
         Assert.Single(completar);
     }
+
+    // ---- Sweep de cierre (citas vencidas -> Missed) ----
+
+    [Fact]
+    public void CitasVencidas_SoloLasAnterioresALaVentana()
+    {
+        var fin = new DateOnly(2025, 12, 31);
+        var citas = new[]
+        {
+            Cita("vencida",    new DateTime(2025, 12, 10)), // fin - 21 d -> vencida
+            Cita("en-ventana", new DateTime(2025, 12, 29)), // dentro de tolerancia -> se conserva
+            Cita("futura",     new DateTime(2026, 1, 15)),  // futura -> se conserva
+        };
+
+        var vencidas = AppointmentSeeder.CitasVencidas(citas, fin, toleranciaDias: 3);
+
+        var v = Assert.Single(vencidas);
+        Assert.Equal("vencida", v.Uuid);
+    }
+
+    [Fact]
+    public void CitasVencidas_ListaVacia_DevuelveVacio()
+    {
+        Assert.Empty(AppointmentSeeder.CitasVencidas([], new DateOnly(2025, 12, 31), 3));
+    }
 }

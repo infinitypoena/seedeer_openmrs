@@ -55,6 +55,35 @@ public class AppointmentSeeder
     }
 
     /// <summary>
+    /// Seam puro: citas ya vencidas al cierre de la corrida (anteriores a fechaFin − tolerancia).
+    /// Las futuras o dentro de tolerancia se conservan Scheduled — aún podrían cumplirse.
+    /// </summary>
+    public static List<CitaPendiente> CitasVencidas(IEnumerable<CitaPendiente> citas, DateOnly fechaFin, int toleranciaDias) =>
+        citas.Where(c => DateOnly.FromDateTime(c.Fecha) < fechaFin.AddDays(-toleranciaDias)).ToList();
+
+    /// <summary>
+    /// Sweep final de la agenda (al cierre de la corrida): los pacientes que nunca volvieron dejaban
+    /// citas Scheduled vencidas para siempre — aquí pasan a Missed (no-show), con la fecha de la cita.
+    /// </summary>
+    public async Task SweepMissedAsync(IEnumerable<SimulatedPatient> pool, DateOnly fechaFin, CancellationToken ct)
+    {
+        int marcadas = 0;
+        foreach (var p in pool)
+        {
+            if (ct.IsCancellationRequested) break;
+            if (p.CitasPendientes.Count == 0) continue;
+            foreach (var cita in CitasVencidas(p.CitasPendientes, fechaFin, _toleranciaDias))
+                if (await CambiarEstadoAsync(p, cita, "Missed", ct, onDate: cita.Fecha))
+                {
+                    p.CitasPendientes.Remove(cita);
+                    marcadas++;
+                }
+        }
+        if (marcadas > 0)
+            _logger.LogInformation("[Appointment] Sweep de cierre: {N} citas vencidas → Missed", marcadas);
+    }
+
+    /// <summary>
     /// Resuelve las citas pendientes del paciente al llegar a una visita: Completed / Missed según
     /// <see cref="ClasificarCitas"/>. Las resueltas se retiran de la lista compartida.
     /// </summary>
@@ -123,12 +152,12 @@ public class AppointmentSeeder
         }
     }
 
-    private async Task<bool> CambiarEstadoAsync(SimulatedPatient patient, CitaPendiente cita, string estado, CancellationToken ct)
+    private async Task<bool> CambiarEstadoAsync(SimulatedPatient patient, CitaPendiente cita, string estado, CancellationToken ct, DateTime? onDate = null)
     {
         var payload = new
         {
             toStatus = estado,
-            onDate   = VisitSeeder.FormatDatetime(patient.VisitDatetime)
+            onDate   = VisitSeeder.FormatDatetime(onDate ?? patient.VisitDatetime)
         };
         try
         {
