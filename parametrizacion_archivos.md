@@ -280,7 +280,32 @@ ciel_uuid,nombre_es,clase,aplica_respiratorio,...,aplica_trauma,datatype,res_min
 | `res_trigger` | Categorías (`\|`-separadas) que hacen anormal el resultado — típico de numéricos (p.ej. `diabetes\|endocrino`) |
 | `res_trigger_dx` | UUIDs de diagnósticos específicos que disparan el anormal — típico de codificados disease-specific (p.ej. dengue → NS1 Positivo) |
 
-Con disparo presente, el resultado es anormal con prob. `LabResultGenerator.ProbAnormalSiTrigger` (0.80); si no, normal. Paneles (`set`, p.ej. hemograma) e imágenes quedan solo como orden (v1).
+Con disparo presente, el resultado es anormal con prob. `LabResultGenerator.ProbAnormalSiTrigger` (0.80); si no, normal. Las **imágenes** quedan solo como orden; los **paneles** (`datatype=panel`) buscan sus componentes en `paneles.csv` (§5b) — si el panel no tiene filas ahí, la orden queda sola.
+
+No todo resultado llega el mismo día: `ReferralProbabilities.LabResult` (def. 0.90) es la fracción que "vuelve" con la visita; el resto se genera igual (con el contexto clínico de esa visita) pero queda **pendiente** y se registra en la **siguiente visita** del paciente, ligado a la orden original. Si el paciente no vuelve, la orden queda sin resultado para siempre (realista).
+
+---
+
+## 5b. catalogs/paneles.csv — Componentes de paneles de laboratorio
+
+**Opcional.** Define los componentes de los labs con `datatype=panel` en `laboratorios.csv`. El resultado del panel se registra como **obs-group**: una obs padre (concepto del panel, ligada a la orden) + una obs hija por componente (`groupMembers`).
+
+```csv
+panel_uuid,componente_uuid,nombre,res_min,res_max,res_min_anormal,res_max_anormal,res_trigger
+1019AAAA...(hemograma),21AAAA...(Hb),Hemoglobina,12.0,16.5,7.5,10.9,digestivo
+1019AAAA...(hemograma),729AAAA...(plaquetas),Plaquetas,150,450,60,140,infeccioso
+```
+
+| Columna | Descripción |
+|---------|-------------|
+| `panel_uuid` | UUID del concepto del panel — debe coincidir con una fila `datatype=panel` de `laboratorios.csv` |
+| `componente_uuid` | UUID del concepto numérico del componente (Hb `21…`, Hto `1015…`, leucocitos `678…`, plaquetas `729…`) |
+| `nombre` | Nombre legible (documental) |
+| `res_min` / `res_max` | Banda numérica **normal** del componente |
+| `res_min_anormal` / `res_max_anormal` | Banda **anormal** cuando se dispara el trigger |
+| `res_trigger` | Categorías (`\|`-separadas) que disparan la banda anormal de **este** componente |
+
+Cada componente sortea su banda **de forma independiente** (`LabResultGenerator.GenerarComponentes`, misma prob. 0.80): un paciente infeccioso (dengue) sale con plaquetas bajas y leucocitos alterados pero hemoglobina normal; uno digestivo (sangrado) con anemia. Misma regla de precisión que los numéricos simples (límites enteros → valor entero). Panel sin filas = orden sola (hoy: lipídico, orina, urocultivo, VIH).
 
 ---
 
@@ -509,6 +534,9 @@ laboratorios.csv
   └── rand < LabOrder (0.40) o requiere_lab
         → filtrar por [aplica_CATEGORIA = true]
         → elegir 1-2 al azar → POST /order testorder
+        → resultado (numeric/coded, o panel vía paneles.csv como obs-group):
+            rand < LabResult (0.90) → POST /obs ligada a la orden, mismo día
+            si no → queda pendiente y se entrega en la SIGUIENTE visita del paciente
 
 PASO 6 — prescripción (si aplica):
 medicamentos.csv
@@ -584,6 +612,7 @@ Esto permite:
 | Peso de un dx entre hombres vs. mujeres | `diagnosticos.csv` → `peso_M` / `peso_F` |
 | Qué medicamentos se prescriben | `medicamentos.csv` → `aplica_CATEGORIA` |
 | Qué labs externos se piden | `laboratorios.csv` → `aplica_CATEGORIA` |
+| Qué componentes trae un panel (hemograma) | `paneles.csv` → filas con su `panel_uuid` |
 | Qué exámenes de consultorio aplican | `examenes_clinicos.csv` → `aplica_CATEGORIA` |
 | Frases de motivo de consulta | `motivos_consulta.csv` → `texto` |
 | % de visitas con labs externos | `appsettings.json` → `ReferralProbabilities.LabOrder` |

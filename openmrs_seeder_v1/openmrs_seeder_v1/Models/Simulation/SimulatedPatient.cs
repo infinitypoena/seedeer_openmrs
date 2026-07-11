@@ -5,6 +5,19 @@ namespace OpenmrsSeeder.Models.Simulation;
 /// <summary>Cita agendada aún sin resolver (Scheduled): UUID en OpenMRS + fecha programada.</summary>
 public readonly record struct CitaPendiente(string Uuid, DateTime Fecha);
 
+/// <summary>
+/// Resultado de laboratorio que "aún no llegó": la orden existe pero el valor se registrará en la
+/// siguiente visita del paciente (retraso realista). Numérico/codificado excluyentes; los paneles
+/// llevan la lista de componentes (obs-group). Se genera al ordenar (con el contexto clínico de esa
+/// visita) y se postea al volver.
+/// </summary>
+public sealed record ResultadoPendiente(
+    string OrderUuid,
+    string ConceptUuid,
+    double? Numerico,
+    string? CodedUuid,
+    List<(string ConceptUuid, double Valor)>? Componentes);
+
 public class SimulatedPatient
 {
     public string Identifier { get; set; } = "";
@@ -78,6 +91,8 @@ public class SimulatedPatient
     /// recurrente (como <see cref="ProblemListConcepts"/>).
     /// </summary>
     public List<CitaPendiente> CitasPendientes { get; set; } = [];
+    /// <summary>Resultados de laboratorio pendientes de llegar (compartida por referencia, como CitasPendientes).</summary>
+    public List<ResultadoPendiente> ResultadosPendientes { get; set; } = [];
     /// <summary>
     /// Diagnósticos crónicos que arrastra el paciente (los <c>EsCronica</c> ya asignados en visitas previas).
     /// Las visitas recurrentes vuelven a uno de estos como motivo de control con alta probabilidad.

@@ -212,6 +212,7 @@ public class SeedOrchestrator
                     ProblemListConcepts = base_.ProblemListConcepts,
                     EnrolledPrograms = base_.EnrolledPrograms,
                     CitasPendientes = base_.CitasPendientes,
+                    ResultadosPendientes = base_.ResultadosPendientes,
                     // Heredar el médico de cabecera (asignado en la primera visita del paciente)
                     CabeceraLocationUuid = base_.CabeceraLocationUuid,
                     CabeceraProviderUuid = base_.CabeceraProviderUuid,
@@ -337,6 +338,8 @@ public class SeedOrchestrator
         await _consultaSeeder.SeedAsync(patient, ct);
         await _conditionSeeder.SeedAsync(patient, ct);
         await _programSeeder.SeedAsync(patient, ct);
+        // "Ya llegó el resultado": entregar los labs que quedaron pendientes de visitas anteriores
+        await _labOrderSeeder.ProcesarPendientesAsync(patient, ct);
         await _labOrderSeeder.SeedAsync(patient, ct);
         await _prescriptionSeeder.SeedAsync(patient, ct);
         // Agendar la cita real del seguimiento decidido en la consulta (si lo hubo)

@@ -158,4 +158,71 @@ public class LabResultGeneratorTests
         var r = Generar(lab, SinCategorias, SinDx, new Random(7));
         Assert.InRange(r.Numerico!.Value, 70, 99);
     }
+
+    // ── Paneles (GenerarComponentes) ───────────────────────────────────────────
+
+    private static List<PanelComponenteEntry> Hemograma() =>
+    [
+        new() { PanelUuid = "cbc", ComponenteUuid = "hb",   Nombre = "Hemoglobina",
+                ResMin = 12.0, ResMax = 16.5, ResMinAnormal = 7.5, ResMaxAnormal = 10.9,
+                ResTrigger = ["digestivo"] },
+        new() { PanelUuid = "cbc", ComponenteUuid = "plt",  Nombre = "Plaquetas",
+                ResMin = 150, ResMax = 450, ResMinAnormal = 60, ResMaxAnormal = 140,
+                ResTrigger = ["infeccioso"] }
+    ];
+
+    [Fact]
+    public void Componentes_SinTrigger_TodosEnBandaNormal()
+    {
+        var rng = new Random(10);
+        for (int i = 0; i < 300; i++)
+        {
+            var comps = GenerarComponentes(Hemograma(), SinCategorias, rng);
+            Assert.Equal(2, comps.Count);
+            Assert.InRange(comps.Single(c => c.ConceptUuid == "hb").Valor, 12.0, 16.5);
+            Assert.InRange(comps.Single(c => c.ConceptUuid == "plt").Valor, 150, 450);
+        }
+    }
+
+    [Fact]
+    public void Componentes_TriggerIndependientePorComponente()
+    {
+        // Paciente infeccioso: las plaquetas caen mayoritariamente en banda anormal,
+        // pero la hemoglobina (trigger digestivo) permanece SIEMPRE normal.
+        var cats = new HashSet<string> { "infeccioso" };
+        var rng = new Random(11);
+        int pltAnormales = 0;
+        const int N = 2000;
+        for (int i = 0; i < N; i++)
+        {
+            var comps = GenerarComponentes(Hemograma(), cats, rng);
+            Assert.InRange(comps.Single(c => c.ConceptUuid == "hb").Valor, 12.0, 16.5);
+            if (comps.Single(c => c.ConceptUuid == "plt").Valor <= 140) pltAnormales++;
+        }
+        Assert.InRange(pltAnormales / (double)N, 0.72, 0.88); // ProbAnormalSiTrigger = 0.80
+    }
+
+    [Fact]
+    public void Componentes_PrecisionPorBanda()
+    {
+        // Plaquetas (banda entera) → entero; hemoglobina (banda decimal) → puede llevar 1 decimal.
+        var rng = new Random(12);
+        var hbVioDecimal = false;
+        for (int i = 0; i < 300; i++)
+        {
+            var comps = GenerarComponentes(Hemograma(), SinCategorias, rng);
+            Assert.True(double.IsInteger(comps.Single(c => c.ConceptUuid == "plt").Valor));
+            if (!double.IsInteger(comps.Single(c => c.ConceptUuid == "hb").Valor)) hbVioDecimal = true;
+        }
+        Assert.True(hbVioDecimal);
+    }
+
+    [Fact]
+    public void Componentes_FilaSinBanda_SeOmite()
+    {
+        var comps = GenerarComponentes(
+            [new PanelComponenteEntry { PanelUuid = "cbc", ComponenteUuid = "vacio" }],
+            SinCategorias, new Random(13));
+        Assert.Empty(comps);
+    }
 }

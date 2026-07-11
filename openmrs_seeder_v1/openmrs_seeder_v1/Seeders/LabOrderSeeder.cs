@@ -63,7 +63,7 @@ public class LabOrderSeeder
         var categorias = patient.Categorias as ISet<string> ?? new HashSet<string>(patient.Categorias);
         var dxUuids    = patient.TodosDiagnosticos.Select(d => d.CielUuid).ToHashSet();
 
-        int ordenesOk = 0, resultadosOk = 0;
+        int ordenesOk = 0, resultadosOk = 0, diferidos = 0;
         foreach (var lab in elegidos)
         {
             var esUrgente = patient.TodosDiagnosticos.Any(d => d.Severidad == "grave")
@@ -76,15 +76,99 @@ public class LabOrderSeeder
             ordenesOk++;
             patient.OrderedConcepts.Add(lab.CielUuid);
 
-            // Resultado el mismo día (fracción _labResultProb); solo numéricos/codificados
-            if (_rng.NextDouble() >= _labResultProb) continue;
+            // Generar el resultado con el contexto clínico de ESTA visita (aunque se registre después)
             var result = LabResultGenerator.Generar(lab, categorias, dxUuids, _rng);
-            if (result.Tipo == LabResultGenerator.TipoResultado.Ninguno) continue;
-            if (await PostResultObsAsync(patient, lab.CielUuid, orderUuid, result, ct)) resultadosOk++;
+            var componentes = lab.Datatype == "panel"
+                ? LabResultGenerator.GenerarComponentes(
+                    _catalogs.Paneles.Where(p => p.PanelUuid == lab.CielUuid), categorias, _rng)
+                : null;
+            var sinResultado = result.Tipo == LabResultGenerator.TipoResultado.Ninguno &&
+                               (componentes is null || componentes.Count == 0);
+            if (sinResultado) continue; // imagen / panel sin componentes catalogados
+
+            if (_rng.NextDouble() < _labResultProb)
+            {
+                // El resultado "vuelve" el mismo día
+                var ok = componentes is { Count: > 0 }
+                    ? await PostPanelObsAsync(patient, lab.CielUuid, orderUuid, componentes, patient.VisitDatetime, ct)
+                    : await PostResultObsAsync(patient, lab.CielUuid, orderUuid, result, ct);
+                if (ok) resultadosOk++;
+            }
+            else
+            {
+                // Retraso realista: la orden queda pendiente y el valor llega en la próxima visita
+                patient.ResultadosPendientes.Add(new ResultadoPendiente(
+                    orderUuid, lab.CielUuid, result.Numerico, result.CodedUuid, componentes));
+                diferidos++;
+            }
         }
 
-        _logger.LogInformation("[LabOrder] {N}/{Total} órdenes + {R} resultados para {Id}",
-            ordenesOk, elegidos.Count, resultadosOk, patient.Identifier);
+        _logger.LogInformation("[LabOrder] {N}/{Total} órdenes + {R} resultados ({D} diferidos) para {Id}",
+            ordenesOk, elegidos.Count, resultadosOk, diferidos, patient.Identifier);
+    }
+
+    /// <summary>
+    /// Registra los resultados que quedaron pendientes en visitas anteriores ("ya llegó el resultado"),
+    /// con la fecha de la visita actual. Llamado al inicio de cada visita del paciente.
+    /// </summary>
+    public async Task ProcesarPendientesAsync(SimulatedPatient patient, CancellationToken ct)
+    {
+        if (patient.ResultadosPendientes.Count == 0) return;
+
+        var entregados = 0;
+        foreach (var p in patient.ResultadosPendientes.ToList())
+        {
+            var ok = p.Componentes is { Count: > 0 }
+                ? await PostPanelObsAsync(patient, p.ConceptUuid, p.OrderUuid, p.Componentes, patient.VisitDatetime, ct)
+                : await PostResultObsAsync(patient, p.ConceptUuid, p.OrderUuid,
+                    p.Numerico is not null
+                        ? new LabResultGenerator.LabResult(LabResultGenerator.TipoResultado.Numerico, p.Numerico, null)
+                        : new LabResultGenerator.LabResult(LabResultGenerator.TipoResultado.Codificado, null, p.CodedUuid),
+                    ct);
+            if (ok)
+            {
+                patient.ResultadosPendientes.Remove(p);
+                entregados++;
+            }
+        }
+        if (entregados > 0)
+            _logger.LogInformation("[LabOrder] {N} resultado(s) pendiente(s) entregados para {Id}",
+                entregados, patient.Identifier);
+    }
+
+    /// <summary>Registra el resultado de un panel como obs-group ligado a la orden (padre + un hijo por componente).</summary>
+    private async Task<bool> PostPanelObsAsync(
+        SimulatedPatient patient, string panelUuid, string orderUuid,
+        List<(string ConceptUuid, double Valor)> componentes, DateTime fecha, CancellationToken ct)
+    {
+        var obsDatetime = VisitSeeder.FormatDatetime(fecha);
+        var payload = new
+        {
+            concept     = panelUuid,
+            person      = patient.OpenMrsUuid,
+            encounter   = patient.ConsultaEncounterUuid,
+            order       = orderUuid,
+            obsDatetime,
+            groupMembers = componentes.Select(c => new
+            {
+                concept     = c.ConceptUuid,
+                person      = patient.OpenMrsUuid,
+                obsDatetime,
+                value       = c.Valor
+            }).ToArray()
+        };
+
+        try
+        {
+            await _client.PostAsync("obs", payload, ct);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("[LabOrder] Error en panel {Concept} para {Id}: {Msg}",
+                panelUuid, patient.Identifier, ex.Message);
+            return false;
+        }
     }
 
     /// <summary>Crea la orden y devuelve su UUID (o null si falla).</summary>

@@ -59,4 +59,31 @@ public static class LabResultGenerator
                 return LabResult.Ninguno; // panel | imagen | ""
         }
     }
+
+    /// <summary>
+    /// Genera los componentes de un panel (p.ej. Hb/Hto/leucocitos/plaquetas del hemograma) como
+    /// pares (conceptUuid, valor). Cada componente sortea SU banda de forma independiente: los
+    /// disparados por una categoría del paciente caen en la anormal con <see cref="ProbAnormalSiTrigger"/>
+    /// (dengue/infeccioso → plaquetas bajas y leucocitos alterados; digestivo → anemia). Misma regla
+    /// de precisión que los numéricos simples (límites enteros → valor entero).
+    /// </summary>
+    public static List<(string ConceptUuid, double Valor)> GenerarComponentes(
+        IEnumerable<PanelComponenteEntry> componentes,
+        ISet<string> categoriasPaciente,
+        Random rng)
+    {
+        var resultado = new List<(string, double)>();
+        foreach (var c in componentes)
+        {
+            var anormal = c.ResTrigger.Any(categoriasPaciente.Contains) &&
+                          rng.NextDouble() < ProbAnormalSiTrigger;
+            var (min, max) = anormal ? (c.ResMinAnormal, c.ResMaxAnormal) : (c.ResMin, c.ResMax);
+            if (max < min) (min, max) = (max, min);
+            if (max <= 0) continue; // fila sin banda utilizable
+
+            var decimales = double.IsInteger(min) && double.IsInteger(max) ? 0 : 1;
+            resultado.Add((c.ComponenteUuid, Math.Round(rng.NextDouble() * (max - min) + min, decimales)));
+        }
+        return resultado;
+    }
 }

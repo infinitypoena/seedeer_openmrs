@@ -18,6 +18,7 @@ public class CatalogLoader
     public IReadOnlyList<string> Apellidos { get; private set; } = [];
     public IReadOnlyList<ProgramaEntry> Programas { get; private set; } = [];
     public IReadOnlyList<DireccionEntry> Direcciones { get; private set; } = [];
+    public IReadOnlyList<PanelComponenteEntry> Paneles { get; private set; } = [];
 
     /// <summary>Carga directa desde listas — usado en tests unitarios.</summary>
     public void LoadFromLists(
@@ -34,7 +35,8 @@ public class CatalogLoader
         IEnumerable<Models.Catalogs.NombreEntry>? nombres = null,
         IEnumerable<string>? apellidos = null,
         IEnumerable<Models.Catalogs.ProgramaEntry>? programas = null,
-        IEnumerable<Models.Catalogs.DireccionEntry>? direcciones = null)
+        IEnumerable<Models.Catalogs.DireccionEntry>? direcciones = null,
+        IEnumerable<Models.Catalogs.PanelComponenteEntry>? paneles = null)
     {
         EpidemiologyProfile = epidemiology.ToList().AsReadOnly();
         Diagnosticos        = diagnosticos.ToList().AsReadOnly();
@@ -50,6 +52,7 @@ public class CatalogLoader
         Apellidos           = (apellidos ?? []).ToList().AsReadOnly();
         Programas           = (programas ?? []).ToList().AsReadOnly();
         Direcciones         = (direcciones ?? []).ToList().AsReadOnly();
+        Paneles             = (paneles ?? []).ToList().AsReadOnly();
     }
 
     public void Load(string catalogsPath)
@@ -69,6 +72,7 @@ public class CatalogLoader
                                   .Where(a => !string.IsNullOrWhiteSpace(a)).ToList().AsReadOnly();
         Programas           = LoadCsv(Path.Combine(catalogsPath, "programas.csv"),               ParsePrograma);
         Direcciones         = LoadCsv(Path.Combine(catalogsPath, "direcciones.csv"),             ParseDireccion);
+        Paneles             = LoadCsv(Path.Combine(catalogsPath, "paneles.csv"),                 ParsePanelComponente);
     }
 
     private static IReadOnlyList<T> LoadCsv<T>(string path, Func<Dictionary<string, string>, T?> parser)
@@ -301,6 +305,24 @@ public class CatalogLoader
             Municipio    = municipio,
             Zona         = S(row, "zona"),
             Peso         = Math.Max(1, I(row, "peso"))
+        };
+    }
+
+    private static PanelComponenteEntry? ParsePanelComponente(Dictionary<string, string> row)
+    {
+        var panel = S(row, "panel_uuid");
+        var comp  = S(row, "componente_uuid");
+        if (string.IsNullOrWhiteSpace(panel) || string.IsNullOrWhiteSpace(comp)) return null;
+        return new PanelComponenteEntry
+        {
+            PanelUuid      = panel,
+            ComponenteUuid = comp,
+            Nombre         = S(row, "nombre"),
+            ResMin         = D(row, "res_min"),
+            ResMax         = D(row, "res_max"),
+            ResMinAnormal  = D(row, "res_min_anormal"),
+            ResMaxAnormal  = D(row, "res_max_anormal"),
+            ResTrigger     = Pipe(row, "res_trigger")
         };
     }
 
