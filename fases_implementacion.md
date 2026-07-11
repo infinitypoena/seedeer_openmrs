@@ -347,6 +347,30 @@ manual_usuario.md existe en la raíz del proyecto junto con fases_implementacion
 
 ---
 
+## Backlog de mejoras (inventario P1–P9, jul 2026)
+
+> Inventario de pendientes acordado en jul 2026. **Fuente de verdad del "qué sigue"** — actualizar
+> el estado aquí al completar cada punto (un commit por bloque a `develop2`).
+> Patrón por bloque: verificar UUIDs contra la instancia → código+tests → smoke REST → corrida corta → docs → commit.
+
+| # | Punto | Estado | Notas |
+|---|-------|--------|-------|
+| P1 | Rotar password root de MariaDB (quedó en historial de git) | `[ ]` decisión del usuario | Solo importa si el repo se hace público |
+| P2 | Doc de usuario/rol dedicado para el seeder (privilegios mínimos) | `[x]` | `manual_usuario.md` §5 — commit `f4f99b0` |
+| P3 | Revivir exámenes clínicos (rama muerta, UUIDs malos) | `[x]` | 10 conceptos smoke-tested + `res_min/max` — commit `f4f99b0` |
+| P4 | Citas: sweep global de vencidas al cierre + `clear` cancela citas | `[x]` | commit `12b8db4` |
+| P5 | Labs v2: paneles (obs-group hemograma) + resultado retrasado | `[x]` | `paneles.csv` + `ResultadosPendientes` — esta entrega. De paso: fix `dateActivated` de órdenes |
+| P6 | Vitales a catálogo (`vitales_rangos.csv`, hoy hardcodeados en `VitalsSeeder`) | `[ ]` | CSV inicial = transcripción exacta de las constantes; fallback total al hardcodeado (tests actuales deben pasar sin tocar) |
+| P7 | Atributos de persona: teléfono salvadoreño + estado civil coherente con edad | `[ ]` | Verificar `GET /personattributetype`; `POST /person/{uuid}/attribute` |
+| P8 | Address Hierarchy de El Salvador (best-effort) | `[ ]` | Si el módulo no expone REST práctico, documentar procedimiento UI/CSV con `direcciones.csv` como fuente; no bloquear |
+| P9 | Quitar `_poolLock` vestigial (la corrida es secuencial) | `[ ]` | Cosmético, build+tests |
+
+Verificación final del paquete (al cerrar P6–P7): corrida de 1 mes comprobando exámenes presentes,
+0 citas `Scheduled` vencidas, hemograma con `groupMembers`, resultados retrasados en segunda visita,
+atributos en `person_attribute`, vitales con distribución idéntica al hardcodeado.
+
+---
+
 ## Registro de cambios
 
 | Fecha | Fase | Cambio |
@@ -367,3 +391,8 @@ manual_usuario.md existe en la raíz del proyecto junto con fases_implementacion
 | 2026-07 | — | Inscripción a programas de atención (HIV Care and Treatment, Diabetes Education) vía POST /programenrollment |
 | 2026-07 | — | Citas reales en la agenda O3 (Bahmni Appointments): FollowUp agenda cita; al volver el paciente se marca Completed/Missed. Fix precisión ASAT/amilasa (allow_decimal=0) |
 | 2026-07-10 | — | Seguimiento agudo coherente: el no-crónico que vuelve retorna por el MISMO dx agudo (2,3% → ~62-64% de pares consecutivos con mismo dx; verificado en corridas feb/mar 2025) |
+| 2026-07-10 | — | **Conversión a app de consola batch** (`develop2`): `dotnet run` ejecuta la simulación completa y termina (exit codes 0/1/2, Ctrl+C limpio); se elimina la capa de controllers/Swagger (la Web API queda en `develop1`). Saneamiento de appsettings + validación fail-fast (`SettingsValidator`); fix TSH (concepto Drug datatype N/A) + contador preciso de errores (`ErrorTally`); variedad de diagnósticos (damping anti-repetición: 144→182 dx distintos); hardening de la instancia (backup, TZ America/El_Salvador, UI en es); direcciones salvadoreñas (`direcciones.csv`) |
+| 2026-07-11 | — | Direcciones ampliadas a los 14 departamentos (~142 zonas) con pesos por **anillos de distancia** (clínica en San Salvador); paquete de auditoría: reproducibilidad, retry REST, credencial y hardening |
+| 2026-07-11 | — | Exámenes clínicos revividos (10 UUIDs smoke-tested: Glasgow, dolor, PHQ-4, flujo pico, obstétricos…) + doc de usuario/rol dedicado; sweep de citas vencidas al cierre (0 `Scheduled` vencidas) + `clear` cancela citas antes de voidear |
+| 2026-07-11 | — | **Resultados de paneles (obs-group) + resultados diferidos**: nuevo `catalogs/paneles.csv` (hemograma: Hb/Hto/leucocitos/plaquetas con bandas normal/anormal por componente y trigger por categoría); el resultado se postea como obs padre ligada a la orden + `groupMembers`. El ~10% que no "vuelve el mismo día" ya no se pierde: queda en `ResultadosPendientes` y se entrega en la **siguiente visita** del paciente (`LabOrderSeeder.ProcesarPendientesAsync`). Verificado con corrida dic-2025 (152 pac, 0 errores, 104 órdenes, paneles con 4 componentes en BD, 1 entrega diferida) |
+| 2026-07-11 | — | **Fix fecha de órdenes (`dateActivated`)**: sin el campo, OpenMRS fechaba toda orden (lab y prescripción) con el **reloj real de la corrida** en vez del día de la visita simulada (afecta a todos los datos previos). Ambos seeders de órdenes envían ahora `dateActivated` = datetime del encounter de consulta (helper `ConsultaSeeder.FechaConsulta`; no puede ser anterior al encounter — `Order.error.encounterDatetimeAfterDateActivated`) |
