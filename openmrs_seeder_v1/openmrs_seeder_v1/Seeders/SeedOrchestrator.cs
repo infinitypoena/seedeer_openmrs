@@ -110,8 +110,9 @@ public class SeedOrchestrator
 
             tracker.Update(runId, r => r.FechaActual = day.Date.ToString("yyyy-MM-dd"));
 
-            // ── Pacientes nuevos ──────────────────────────────────────────────
-            for (int i = 0; i < day.NuevosPacientes; i++)
+            // Alta de un paciente nuevo + su primera visita. Se reutiliza para rellenar el cupo de
+            // recurrentes cuando el pool aún es pequeño (primeros días), en vez de perder ese volumen.
+            async Task CrearYProcesarNuevoAsync()
             {
                 var patient = _profiler.GenerateNew(day.Date);
                 var uuid = await _patientSeeder.CreateAsync(patient, ct);
@@ -121,7 +122,7 @@ public class SeedOrchestrator
                         patient.Identifier, day.Date.ToString("yyyy-MM-dd"));
                     tracker.Update(runId, r => r.Errores.Add(
                         $"[{day.Date}] No se pudo crear paciente {patient.Identifier}"));
-                    continue;
+                    return;
                 }
                 patient.OpenMrsUuid = uuid;
 
@@ -146,6 +147,13 @@ public class SeedOrchestrator
                 tracker.Update(runId, r => r.PacientesCreados++);
             }
 
+            // ── Pacientes nuevos ──────────────────────────────────────────────
+            for (int i = 0; i < day.NuevosPacientes; i++)
+            {
+                if (ct.IsCancellationRequested) break;
+                await CrearYProcesarNuevoAsync();
+            }
+
             // ── Pacientes recurrentes ─────────────────────────────────────────
             // Excluir a los ya visitados hoy (nuevos del mismo día); elegibles = cumplieron su intervalo.
             var atendidosHoy = new HashSet<string>(
@@ -165,7 +173,10 @@ public class SeedOrchestrator
 
             foreach (var base_ in seleccionados)
             {
+                if (ct.IsCancellationRequested) break;
                 var preferCommonRec = _epiSelector.RollPreferCommon(runCommonP);
+                // Edad recalculada a la fecha de la visita (usada también para elegir dx acorde a la edad).
+                var ageGroupVisita  = PatientProfileGenerator.GrupoEdad(base_.BirthDate, day.Date);
 
                 // Continuidad longitudinal: si el paciente ya arrastra una condición crónica, con alta
                 // probabilidad esta visita es un CONTROL de esa misma condición (no un motivo nuevo).
@@ -173,10 +184,12 @@ public class SeedOrchestrator
                 // vuelve por ese mismo dx (control/mejoría) — el de neumonía no regresa con dermatitis.
                 DiagnosticoEntry? dxSeguimiento = null;
                 var esControlAgudo = false;
+                var esControlCronico = false;
                 if (base_.CronicasActivas.Count > 0 &&
                     _epiSelector.RollSeguimientoCronico(_settings.SeguimientoCronicoProb))
                 {
                     dxSeguimiento = base_.CronicasActivas[rng.Next(base_.CronicasActivas.Count)];
+                    esControlCronico = true;
                 }
                 else if (base_.UltimoDxAgudo is not null &&
                          EpidemiologySelector.EpisodioAgudoVigente(
@@ -197,9 +210,9 @@ public class SeedOrchestrator
                     SecondFamilyName = base_.SecondFamilyName,
                     Gender        = base_.Gender,
                     BirthDate     = base_.BirthDate,
-                    // Recalcular la franja de edad a la fecha de ESTA visita (la edad avanza con el tiempo
+                    // Franja de edad recalculada a la fecha de ESTA visita (la edad avanza con el tiempo
                     // simulado), en vez de copiar la de la primera visita.
-                    AgeGroup      = PatientProfileGenerator.GrupoEdad(base_.BirthDate, day.Date),
+                    AgeGroup      = ageGroupVisita,
                     Address1      = base_.Address1,
                     City          = base_.City,
                     StateProvince = base_.StateProvince,
@@ -221,15 +234,20 @@ public class SeedOrchestrator
                     TempAmbienteC = tempC,
                     // Control de crónica → misma categoría; si no, se elige una nueva (motivo agudo).
                     Categoria     = dxSeguimiento?.Categoria
-                                    ?? _epiSelector.SelectCategoria(base_.AgeGroup, base_.Gender, estacion, preferCommonRec),
+                                    ?? _epiSelector.SelectCategoria(ageGroupVisita, base_.Gender, estacion, preferCommonRec),
                     VisitDatetime = _schedule.GenerateVisitTime(day.Date)
                 };
                 recurrente.Diagnostico = dxSeguimiento
                     ?? _epiSelector.SelectDiagnostico(
-                        recurrente.Categoria, recurrente.AgeGroup, recurrente.Gender, estacion, preferCommonRec);
-                recurrente.Comorbilidades = recurrente.Diagnostico is null
-                    ? []
-                    : _epiSelector.SelectComorbilidades(recurrente.Diagnostico, recurrente.AgeGroup, recurrente.Gender, estacion);
+                        recurrente.Categoria, ageGroupVisita, recurrente.Gender, estacion, preferCommonRec);
+                // En un control crónico, la lista de problemas es estable: se reutilizan las OTRAS crónicas
+                // ya conocidas del paciente en vez de sortear comorbilidades nuevas (que la hacían crecer
+                // sin fin visita a visita). En un motivo agudo, se sortean como antes.
+                recurrente.Comorbilidades = esControlCronico
+                    ? base_.CronicasActivas.Where(d => d.CielUuid != dxSeguimiento!.CielUuid).ToList()
+                    : recurrente.Diagnostico is null
+                        ? []
+                        : _epiSelector.SelectComorbilidades(recurrente.Diagnostico, ageGroupVisita, recurrente.Gender, estacion);
 
                 await ProcesarVisitaAsync(recurrente, day.Date, tracker, runId, ct);
 
@@ -237,6 +255,14 @@ public class SeedOrchestrator
                 RegistrarCronicas(base_, recurrente);
                 RegistrarEpisodioAgudo(base_, recurrente, day.Date, esControlAgudo);
                 FijarProximaVisita(base_, recurrente, day.Date, rng);
+            }
+
+            // El cupo de recurrentes no cubierto (pool aún pequeño, sobre todo los primeros días) se
+            // rellena con pacientes nuevos para no perder ese volumen diario.
+            for (int i = seleccionados.Count; i < day.PacientesRecurrentes; i++)
+            {
+                if (ct.IsCancellationRequested) break;
+                await CrearYProcesarNuevoAsync();
             }
 
             diasProcesados++;
@@ -329,6 +355,10 @@ public class SeedOrchestrator
         Guid runId,
         CancellationToken ct)
     {
+        // Cancelación (Ctrl+C): no empezar una visita nueva — evita disparar POST que se cancelarán a
+        // media máquina y ensuciarían el conteo de errores.
+        if (ct.IsCancellationRequested) return;
+
         // Consultorio + médico de esta visita: nuevos estrenan cabecera; recurrentes vuelven a la suya
         // con alta probabilidad (o caen con otro médico).
         _clinicResources.AssignVisit(patient);

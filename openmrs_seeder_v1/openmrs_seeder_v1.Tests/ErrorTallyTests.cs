@@ -70,6 +70,32 @@ public class ErrorTallyTests
     }
 
     [Fact]
+    public void TrasMarcarCancelacion_NoContabiliza()
+    {
+        // Ctrl+C: las POST en vuelo que se cancelan lanzan OperationCanceledException que los seeders
+        // registran como LogError; tras la cancelación no deben inflar el resumen.
+        var tally = new ErrorTally();
+        tally.Registrar("LabOrderSeeder", "error real antes de cancelar");
+
+        tally.MarcarCancelacion();
+        tally.Registrar("LabOrderSeeder", "TaskCanceledException");
+        tally.Registrar("VitalsSeeder", "TaskCanceledException");
+
+        Assert.Equal(1, tally.Total);
+    }
+
+    [Fact]
+    public void Reset_ReactivaElConteo_TrasCancelacion()
+    {
+        var tally = new ErrorTally();
+        tally.MarcarCancelacion();
+        tally.Reset();
+
+        tally.Registrar("X", "error de una corrida nueva");
+        Assert.Equal(1, tally.Total);
+    }
+
+    [Fact]
     public void Provider_UsaUltimoSegmentoDeLaCategoria()
     {
         var tally = new ErrorTally();

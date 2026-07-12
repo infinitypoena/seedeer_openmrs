@@ -95,7 +95,7 @@ public class LabOrderSeeder
             {
                 // El resultado "vuelve" el mismo día
                 var ok = componentes is { Count: > 0 }
-                    ? await PostPanelObsAsync(patient, lab.CielUuid, orderUuid, componentes, patient.VisitDatetime, ct)
+                    ? await PostPanelObsAsync(patient, lab.CielUuid, orderUuid, componentes, ConsultaSeeder.FechaConsulta(patient), ct)
                     : await PostResultObsAsync(patient, lab.CielUuid, orderUuid, result, ct);
                 if (ok) resultadosOk++;
             }
@@ -124,7 +124,7 @@ public class LabOrderSeeder
         foreach (var p in patient.ResultadosPendientes.ToList())
         {
             var ok = p.Componentes is { Count: > 0 }
-                ? await PostPanelObsAsync(patient, p.ConceptUuid, p.OrderUuid, p.Componentes, patient.VisitDatetime, ct)
+                ? await PostPanelObsAsync(patient, p.ConceptUuid, p.OrderUuid, p.Componentes, ConsultaSeeder.FechaConsulta(patient), ct)
                 : await PostResultObsAsync(patient, p.ConceptUuid, p.OrderUuid,
                     p.Numerico is not null
                         ? new LabResultGenerator.LabResult(LabResultGenerator.TipoResultado.Numerico, p.Numerico, null)
@@ -226,7 +226,9 @@ public class LabOrderSeeder
             person      = patient.OpenMrsUuid,
             encounter   = patient.ConsultaEncounterUuid,
             order       = orderUuid,
-            obsDatetime = VisitSeeder.FormatDatetime(patient.VisitDatetime),
+            // Fechada con el datetime del encounter de consulta (no la llegada): OpenMRS no admite obs
+            // anteriores a su encounter.
+            obsDatetime = VisitSeeder.FormatDatetime(ConsultaSeeder.FechaConsulta(patient)),
             value
         };
 

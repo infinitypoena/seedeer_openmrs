@@ -102,6 +102,8 @@ Console.CancelKeyPress += (_, e) =>
 {
     e.Cancel = true;
     logger.LogWarning("Cancelación solicitada (Ctrl+C) — cerrando de forma limpia…");
+    // Dejar de contabilizar errores: las POST en vuelo que se cancelan no son fallos reales de operación.
+    errorTally.MarcarCancelacion();
     cts.Cancel();
 };
 

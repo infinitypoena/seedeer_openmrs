@@ -17,8 +17,17 @@ public class ErrorTally
     private const int MaxMensajes = 100;
     private const int MaxLargoMensaje = 220;
 
+    /// <summary>
+    /// Cierre por cancelación (Ctrl+C): a partir de aquí no se contabilizan errores. Las POST en vuelo
+    /// que se cancelan lanzan OperationCanceledException que los seeders registran como LogError; sin
+    /// esto, un Ctrl+C a mitad de día inflaba el resumen con una cascada de errores de operación falsos.
+    /// </summary>
+    private volatile bool _cancelando;
+    public void MarcarCancelacion() => _cancelando = true;
+
     public void Registrar(string fuente, string mensaje)
     {
+        if (_cancelando) return;
         _porFuente.AddOrUpdate(fuente, 1, (_, n) => n + 1);
         if (_mensajes.Count < MaxMensajes)
         {
@@ -32,6 +41,7 @@ public class ErrorTally
     {
         _porFuente.Clear();
         _mensajes.Clear();
+        _cancelando = false;
     }
 
     public int Total => _porFuente.Values.Sum();

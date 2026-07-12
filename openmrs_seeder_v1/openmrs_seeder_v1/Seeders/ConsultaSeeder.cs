@@ -50,10 +50,12 @@ public class ConsultaSeeder
         }
         patient.ConsultaEncounterUuid = encounterUuid;
 
-        // Motivo de consulta (texto libre)
+        // Motivo de consulta (texto libre). Las obs de la consulta se fechan con el datetime del encounter
+        // (llegada + 30 min), no con la hora de llegada: OpenMRS no admite obs anteriores a su encounter.
+        var fechaConsulta = FechaConsulta(patient);
         var motivo = PickMotivoConsulta(patient.Categoria);
         if (!string.IsNullOrEmpty(motivo))
-            await PostObsTextAsync(patient.Identifier, patient.OpenMrsUuid, encounterUuid, ChiefComplaintUuid, motivo, patient.VisitDatetime, ct);
+            await PostObsTextAsync(patient.Identifier, patient.OpenMrsUuid, encounterUuid, ChiefComplaintUuid, motivo, fechaConsulta, ct);
 
         // Examen en consultorio (si aplica)
         var debeExamen = patient.Diagnostico?.RequiereExamenClinico == true
@@ -75,7 +77,7 @@ public class ConsultaSeeder
             var returnDate = fechaCita.ToDateTime(TimeOnly.FromDateTime(patient.VisitDatetime));
             patient.FechaSeguimiento = returnDate;
             await PostObsDateAsync(patient.Identifier, patient.OpenMrsUuid, encounterUuid,
-                ReturnVisitDateUuid, returnDate, patient.VisitDatetime, ct);
+                ReturnVisitDateUuid, returnDate, fechaConsulta, ct);
         }
 
         _logger.LogInformation("[Consulta] Encounter {Uuid} para {Id} | Dx: {Dx} | comun: {Comun} | +{Comorb} comorbilidad(es)",
@@ -138,25 +140,28 @@ public class ConsultaSeeder
 
     private async Task SeedExamenClinicoAsync(SimulatedPatient patient, string encounterUuid, CancellationToken ct)
     {
+        // El examen puede corresponder a cualquiera de las categorías del paciente (incluye
+        // comorbilidades), igual que labs y fármacos, no solo la categoría primaria.
         var candidatos = _catalogs.ExamenesClinicos
-            .Where(e => AplicaCategoria(e, patient.Categoria))
+            .Where(e => patient.Categorias.Any(c => AplicaCategoria(e, c)))
             .ToList();
 
         if (candidatos.Count == 0) return;
 
         var examen = candidatos[_rng.Next(candidatos.Count)];
+        var fechaConsulta = FechaConsulta(patient);
 
         if (examen.TipoResultado == "numerico")
         {
             var valor = ValorExamenNumerico(examen, patient.Categoria, _rng);
             await PostObsNumericAsync(patient.Identifier, patient.OpenMrsUuid, encounterUuid,
-                examen.CielUuid, valor, patient.VisitDatetime, ct);
+                examen.CielUuid, valor, fechaConsulta, ct);
         }
         else
         {
             var valorCoded = _rng.NextDouble() < 0.80 ? NormalUuid : AbnormalUuid;
             await PostObsCodedAsync(patient.Identifier, patient.OpenMrsUuid, encounterUuid,
-                examen.CielUuid, valorCoded, patient.VisitDatetime, ct);
+                examen.CielUuid, valorCoded, fechaConsulta, ct);
         }
     }
 
