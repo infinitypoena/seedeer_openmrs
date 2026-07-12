@@ -108,8 +108,16 @@ public class SimulatedPatient
     /// <summary>
     /// Fecha más temprana en que el paciente puede volver a consulta (intervalo mínimo entre visitas).
     /// Se fija tras cada visita con <see cref="Services.RecurrenceScheduler"/>; <c>null</c> = elegible ya.
+    /// Cuando la consulta agenda un control, coincide con <see cref="ProximaCita"/>.
     /// </summary>
     public DateOnly? ProximoElegibleDesde { get; set; }
+    /// <summary>
+    /// Fecha de la cita de control agendada en la última visita (<c>null</c> = no se agendó seguimiento).
+    /// La consume <see cref="Services.RecurrentSelector"/> para priorizar el retorno del MISMO paciente
+    /// en su fecha, en vez de elegir recurrentes al azar. Es el estado interno de la agenda: gobierna el
+    /// retorno aunque la feature de citas reales de OpenMRS (<c>AppointmentServiceUuid</c>) esté inactiva.
+    /// </summary>
+    public DateOnly? ProximaCita { get; set; }
     /// <summary>
     /// Episodio agudo abierto (dx primario NO crónico de la última visita). Si el paciente vuelve
     /// dentro de la ventana (<c>VentanaSeguimientoAgudoDias</c>), con alta probabilidad regresa por

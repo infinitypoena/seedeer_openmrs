@@ -18,7 +18,8 @@ public class ConsultaSeeder
     private readonly OpenMrsSettings _settings;
     private readonly CatalogLoader _catalogs;
     private readonly double _clinicalExamProb;
-    private readonly double _followUpProb;
+    private readonly ReferralProbabilitiesSettings _referral;
+    private readonly RecurrenceSettings _recurrence;
     private readonly Random _rng;
     private readonly ILogger<ConsultaSeeder> _logger;
 
@@ -34,7 +35,8 @@ public class ConsultaSeeder
         _catalogs         = catalogs;
         _clinicalExamProb = simSettings.ReferralProbabilities.ClinicalExam;
         _rng = new Random(simSettings.RandomSeed + 13);
-        _followUpProb     = simSettings.ReferralProbabilities.FollowUp;
+        _referral         = simSettings.ReferralProbabilities;
+        _recurrence       = simSettings.Recurrence;
         _logger           = logger;
     }
 
@@ -61,11 +63,16 @@ public class ConsultaSeeder
         if (debeExamen)
             await SeedExamenClinicoAsync(patient, encounterUuid, ct);
 
-        // Nota de seguimiento: cita de control 7–30 días después (obs fecha "Return visit date").
-        // La fecha queda en el paciente para que AppointmentSeeder agende la cita real en la agenda.
-        if (_rng.NextDouble() < _followUpProb)
+        // Nota de seguimiento: la probabilidad se condiciona al cuadro (crónico ≫ grave ≫ resto) y la
+        // fecha sale de la banda clínica de recurrencia (crónico mensual/trimestral, agudo 1–3 semanas),
+        // NO de un 7–30 días plano. Así la cita coincide con la próxima elegibilidad del paciente y
+        // AppointmentSeeder puede agendar la cita real que después gobierna su retorno.
+        var esCronico = patient.TodosDiagnosticos.Any(d => d.EsCronica) || patient.CronicasActivas.Count > 0;
+        if (_rng.NextDouble() < SeguimientoPolicy.Probabilidad(patient.TodosDiagnosticos, _referral))
         {
-            var returnDate = patient.VisitDatetime.AddDays(_rng.Next(7, 31));
+            var fechaCita  = RecurrenceScheduler.ProximaFechaElegible(
+                DateOnly.FromDateTime(patient.VisitDatetime), esCronico, _rng, _recurrence);
+            var returnDate = fechaCita.ToDateTime(TimeOnly.FromDateTime(patient.VisitDatetime));
             patient.FechaSeguimiento = returnDate;
             await PostObsDateAsync(patient.Identifier, patient.OpenMrsUuid, encounterUuid,
                 ReturnVisitDateUuid, returnDate, patient.VisitDatetime, ct);

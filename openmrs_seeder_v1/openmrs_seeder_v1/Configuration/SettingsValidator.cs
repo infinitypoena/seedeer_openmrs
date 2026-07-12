@@ -56,6 +56,8 @@ public static class SettingsValidator
         Prob(rp.DrugOrder, "ReferralProbabilities.DrugOrder");
         Prob(rp.Urgent, "ReferralProbabilities.Urgent");
         Prob(rp.FollowUp, "ReferralProbabilities.FollowUp");
+        Prob(rp.FollowUpCronico, "ReferralProbabilities.FollowUpCronico");
+        Prob(rp.FollowUpGrave, "ReferralProbabilities.FollowUpGrave");
         Prob(rp.LabResult, "ReferralProbabilities.LabResult");
 
         // Bandas sorteadas por corrida
@@ -98,6 +100,7 @@ public static class SettingsValidator
 
         // Citas
         NoNegativo(sim.Appointments.ToleranciaDias, "Appointments.ToleranciaDias");
+        Prob(sim.Appointments.AsistenciaProb, "Appointments.AsistenciaProb");
 
         // Variedad
         NoNegativo(sim.Variedad.RepeticionDamping, "Variedad.RepeticionDamping");

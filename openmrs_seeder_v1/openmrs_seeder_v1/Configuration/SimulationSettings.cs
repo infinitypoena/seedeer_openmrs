@@ -100,6 +100,11 @@ public class AppointmentsSettings
     /// (|fecha cita − fecha visita| ≤ tolerancia → Completed; anterior a la ventana → Missed).
     /// </summary>
     public int ToleranciaDias { get; set; } = 3;
+    /// <summary>
+    /// Probabilidad de que un paciente con cita de control para hoy (±tolerancia) efectivamente asista.
+    /// El resto son no-shows: su cita queda pendiente y, al vencer, se resuelve como Missed. Def. 0,75.
+    /// </summary>
+    public double AsistenciaProb { get; set; } = 0.75;
 }
 
 /// <summary>
@@ -222,6 +227,10 @@ public class ReferralProbabilitiesSettings
     public double DrugOrder { get; set; } = 0.65;
     public double Urgent { get; set; } = 0.20;
     public double FollowUp { get; set; } = 0.30;
+    /// <summary>Prob. de agendar control cuando el cuadro incluye una condición crónica. Def. 0,90.</summary>
+    public double FollowUpCronico { get; set; } = 0.90;
+    /// <summary>Prob. de agendar control cuando el cuadro (no crónico) es grave. Def. 0,80.</summary>
+    public double FollowUpGrave { get; set; } = 0.80;
     /// <summary>
     /// Fracción de órdenes de laboratorio que "vuelven" con un resultado el mismo día (obs ligada a
     /// la orden). El resto queda pendiente (sin resultado), como en una clínica real. Def. 0.90.

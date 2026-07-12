@@ -141,33 +141,30 @@ public class SeedOrchestrator
 
                 RegistrarCronicas(patient, patient);
                 RegistrarEpisodioAgudo(patient, patient, day.Date, fueControlAgudo: false);
-                FijarProximaVisita(patient, day.Date, rng);
+                FijarProximaVisita(patient, patient, day.Date, rng);
                 _patientPool.Add(patient);
                 tracker.Update(runId, r => r.PacientesCreados++);
             }
 
             // ── Pacientes recurrentes ─────────────────────────────────────────
-            List<SimulatedPatient> poolSnapshot = [.. _patientPool];
-
-            // Excluir pacientes ya visitados hoy (nuevos del mismo día)
-            var uuidsHoy = new HashSet<string>(
-                poolSnapshot
+            // Excluir a los ya visitados hoy (nuevos del mismo día); elegibles = cumplieron su intervalo.
+            var atendidosHoy = new HashSet<string>(
+                _patientPool
                     .Where(p => p.VisitDatetime.Date == day.Date.ToDateTime(TimeOnly.MinValue).Date)
                     .Select(p => p.OpenMrsUuid));
+            var elegibles = _patientPool
+                .Where(p => !atendidosHoy.Contains(p.OpenMrsUuid))
+                .Where(p => p.ProximoElegibleDesde is null || day.Date >= p.ProximoElegibleDesde.Value)
+                .ToList();
 
-            for (int i = 0; i < day.PacientesRecurrentes; i++)
+            // La agenda gobierna el retorno: primero los pacientes con cita para hoy (±tolerancia), cada
+            // uno con probabilidad de asistencia; el cupo restante se sortea entre el resto de elegibles.
+            var seleccionados = RecurrentSelector.Seleccionar(
+                elegibles, day.Date, day.PacientesRecurrentes,
+                _settings.Appointments.ToleranciaDias, _settings.Appointments.AsistenciaProb, rng);
+
+            foreach (var base_ in seleccionados)
             {
-                if (poolSnapshot.Count == 0) break;
-
-                // Elegibles: no atendidos hoy y que ya cumplieron su intervalo mínimo entre visitas.
-                var disponibles = poolSnapshot
-                    .Where(p => !uuidsHoy.Contains(p.OpenMrsUuid))
-                    .Where(p => p.ProximoElegibleDesde is null || day.Date >= p.ProximoElegibleDesde.Value)
-                    .ToList();
-                if (disponibles.Count == 0) break;
-
-                var base_ = disponibles[rng.Next(disponibles.Count)];
-                uuidsHoy.Add(base_.OpenMrsUuid);
                 var preferCommonRec = _epiSelector.RollPreferCommon(runCommonP);
 
                 // Continuidad longitudinal: si el paciente ya arrastra una condición crónica, con alta
@@ -234,7 +231,7 @@ public class SeedOrchestrator
                 // Persistir en el paciente original cualquier crónica nueva surgida en esta visita.
                 RegistrarCronicas(base_, recurrente);
                 RegistrarEpisodioAgudo(base_, recurrente, day.Date, esControlAgudo);
-                FijarProximaVisita(base_, day.Date, rng);
+                FijarProximaVisita(base_, recurrente, day.Date, rng);
             }
 
             diasProcesados++;
@@ -298,13 +295,26 @@ public class SeedOrchestrator
     }
 
     /// <summary>
-    /// Fija en el paciente del pool la fecha más temprana de su próxima visita, imponiendo el intervalo
-    /// mínimo entre visitas (crónico = control mensual/trimestral; agudo = 1–3 semanas).
+    /// Fija en el paciente del pool cuándo puede volver. Si la consulta agendó un control
+    /// (<see cref="SimulatedPatient.FechaSeguimiento"/>), la cita y la próxima elegibilidad son la MISMA
+    /// fecha (la agenda gobierna el retorno). Si no, se impone solo el intervalo mínimo entre visitas
+    /// (crónico = control mensual/trimestral; agudo = 1–3 semanas) y no queda cita que priorizar.
     /// </summary>
-    private void FijarProximaVisita(SimulatedPatient poolPatient, DateOnly visita, Random rng)
+    private void FijarProximaVisita(
+        SimulatedPatient poolPatient, SimulatedPatient visitPatient, DateOnly visita, Random rng)
     {
-        poolPatient.ProximoElegibleDesde = RecurrenceScheduler.ProximaFechaElegible(
-            visita, poolPatient.CronicasActivas.Count > 0, rng, _settings.Recurrence);
+        if (visitPatient.FechaSeguimiento is { } fs)
+        {
+            var cita = DateOnly.FromDateTime(fs);
+            poolPatient.ProximaCita          = cita;
+            poolPatient.ProximoElegibleDesde = cita;
+        }
+        else
+        {
+            poolPatient.ProximaCita          = null;
+            poolPatient.ProximoElegibleDesde = RecurrenceScheduler.ProximaFechaElegible(
+                visita, poolPatient.CronicasActivas.Count > 0, rng, _settings.Recurrence);
+        }
     }
 
     private async Task ProcesarVisitaAsync(
