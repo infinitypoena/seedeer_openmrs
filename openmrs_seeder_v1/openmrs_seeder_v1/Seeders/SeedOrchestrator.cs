@@ -25,6 +25,7 @@ public class SeedOrchestrator
     private readonly ProgramEnrollmentSeeder _programSeeder;
     private readonly AppointmentSeeder _appointmentSeeder;
     private readonly ClinicResourceAssigner _clinicResources;
+    private readonly RunStats _stats;
 
     // La corrida es secuencial (un solo hilo, await tras await): el pool no necesita lock.
     private readonly List<SimulatedPatient> _patientPool = [];
@@ -48,8 +49,10 @@ public class SeedOrchestrator
         ProgramEnrollmentSeeder programSeeder,
         AppointmentSeeder appointmentSeeder,
         ClinicResourceAssigner clinicResources,
+        RunStats stats,
         ILogger<SeedOrchestrator> logger)
     {
+        _stats              = stats;
         _settings           = settings;
         _schedule           = schedule;
         _profiler           = profiler;
@@ -92,6 +95,7 @@ public class SeedOrchestrator
         // Factor inicial: esta corrida se inclina a común con esta probabilidad (varía entre corridas)
         var runCommonP = _epiSelector.DrawRunCommonProbability();
         _epiSelector.ResetUsos(); // amortiguación anti-repetición: contadores limpios por corrida
+        _stats.Reset();           // estadísticas de lo sembrado: limpias por corrida
 
         _logger.LogInformation("[Orchestrator] Iniciando run {RunId} — {Dias} días con pacientes | P(común) de la corrida: {P:P0}",
             runId, diasConPacientes, runCommonP);
@@ -420,6 +424,8 @@ public class SeedOrchestrator
             return;
         }
         patient.VisitUuid = visitUuid;
+        // La visita existe en OpenMRS: cuenta para las estadísticas del resumen final.
+        _stats.RegistrarVisita(patient, date);
 
         await _vitalsSeeder.SeedAsync(patient, ct);
         // El paciente "llegó": resolver sus citas pendientes (Completed si cae cerca, Missed si venció)

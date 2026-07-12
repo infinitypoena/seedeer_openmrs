@@ -53,6 +53,7 @@ builder.Logging.AddProvider(new ErrorTallyLoggerProvider(errorTally));
 
 // Servicios singleton (stateless, seguros para reusar)
 builder.Services.AddSingleton<SeedProgressTracker>();
+builder.Services.AddSingleton<RunStats>();
 builder.Services.AddSingleton<CatalogLoader>();
 builder.Services.AddSingleton<DailyScheduleGenerator>();
 builder.Services.AddSingleton<PatientProfileGenerator>();
@@ -259,16 +260,47 @@ async Task<int> EjecutarSimulacionAsync()
     }
 
     // ══ Etapa 4/4 · Resumen final ════════════════════════════════════════════════════════════════
-    var run = tracker.GetRun(runId)!;
+    var run   = tracker.GetRun(runId)!;
+    var stats = host.Services.GetRequiredService<RunStats>();
+
     logger.LogInformation("══ Etapa 4/4 · Resumen final ══");
     logger.LogInformation(
-        "Etapa '{Etapa}' | {Pacientes} pacientes creados | {Dias}/{Total} días simulados | " +
-        "{Errores} errores de proceso | {Operacion} errores de operación",
-        run.Etapa, run.PacientesCreados, run.DiasProcesados, run.TotalDias,
-        run.Errores.Count, errorTally.Total);
-    logger.LogInformation(
-        "Ventana sembrada: {Inicio:yyyy-MM-dd} → {Fin:yyyy-MM-dd} | duración de la corrida: {Duracion:hh\\:mm\\:ss}",
+        "Etapa '{Etapa}' | {Dias}/{Total} días simulados | ventana {Inicio:yyyy-MM-dd} → {Fin:yyyy-MM-dd} | " +
+        "duración {Duracion:hh\\:mm\\:ss}",
+        run.Etapa, run.DiasProcesados, run.TotalDias,
         simSettings.StartDate, simSettings.EndDate, cronometro.Elapsed);
+    logger.LogInformation(
+        "Visitas: {Total} ({Nuevos} de pacientes nuevos + {Rec} de recurrentes)",
+        stats.TotalVisitas, stats.VisitasDeNuevos, stats.VisitasDeRecurrentes);
+    logger.LogInformation(
+        "Pacientes: {Unicos} distintos | {Volvieron} volvieron alguna vez ({PctVolvieron:0.0} %) | " +
+        "media {Media:0.00} visitas/paciente",
+        stats.PacientesUnicos, stats.PacientesQueVolvieron,
+        stats.PacientesUnicos == 0 ? 0 : 100.0 * stats.PacientesQueVolvieron / stats.PacientesUnicos,
+        stats.VisitasPorPaciente);
+
+    var semanas = stats.PorSemana();
+    if (semanas.Count > 0)
+    {
+        logger.LogInformation("Visitas por semana ({N} semanas, la fecha es el lunes que la abre):", semanas.Count);
+        foreach (var (semana, totalSemana, nuevosSemana, recSemana) in semanas)
+            logger.LogInformation("   semana del {Semana:yyyy-MM-dd}  {Total,4} visitas ({Nuevos} nuevos, {Rec} recurrentes)",
+                semana, totalSemana, nuevosSemana, recSemana);
+    }
+
+    var top = stats.TopDiagnosticos(5);
+    if (top.Count > 0)
+    {
+        logger.LogInformation(
+            "Top 5 diagnósticos de {Distintos} distintos (primarios + comorbilidades; el % es sobre las visitas):",
+            stats.DiagnosticosDistintos);
+        var puesto = 1;
+        foreach (var (nombre, veces, pct) in top)
+            logger.LogInformation("   {Puesto}. {Nombre,-45} {Veces,4} veces ({Pct:0.0} %)", puesto++, nombre, veces, pct);
+    }
+
+    logger.LogInformation("Errores: {Proceso} de proceso | {Operacion} de operación",
+        run.Errores.Count, errorTally.Total);
     foreach (var error in run.Errores)
         logger.LogWarning("  [proceso] {Error}", error);
     if (errorTally.Total > 0)
