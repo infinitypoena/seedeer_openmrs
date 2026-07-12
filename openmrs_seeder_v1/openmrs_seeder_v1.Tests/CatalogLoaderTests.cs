@@ -133,6 +133,38 @@ public class CatalogLoaderTests
     }
 
     [Fact]
+    public void Load_MedicamentoPosologia_VaciaUsaDefaults_LlenaParsea()
+    {
+        var dir = CreateTempDir(new()
+        {
+            ["medicamentos.csv"] =
+                "drug_uuid,concept_uuid,nombre_generico,strength,via_uuid,aplica_respiratorio,aplica_infeccioso,dosis,unidad_dosis_uuid,frecuencia_uuid,dias_tratamiento\n" +
+                "drug-amox,concept-amox,Amoxicilina,500mg,via-oral,true,true,1,unidad-tab,frec-8h,7\n" +
+                "drug-para,concept-para,Paracetamol,500mg,via-oral,true,false\n", // fila corta → posología por defecto
+        });
+
+        try
+        {
+            var loader = new CatalogLoader();
+            loader.Load(dir);
+
+            var amox = loader.Medicamentos[0];
+            Assert.Equal(1, amox.Dosis);
+            Assert.Equal("unidad-tab", amox.UnidadDosisUuid);
+            Assert.Equal("frec-8h", amox.FrecuenciaUuid);
+            Assert.Equal(7, amox.DiasTratamiento);
+
+            // Fila sin columnas de posología → valores neutros (el seeder cae a los Defaults).
+            var para = loader.Medicamentos[1];
+            Assert.Equal(0, para.Dosis);
+            Assert.Equal("", para.UnidadDosisUuid);
+            Assert.Equal("", para.FrecuenciaUuid);
+            Assert.Equal(0, para.DiasTratamiento);
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [Fact]
     public void Load_AlergenosTiposCorrectos()
     {
         var dir = CreateTempDir(new()

@@ -60,7 +60,8 @@ public class PrescriptionSeeder
         int rxOk = 0;
         foreach (var med in elegidos)
         {
-            var duracion = Duraciones[_rng.Next(Duraciones.Length)];
+            // Días de tratamiento del catálogo si están; si no, duración aleatoria histórica.
+            var duracion = med.DiasTratamiento > 0 ? med.DiasTratamiento : Duraciones[_rng.Next(Duraciones.Length)];
             var ok = await PostDrugOrderAsync(patient, med, duracion, ct);
             // La receta expira sola por su duración: queda vigente hasta fecha de visita + duración.
             if (ok) { rxOk++; patient.OrderedConcepts[med.ConceptUuid] = fechaVisita.AddDays(duracion); }
@@ -75,6 +76,14 @@ public class PrescriptionSeeder
         int duracion,
         CancellationToken ct)
     {
+        // Posología del catálogo con fallback al comportamiento histórico (1 tableta / una vez al día):
+        // columnas vacías = valores por defecto de Defaults.*, igual que el resto del catálogo.
+        var dose      = med.Dosis > 0 ? med.Dosis : 1.0;
+        var doseUnits = string.IsNullOrWhiteSpace(med.UnidadDosisUuid)
+            ? _settings.Defaults.TabletConceptUuid : med.UnidadDosisUuid;
+        var frequency = string.IsNullOrWhiteSpace(med.FrecuenciaUuid)
+            ? _settings.Defaults.OnceDailyFrequencyUuid : med.FrecuenciaUuid;
+
         var payload = new
         {
             type          = "drugorder",
@@ -84,13 +93,13 @@ public class PrescriptionSeeder
             encounter     = patient.ConsultaEncounterUuid,
             orderer       = patient.AssignedProviderUuid ?? _settings.Defaults.ProviderUuid,
             careSetting   = _settings.Defaults.OutpatientCareSettingUuid,
-            dose          = 1.0,
-            doseUnits     = _settings.Defaults.TabletConceptUuid,
+            dose,
+            doseUnits,
             route         = med.ViaUuid,
-            frequency     = _settings.Defaults.OnceDailyFrequencyUuid,
+            frequency,
             numRefills    = 0,
             quantity      = (double)duracion,
-            quantityUnits = _settings.Defaults.TabletConceptUuid,
+            quantityUnits = doseUnits,
             duration      = duracion,
             durationUnits = _settings.Defaults.DaysConceptUuid,
             // Sin esto OpenMRS usa el reloj real: la orden quedaba fechada el día de la corrida,
