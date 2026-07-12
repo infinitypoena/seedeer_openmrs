@@ -70,9 +70,18 @@ public class SeedOrchestrator
         _logger             = logger;
     }
 
+    /// <summary>
+    /// Plan de días de la corrida (volumen diario por peso del día de la semana + normal). Se genera
+    /// UNA sola vez y se cachea: <c>DailyScheduleGenerator</c> comparte su RNG con las horas de visita,
+    /// así que regenerarlo desplazaría el flujo aleatorio y el informe previo no describiría la corrida
+    /// que de verdad se ejecuta. Program.cs lo consume para el informe; <see cref="RunAsync"/> lo reusa.
+    /// </summary>
+    public IReadOnlyList<DailySchedule> PlanificarDias() => _plan ??= _schedule.Generate();
+    private IReadOnlyList<DailySchedule>? _plan;
+
     public async Task RunAsync(Guid runId, SeedProgressTracker tracker, CancellationToken ct)
     {
-        var days             = _schedule.Generate();
+        var days             = PlanificarDias();
         var diasConPacientes = days.Count(d => d.TotalPatients > 0);
         // Seed fija: decide recurrentes/roster/espaciamiento — sin ella la reproducibilidad se rompe
         var rng              = new Random(_settings.RandomSeed + 10);

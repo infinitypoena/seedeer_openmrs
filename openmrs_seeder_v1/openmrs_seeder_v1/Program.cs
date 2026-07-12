@@ -5,8 +5,12 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using OpenmrsSeeder.Clients;
 using OpenmrsSeeder.Configuration;
+using OpenmrsSeeder.Models.Simulation;
 using OpenmrsSeeder.Seeders;
 using OpenmrsSeeder.Services;
+
+// Margen entre el informe previo y la primera escritura en OpenMRS (Ctrl+C para abortar a tiempo).
+const int PausaPreviaSegundos = 5;
 
 // Simulador clínico OpenMRS — ejecución batch: `dotnet run` corre la simulación completa según
 // appsettings.json y termina. `dotnet run -- clear` anula (void) todos los datos SIM- previos.
@@ -94,22 +98,49 @@ var clavesDesconocidas = SettingsValidator
 foreach (var clave in clavesDesconocidas)
     logger.LogWarning("Clave de configuración desconocida (ignorada por el binding): {Clave}", clave);
 
+// ══ Etapa 1/3 · Catálogos ═══════════════════════════════════════════════════════════════════════
+// Fail-fast: el loader es mudo (CSV ausente → lista vacía, booleano mal escrito → false), así que una
+// errata se manifestaría como una feature apagada en silencio o como comportamiento raro a mitad de la
+// corrida. Se carga, se informa de lo cargado y se valida ANTES de tocar OpenMRS.
 var catalogLoader = host.Services.GetRequiredService<CatalogLoader>();
 catalogLoader.Load(Path.Combine(AppContext.BaseDirectory, "catalogs"));
 
-// Fail-fast de catálogos: el loader es mudo (CSV ausente → lista vacía, booleano mal escrito → false),
-// así que una errata se manifestaría como una feature apagada en silencio o como comportamiento raro a
-// mitad de la corrida. Se valida ANTES de tocar OpenMRS.
+logger.LogInformation("══ Etapa 1/3 · Validación de catálogos ══");
+foreach (var (archivo, filas, opcional) in new (string, int, bool)[]
+{
+    ("epidemiology-profile.csv",     catalogLoader.EpidemiologyProfile.Count, false),
+    ("diagnosticos.csv",             catalogLoader.Diagnosticos.Count,        false),
+    ("medicamentos.csv",             catalogLoader.Medicamentos.Count,        false),
+    ("laboratorios.csv",             catalogLoader.Laboratorios.Count,        false),
+    ("paneles.csv",                  catalogLoader.Paneles.Count,             true),
+    ("examenes_clinicos.csv",        catalogLoader.ExamenesClinicos.Count,    false),
+    ("alergenos.csv",                catalogLoader.Alergenos.Count,           false),
+    ("motivos_consulta.csv",         catalogLoader.MotivosConsulta.Count,     false),
+    ("nombres.csv",                  catalogLoader.Nombres.Count,             false),
+    ("apellidos.csv",                catalogLoader.Apellidos.Count,           false),
+    ("direcciones.csv",              catalogLoader.Direcciones.Count,         true),
+    ("consultorios.csv",             catalogLoader.Consultorios.Count,        true),
+    ("comorbilidad_afinidades.csv",  catalogLoader.Afinidades.Count,          true),
+    ("programas.csv",                catalogLoader.Programas.Count,           true),
+    ("clima.csv",                    catalogLoader.Clima.Count,               true)
+})
+{
+    var estado = filas > 0 ? $"{filas,5} filas" : opcional ? "    — (opcional, desactivado)" : "    VACÍO";
+    logger.LogInformation("   {Archivo,-28} {Estado}", archivo, estado);
+}
+
 var (erroresCatalogo, avisosCatalogo) = CatalogValidator.Validate(catalogLoader);
 foreach (var aviso in avisosCatalogo)
-    logger.LogWarning("Catálogo: {Aviso}", aviso);
+    logger.LogWarning("   ⚠ {Aviso}", aviso);
+
 if (erroresCatalogo.Count > 0)
 {
-    logger.LogError("Catálogos inválidos ({N} problema(s)) — no se toca ningún dato:", erroresCatalogo.Count);
+    logger.LogError("Catálogos INVÁLIDOS ({N} problema(s)) — se aborta sin tocar ningún dato:", erroresCatalogo.Count);
     foreach (var error in erroresCatalogo)
-        logger.LogError("  - {Error}", error);
+        logger.LogError("   - {Error}", error);
     return 2;
 }
+logger.LogInformation("Catálogos válidos ({A} advertencia(s), 0 errores).", avisosCatalogo.Count);
 
 // Ctrl+C → cancelación limpia (los datos ya insertados persisten)
 using var cts = new CancellationTokenSource();
@@ -122,21 +153,12 @@ Console.CancelKeyPress += (_, e) =>
     cts.Cancel();
 };
 
-// Resumen inicial (el viejo GET /api/seed/status, ahora por consola)
+// Conexión con la instancia (el viejo GET /api/seed/status, ahora por consola)
 var client = host.Services.GetRequiredService<OpenMrsRestClient>();
 var online = await client.PingAsync(cts.Token);
 logger.LogInformation(
-    "OpenMRS: {Estado} ({BaseUrl}) | Ventana: {Start:yyyy-MM-dd} → {End:yyyy-MM-dd} | " +
-    "{Volumen} pac/día medio, {Recurrentes}% recurrentes, seed {Seed}",
-    online ? "ONLINE" : "OFFLINE", omrsSettings.RestApi.BaseUrl,
-    simSettings.StartDate, simSettings.EndDate,
-    simSettings.PacientesPorDiaMedio, simSettings.PorcentajeRecurrentes, simSettings.RandomSeed);
-logger.LogInformation(
-    "Catálogos: {Dx} diagnósticos, {Med} medicamentos, {Lab} laboratorios, {Aler} alérgenos, " +
-    "{Cons} consultorios, {Prog} programas",
-    catalogLoader.Diagnosticos.Count, catalogLoader.Medicamentos.Count,
-    catalogLoader.Laboratorios.Count, catalogLoader.Alergenos.Count,
-    catalogLoader.Consultorios.Count, catalogLoader.Programas.Count);
+    "OpenMRS: {Estado} ({BaseUrl}) | seed {Seed}",
+    online ? "ONLINE" : "OFFLINE", omrsSettings.RestApi.BaseUrl, simSettings.RandomSeed);
 
 if (!online)
 {
@@ -162,6 +184,26 @@ async Task<int> EjecutarSimulacionAsync()
 {
     var tracker      = host.Services.GetRequiredService<SeedProgressTracker>();
     var orchestrator = host.Services.GetRequiredService<SeedOrchestrator>();
+
+    // ══ Etapa 2/3 · Días a simular ═══════════════════════════════════════════════════════════════
+    // El plan se genera aquí una sola vez y el orquestador reusa ESTE mismo (PlanificarDias lo cachea):
+    // el informe describe la corrida que realmente se va a ejecutar, no una tirada distinta.
+    var plan = orchestrator.PlanificarDias();
+    ReportarPlan(plan);
+
+    // ══ Etapa 3/3 · Ejecución ════════════════════════════════════════════════════════════════════
+    // Margen para abortar (Ctrl+C) tras leer el informe: a partir de aquí se escribe en OpenMRS.
+    logger.LogInformation("══ Etapa 3/3 · Ejecución — comenzando en {S} s (Ctrl+C para abortar) ══",
+        PausaPreviaSegundos);
+    try
+    {
+        await Task.Delay(TimeSpan.FromSeconds(PausaPreviaSegundos), cts.Token);
+    }
+    catch (OperationCanceledException)
+    {
+        logger.LogWarning("Cancelado antes de empezar — no se tocó ningún dato.");
+        return 0;
+    }
 
     var runId = tracker.CreateRun();
     tracker.Update(runId, r => { r.Etapa = "iniciando"; r.Porcentaje = 0; });
@@ -231,6 +273,56 @@ async Task<int> EjecutarSimulacionAsync()
     }
 
     return run.Etapa == "error" ? 1 : 0;
+}
+
+/// <summary>
+/// Informe de los días que se van a simular: ventana, volumen previsto y desglose. Con pocos días el
+/// desglose es diario; con muchos (corridas de meses o años) se agrupa por mes para no inundar la
+/// consola. Los volúmenes ya vienen sorteados (peso del día de la semana + normal), así que esto es
+/// exactamente lo que se va a sembrar, no una estimación.
+/// </summary>
+void ReportarPlan(IReadOnlyList<DailySchedule> plan)
+{
+    var es          = System.Globalization.CultureInfo.GetCultureInfo("es-ES");
+    var conAtencion = plan.Where(d => d.TotalPatients > 0).ToList();
+    var total       = plan.Sum(d => d.TotalPatients);
+    var nuevos      = plan.Sum(d => d.NuevosPacientes);
+    var recurrentes = plan.Sum(d => d.PacientesRecurrentes);
+
+    logger.LogInformation("══ Etapa 2/3 · Días a simular ══");
+    logger.LogInformation(
+        "Ventana: {Inicio:yyyy-MM-dd} → {Fin:yyyy-MM-dd} | {Dias} días naturales, {ConAtencion} con " +
+        "atención ({Cerrados} cerrados por peso 0 en WeekdayWeights)",
+        simSettings.StartDate, simSettings.EndDate,
+        plan.Count, conAtencion.Count, plan.Count - conAtencion.Count);
+    logger.LogInformation(
+        "Volumen previsto: {Total} visitas ({Nuevos} de pacientes nuevos + {Rec} de recurrentes) | " +
+        "media {Media:0.0}/día de atención | {Medio} pac/día medio configurado, {Pct}% recurrentes",
+        total, nuevos, recurrentes,
+        conAtencion.Count == 0 ? 0 : (double)total / conAtencion.Count,
+        simSettings.PacientesPorDiaMedio, simSettings.PorcentajeRecurrentes);
+
+    if (conAtencion.Count == 0)
+    {
+        logger.LogWarning("Ningún día de la ventana tiene pacientes — revisa WeekdayWeights y las fechas.");
+        return;
+    }
+
+    if (conAtencion.Count <= 31)
+    {
+        foreach (var d in conAtencion)
+            logger.LogInformation("   {Fecha:yyyy-MM-dd} {Dia,-9} {Total,3} visitas ({Nuevos} nuevos, {Rec} recurrentes)",
+                d.Date, es.DateTimeFormat.GetDayName(d.Date.DayOfWeek),
+                d.TotalPatients, d.NuevosPacientes, d.PacientesRecurrentes);
+    }
+    else
+    {
+        logger.LogInformation("   Desglose por mes ({N} días con atención, demasiados para listarlos):", conAtencion.Count);
+        foreach (var mes in conAtencion.GroupBy(d => new { d.Date.Year, d.Date.Month }).OrderBy(g => g.Key.Year).ThenBy(g => g.Key.Month))
+            logger.LogInformation("   {Mes,-10} {Anio}  {Dias,2} días  {Total,5} visitas ({Nuevos} nuevos, {Rec} recurrentes)",
+                es.DateTimeFormat.GetMonthName(mes.Key.Month), mes.Key.Year, mes.Count(),
+                mes.Sum(d => d.TotalPatients), mes.Sum(d => d.NuevosPacientes), mes.Sum(d => d.PacientesRecurrentes));
+    }
 }
 
 async Task<int> EjecutarLimpiezaAsync()
