@@ -197,7 +197,9 @@ public class SeedOrchestrator
                     SecondFamilyName = base_.SecondFamilyName,
                     Gender        = base_.Gender,
                     BirthDate     = base_.BirthDate,
-                    AgeGroup      = base_.AgeGroup,
+                    // Recalcular la franja de edad a la fecha de ESTA visita (la edad avanza con el tiempo
+                    // simulado), en vez de copiar la de la primera visita.
+                    AgeGroup      = PatientProfileGenerator.GrupoEdad(base_.BirthDate, day.Date),
                     Address1      = base_.Address1,
                     City          = base_.City,
                     StateProvince = base_.StateProvince,
@@ -212,6 +214,9 @@ public class SeedOrchestrator
                     // Heredar el médico de cabecera (asignado en la primera visita del paciente)
                     CabeceraLocationUuid = base_.CabeceraLocationUuid,
                     CabeceraProviderUuid = base_.CabeceraProviderUuid,
+                    // Antropometría basal: talla constante y peso derivando poco alrededor del IMC basal
+                    TallaCm  = base_.TallaCm,
+                    ImcBasal = base_.ImcBasal,
                     ClimaEstacion = estacion,
                     TempAmbienteC = tempC,
                     // Control de crónica → misma categoría; si no, se elige una nueva (motivo agudo).

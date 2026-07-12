@@ -67,6 +67,18 @@ public class SimulatedPatient
     /// <summary>Datetime de la visita (fecha simulada + hora realista del día)</summary>
     public DateTime VisitDatetime { get; set; }
     /// <summary>
+    /// Talla (cm) fijada en la primera visita y constante de por vida (un adulto no cambia de estatura
+    /// entre visitas; un niño crece por su curva de edad, pero su talla base se ancla aquí). Heredada por
+    /// la copia recurrente. <c>null</c> = aún no calculada.
+    /// </summary>
+    public double? TallaCm { get; set; }
+    /// <summary>
+    /// IMC basal (constitución) fijado en la primera visita. En visitas siguientes el peso deriva poco
+    /// alrededor de este valor (salvo efecto puntual de enfermedad), evitando pesos incoherentes entre
+    /// controles. <c>null</c> = aún no calculado.
+    /// </summary>
+    public double? ImcBasal { get; set; }
+    /// <summary>
     /// Conceptos (fármacos/labs) ordenados para esta persona → fecha hasta la que la orden sigue ACTIVA
     /// (vigencia: <c>autoExpireDate</c> del lab o <c>dateActivated + duración</c> del fármaco). Evita el
     /// AmbiguousOrderException de OpenMRS solo mientras la orden vive; pasada la vigencia, un control

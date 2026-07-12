@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using OpenmrsSeeder.Clients;
 using OpenmrsSeeder.Configuration;
 using OpenmrsSeeder.Models.Simulation;
+using OpenmrsSeeder.Services;
 
 namespace OpenmrsSeeder.Seeders;
 
@@ -125,9 +126,18 @@ public class VitalsSeeder
                          : null;
         var spo2Override = dxs.Any(d => d.VitalSpo2 == "baja") ? "baja" : null;
 
+        var edadMeses = PatientProfileGenerator.EdadEnMeses(
+            patient.BirthDate, DateOnly.FromDateTime(patient.VisitDatetime));
+
         var v = ComputeVitals(patient.Categorias, severityRank, patient.Gender, patient.AgeGroup,
             fiebre, imcOverride, patient.TempAmbienteC, _climate, _rng,
-            paOverride, fcOverride, spo2Override);
+            paOverride, fcOverride, spo2Override,
+            patient.TallaCm, patient.ImcBasal, edadMeses);
+
+        // Fijar la antropometría basal en la primera visita; las recurrentes la heredan (talla constante,
+        // peso derivando poco alrededor del IMC basal).
+        patient.TallaCm  ??= v.HeightCm;
+        patient.ImcBasal ??= Math.Round(v.WeightKg / Math.Pow(v.HeightCm / 100.0, 2), 1);
 
         return new Dictionary<string, double>
         {
@@ -156,6 +166,18 @@ public class VitalsSeeder
     };
 
     /// <summary>
+    /// Talla (cm) aproximada por edad en meses (0–14 años): curva monótona simple ~50 cm al nacer,
+    /// ~74 al año, ~98 a los 3, luego ~6 cm/año. Evita que un lactante salga con talla de adolescente.
+    /// </summary>
+    public static double TallaPediatricaCm(int edadMeses)
+    {
+        var m = Math.Clamp(edadMeses, 0, 14 * 12);
+        return m <= 12 ? 50 + 2.0 * m
+             : m <= 36 ? 74 + 1.0 * (m - 12)
+             :           98 + 0.5 * (m - 36);
+    }
+
+    /// <summary>
     /// Seam puro y testeable: deriva los signos vitales a partir de la UNIÓN de categorías del
     /// paciente (incluye comorbilidades), la severidad y overrides opcionales por enfermedad.
     /// El peso se acopla a la talla vía IMC para que sea clínicamente coherente.
@@ -172,7 +194,10 @@ public class VitalsSeeder
         Random rng,
         string? paOverride = null,
         string? fcOverride = null,
-        string? spo2Override = null)
+        string? spo2Override = null,
+        double? tallaFijaCm = null,
+        double? imcBasal = null,
+        int? edadMeses = null)
     {
         var cats = categorias as ISet<string> ?? new HashSet<string>(categorias);
         bool Has(string c) => cats.Contains(c);
@@ -181,9 +206,17 @@ public class VitalsSeeder
         double Rand(double min, double max) => rng.NextDouble() * (max - min) + min;
 
         // ── Talla (primero; el peso depende de ella) ──
-        double height = esNino
-            ? Math.Round(Rand(90, 160))
-            : Math.Round(gender == "M" ? Rand(160, 185) : Rand(150, 172));
+        // Si ya está fijada (visitas siguientes): constante. Si no: adultos por banda de sexo; niños por
+        // su edad en meses (curva simple) cuando se conoce, o la banda histórica 90–160 como fallback.
+        double height;
+        if (tallaFijaCm is double tf)
+            height = tf;
+        else if (esNino)
+            height = edadMeses is int em
+                ? Math.Round(Math.Clamp(TallaPediatricaCm(em) + Rand(-2.5, 2.5), 45, 175))
+                : Math.Round(Rand(90, 160));
+        else
+            height = Math.Round(gender == "M" ? Rand(160, 185) : Rand(150, 172));
 
         // ── Peso vía IMC objetivo (coherente con talla) ──
         // El override por enfermedad (vital_imc) tiene prioridad sobre la categoría.
@@ -193,7 +226,11 @@ public class VitalsSeeder
           : Has("diabetes") || Has("endocrino")    ? (27.0, 38.0)
           : esNino                                 ? (14.0, 20.0)
           :                                          (18.5, 27.0);
-        var imc    = Rand(imcMin, imcMax);
+        // Con IMC basal (visitas siguientes) y sin efecto puntual de enfermedad, el IMC deriva poco
+        // alrededor del basal; si hay override de enfermedad, o es la primera visita, manda la banda.
+        var imc = imcBasal is double ib && imcOverride is null
+            ? Math.Clamp(ib + Rand(-1.5, 1.5), 14.0, 40.0)
+            : Rand(imcMin, imcMax);
         var weight = Math.Round(imc * Math.Pow(height / 100.0, 2), 1);
 
         // ── Presión arterial (el override por enfermedad gana sobre la categoría) ──

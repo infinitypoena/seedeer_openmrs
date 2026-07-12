@@ -115,6 +115,29 @@ public class PatientProfileGenerator
         return Math.Max(0, edad);
     }
 
+    /// <summary>Edad cumplida en meses a la fecha de referencia (para la talla pediátrica por edad).</summary>
+    public static int EdadEnMeses(DateOnly nacimiento, DateOnly referencia)
+    {
+        var meses = (referencia.Year - nacimiento.Year) * 12 + referencia.Month - nacimiento.Month;
+        if (referencia.Day < nacimiento.Day) meses--;
+        return Math.Max(0, meses);
+    }
+
+    /// <summary>
+    /// Seam puro: grupo de edad a la fecha de la visita, recalculado desde la fecha de nacimiento (no
+    /// copiado de visitas previas). Así la edad del paciente avanza con el tiempo simulado y un niño
+    /// puede cruzar de franja entre controles. Las fronteras coinciden con <c>GenerateBirthDate</c>.
+    /// </summary>
+    public static string GrupoEdad(DateOnly birthDate, DateOnly fechaVisita)
+    {
+        var edad = EdadEnAnios(birthDate, fechaVisita);
+        return edad <= 14 ? "0-14"
+             : edad <= 29 ? "15-29"
+             : edad <= 44 ? "30-44"
+             : edad <= 64 ? "45-64"
+             :              "65+";
+    }
+
     /// <summary>
     /// Dirección salvadoreña coherente desde <c>direcciones.csv</c>: zona (colonia/barrio/cantón)
     /// elegida por peso — la mayoría cerca de la clínica (área metropolitana), cola de municipios
