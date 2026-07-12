@@ -69,7 +69,7 @@ public class ConsultaSeeder
         // fecha sale de la banda clínica de recurrencia (crónico mensual/trimestral, agudo 1–3 semanas),
         // NO de un 7–30 días plano. Así la cita coincide con la próxima elegibilidad del paciente y
         // AppointmentSeeder puede agendar la cita real que después gobierna su retorno.
-        var esCronico = patient.TodosDiagnosticos.Any(d => d.EsCronica) || patient.CronicasActivas.Count > 0;
+        var esCronico = patient.TodosDiagnosticos.Any(d => d.EsCronica);
         if (_rng.NextDouble() < SeguimientoPolicy.Probabilidad(patient.TodosDiagnosticos, _referral))
         {
             var fechaCita  = RecurrenceScheduler.ProximaFechaElegible(
@@ -153,7 +153,7 @@ public class ConsultaSeeder
 
         if (examen.TipoResultado == "numerico")
         {
-            var valor = ValorExamenNumerico(examen, patient.Categoria, _rng);
+            var valor = ValorExamenNumerico(examen, _rng);
             await PostObsNumericAsync(patient.Identifier, patient.OpenMrsUuid, encounterUuid,
                 examen.CielUuid, valor, fechaConsulta, ct);
         }
@@ -193,33 +193,17 @@ public class ConsultaSeeder
     };
 
     /// <summary>
-    /// Seam puro: valor del examen numérico. Si el catálogo trae banda (`res_min/res_max`), manda la
-    /// banda — entero cuando los límites son enteros (Glasgow, escala de dolor, FC fetal; mismo
-    /// criterio de precisión que LabResultGenerator), 1 decimal si no. Sin banda → lógica histórica
-    /// por unidad (retrocompatible).
+    /// Seam puro: valor del examen numérico, sorteado en la banda del catálogo (`res_min/res_max`) —
+    /// entero cuando los límites son enteros (Glasgow, escala de dolor, FC fetal; mismo criterio de
+    /// precisión que LabResultGenerator), 1 decimal si no. La banda es obligatoria para los exámenes
+    /// numéricos y la exige <c>CatalogValidator</c> al arranque.
     /// </summary>
-    public static double ValorExamenNumerico(Models.Catalogs.ExamenClinicoEntry examen, string categoria, Random rng)
+    public static double ValorExamenNumerico(Models.Catalogs.ExamenClinicoEntry examen, Random rng)
     {
-        if (examen.ResMax > 0)
-        {
-            var valor = rng.NextDouble() * (examen.ResMax - examen.ResMin) + examen.ResMin;
-            var decimales = double.IsInteger(examen.ResMin) && double.IsInteger(examen.ResMax) ? 0 : 1;
-            return Math.Round(valor, decimales);
-        }
-        return GenerateNumericValue(examen.Unidad, categoria, rng);
+        var valor = rng.NextDouble() * (examen.ResMax - examen.ResMin) + examen.ResMin;
+        var decimales = double.IsInteger(examen.ResMin) && double.IsInteger(examen.ResMax) ? 0 : 1;
+        return Math.Round(valor, decimales);
     }
-
-    private static double GenerateNumericValue(string unidad, string categoria, Random rng) => unidad switch
-    {
-        "mg/dL" => categoria == "diabetes"
-            ? Math.Round(rng.NextDouble() * 200 + 100, 1)  // 100-300 en diabéticos
-            : Math.Round(rng.NextDouble() * 60  + 70,  1), // 70-130 normal
-        "%" => categoria == "respiratorio"
-            ? Math.Round(rng.NextDouble() * 8 + 88, 1)     // 88-96 en respiratorio
-            : Math.Round(rng.NextDouble() * 5 + 95, 1),    // 95-100 normal
-        "mmHg" => Math.Round(rng.NextDouble() * 80 + 100), // 100-180
-        _      => Math.Round(rng.NextDouble() * 0.7 + 0.6, 2) // 0.6-1.3 (ITB)
-    };
 
     private async Task PostObsTextAsync(string identifier, string personUuid, string encounterUuid,
         string conceptUuid, string text, DateTime dt, CancellationToken ct)

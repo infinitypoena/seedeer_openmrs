@@ -101,7 +101,7 @@ public class SeedOrchestrator
             if (day.TotalPatients == 0) continue;
 
             // Roster del día: 2-3 médicos "abren consultorio" (clínica pequeña, no siempre están todos)
-            _clinicResources.ActivarMedicosDelDia(rng);
+            _clinicResources.ActivarMedicosDelDia(day.Date);
 
             var (estacion, tempC) = _climate.Resolve(day.Date);
 
@@ -178,27 +178,21 @@ public class SeedOrchestrator
                 // Edad recalculada a la fecha de la visita (usada también para elegir dx acorde a la edad).
                 var ageGroupVisita  = PatientProfileGenerator.GrupoEdad(base_.BirthDate, day.Date);
 
-                // Continuidad longitudinal: si el paciente ya arrastra una condición crónica, con alta
-                // probabilidad esta visita es un CONTROL de esa misma condición (no un motivo nuevo).
-                // Si no, y tiene un episodio AGUDO abierto dentro de su ventana, con alta probabilidad
-                // vuelve por ese mismo dx (control/mejoría) — el de neumonía no regresa con dermatitis.
-                DiagnosticoEntry? dxSeguimiento = null;
-                var esControlAgudo = false;
-                var esControlCronico = false;
-                if (base_.CronicasActivas.Count > 0 &&
-                    _epiSelector.RollSeguimientoCronico(_settings.SeguimientoCronicoProb))
-                {
-                    dxSeguimiento = base_.CronicasActivas[rng.Next(base_.CronicasActivas.Count)];
-                    esControlCronico = true;
-                }
-                else if (base_.UltimoDxAgudo is not null &&
-                         EpidemiologySelector.EpisodioAgudoVigente(
-                             base_.FechaUltimoDxAgudo, day.Date, _settings.VentanaSeguimientoAgudoDias) &&
-                         _epiSelector.RollSeguimientoAgudo(_settings.SeguimientoAgudoProb))
-                {
-                    dxSeguimiento = base_.UltimoDxAgudo;
-                    esControlAgudo = true;
-                }
+                // Motivo de la visita: si viene a su cita, el dx que la motivó; si no, continuidad
+                // longitudinal probabilística (control de crónica / episodio agudo abierto).
+                var (dxSeguimiento, esControlCronico, esControlAgudo) = DxDeControl(
+                    base_, day.Date,
+                    _settings.Appointments.ToleranciaDias, _settings.VentanaSeguimientoAgudoDias,
+                    () => _epiSelector.RollSeguimientoCronico(_settings.SeguimientoCronicoProb),
+                    () => _epiSelector.RollSeguimientoAgudo(_settings.SeguimientoAgudoProb),
+                    rng.Next);
+
+                // Si acude a su cita, lo atiende el médico con el que se agendó (no se re-sortea).
+                (string Location, string Provider)? citaRecursos =
+                    RecurrentSelector.TieneCitaHoy(base_, day.Date, _settings.Appointments.ToleranciaDias)
+                    && base_.ProximaCitaProviderUuid is { } prov && base_.ProximaCitaLocationUuid is { } loc
+                        ? (loc, prov)
+                        : null;
 
                 var recurrente = new SimulatedPatient
                 {
@@ -249,7 +243,7 @@ public class SeedOrchestrator
                         ? []
                         : _epiSelector.SelectComorbilidades(recurrente.Diagnostico, ageGroupVisita, recurrente.Gender, estacion);
 
-                await ProcesarVisitaAsync(recurrente, day.Date, tracker, runId, ct);
+                await ProcesarVisitaAsync(recurrente, day.Date, tracker, runId, ct, citaRecursos);
 
                 // Persistir en el paciente original cualquier crónica nueva surgida en esta visita.
                 RegistrarCronicas(base_, recurrente);
@@ -287,6 +281,41 @@ public class SeedOrchestrator
             r.Porcentaje = 100;
             r.Completado = true;
         });
+    }
+
+    /// <summary>
+    /// Motivo de la visita de un paciente recurrente (seam puro, RNG/tiradas inyectadas):
+    /// <list type="number">
+    /// <item>Si <b>acude a su cita de control</b> (±tolerancia), el dx es el que la motivó — la consulta
+    /// de seguimiento es del mismo cuadro por el que se le citó, sin tirar los dados.</item>
+    /// <item>Si no, continuidad probabilística: control de una de sus crónicas (<paramref name="rollCronico"/>),</item>
+    /// <item>o control del episodio agudo abierto si sigue vigente (<paramref name="rollAgudo"/>).</item>
+    /// </list>
+    /// <c>Dx = null</c> → el llamador sortea un motivo nuevo con el selector epidemiológico.
+    /// </summary>
+    public static (DiagnosticoEntry? Dx, bool EsControlCronico, bool EsControlAgudo) DxDeControl(
+        SimulatedPatient poolPatient,
+        DateOnly fecha,
+        int toleranciaDias,
+        int ventanaAgudoDias,
+        Func<bool> rollCronico,
+        Func<bool> rollAgudo,
+        Func<int, int> nextInt)
+    {
+        if (RecurrentSelector.TieneCitaHoy(poolPatient, fecha, toleranciaDias) &&
+            poolPatient.MotivoProximaCita is { } motivo)
+            return (motivo, motivo.EsCronica, !motivo.EsCronica);
+
+        if (poolPatient.CronicasActivas.Count > 0 && rollCronico())
+            return (poolPatient.CronicasActivas[nextInt(poolPatient.CronicasActivas.Count)], true, false);
+
+        if (poolPatient.UltimoDxAgudo is not null &&
+            EpidemiologySelector.EpisodioAgudoVigente(
+                poolPatient.FechaUltimoDxAgudo, fecha, ventanaAgudoDias) &&
+            rollAgudo())
+            return (poolPatient.UltimoDxAgudo, false, true);
+
+        return (null, false, false);
     }
 
     /// <summary>
@@ -328,7 +357,9 @@ public class SeedOrchestrator
     /// <summary>
     /// Fija en el paciente del pool cuándo puede volver. Si la consulta agendó un control
     /// (<see cref="SimulatedPatient.FechaSeguimiento"/>), la cita y la próxima elegibilidad son la MISMA
-    /// fecha (la agenda gobierna el retorno). Si no, se impone solo el intervalo mínimo entre visitas
+    /// fecha (la agenda gobierna el retorno), y la cita se lleva consigo el <b>motivo</b> (dx primario de
+    /// esta visita) y el <b>médico</b> reservado: al acudir el paciente, esa consulta de seguimiento es
+    /// del mismo cuadro y con el mismo médico. Si no, se impone solo el intervalo mínimo entre visitas
     /// (crónico = control mensual/trimestral; agudo = 1–3 semanas) y no queda cita que priorizar.
     /// </summary>
     private void FijarProximaVisita(
@@ -337,13 +368,19 @@ public class SeedOrchestrator
         if (visitPatient.FechaSeguimiento is { } fs)
         {
             var cita = DateOnly.FromDateTime(fs);
-            poolPatient.ProximaCita          = cita;
-            poolPatient.ProximoElegibleDesde = cita;
+            poolPatient.ProximaCita             = cita;
+            poolPatient.ProximoElegibleDesde    = cita;
+            poolPatient.MotivoProximaCita       = visitPatient.Diagnostico;
+            poolPatient.ProximaCitaProviderUuid = visitPatient.ProximaCitaProviderUuid;
+            poolPatient.ProximaCitaLocationUuid = visitPatient.ProximaCitaLocationUuid;
         }
         else
         {
-            poolPatient.ProximaCita          = null;
-            poolPatient.ProximoElegibleDesde = RecurrenceScheduler.ProximaFechaElegible(
+            poolPatient.ProximaCita             = null;
+            poolPatient.MotivoProximaCita       = null;
+            poolPatient.ProximaCitaProviderUuid = null;
+            poolPatient.ProximaCitaLocationUuid = null;
+            poolPatient.ProximoElegibleDesde    = RecurrenceScheduler.ProximaFechaElegible(
                 visita, poolPatient.CronicasActivas.Count > 0, rng, _settings.Recurrence);
         }
     }
@@ -353,15 +390,16 @@ public class SeedOrchestrator
         DateOnly date,
         SeedProgressTracker tracker,
         Guid runId,
-        CancellationToken ct)
+        CancellationToken ct,
+        (string Location, string Provider)? citaRecursos = null)
     {
         // Cancelación (Ctrl+C): no empezar una visita nueva — evita disparar POST que se cancelarán a
         // media máquina y ensuciarían el conteo de errores.
         if (ct.IsCancellationRequested) return;
 
-        // Consultorio + médico de esta visita: nuevos estrenan cabecera; recurrentes vuelven a la suya
-        // con alta probabilidad (o caen con otro médico).
-        _clinicResources.AssignVisit(patient);
+        // Consultorio + médico de esta visita: el que le reservó la cita si viene a su control; si no,
+        // los nuevos estrenan cabecera y los recurrentes vuelven a la suya con alta probabilidad.
+        _clinicResources.AssignVisit(patient, citaRecursos);
 
         var visitUuid = await _visitSeeder.CreateAsync(patient, ct);
         if (visitUuid is null)
@@ -384,7 +422,10 @@ public class SeedOrchestrator
         await _labOrderSeeder.ProcesarPendientesAsync(patient, ct);
         await _labOrderSeeder.SeedAsync(patient, ct);
         await _prescriptionSeeder.SeedAsync(patient, ct);
-        // Agendar la cita real del seguimiento decidido en la consulta (si lo hubo)
+        // Reservar el médico del control (uno de los que estarán de turno ese día, preferentemente el
+        // que lo atiende hoy) antes de agendar la cita real del seguimiento decidido en la consulta.
+        if (patient.FechaSeguimiento is { } fechaSeguimiento)
+            _clinicResources.ReservarCita(patient, DateOnly.FromDateTime(fechaSeguimiento));
         await _appointmentSeeder.SeedAsync(patient, ct);
         await _visitCloseSeeder.SeedAsync(patient, ct);
     }

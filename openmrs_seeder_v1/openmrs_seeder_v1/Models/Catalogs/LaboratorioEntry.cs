@@ -4,7 +4,6 @@ public class LaboratorioEntry
 {
     public string CielUuid { get; set; } = "";
     public string NombreEs { get; set; } = "";
-    public string Clase { get; set; } = "";
     public bool AplicaRespiratorio { get; set; }
     public bool AplicaCardiovascular { get; set; }
     public bool AplicaDiabetes { get; set; }

@@ -1,11 +1,11 @@
-ciel_uuid,nombre_es,tipo_resultado,unidad,aplica_respiratorio,aplica_cardiovascular,aplica_diabetes,aplica_digestivo,aplica_osteomuscular,aplica_urologico,aplica_infeccioso,aplica_endocrino,aplica_neurologico,aplica_dermatologico,aplica_salud_mental,aplica_ginecoobstetrico,aplica_trauma,res_min,res_max
-160347AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Escala de Glasgow para coma,numerico,puntos,false,false,false,false,false,false,false,false,true,false,false,false,true,12,15
-166082AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Escala de dolor (0-10),numerico,puntos,false,false,false,true,true,false,false,false,false,false,false,false,true,3,9
-159434AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Flujo pico espiratorio pre-broncodilatador,numerico,L/min,true,false,false,false,false,false,false,false,false,false,false,false,false,200,550
-166590AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Puntaje PHQ-4 (tamizaje ansiedad/depresión),numerico,puntos,false,false,false,false,false,false,false,false,false,false,true,false,false,2,10
-1440AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Frecuencia cardíaca fetal,numerico,lpm,false,false,false,false,false,false,false,false,false,false,false,true,false,110,160
-1439AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Altura del fondo uterino,numerico,cm,false,false,false,false,false,false,false,false,false,false,false,true,false,18,34
-160622AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Reflejo plantar,categorico,,false,false,false,false,false,false,false,false,true,false,false,false,true,,
-160348AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Agudeza visual cualitativa,categorico,,false,false,true,false,false,false,false,true,true,false,false,false,false,,
-91db94e5-bc72-4210-a2ed-c9202f53f741,Prueba de sensibilidad con monofilamento (pie),categorico,,false,false,true,false,false,false,false,false,false,false,false,false,false,,
-460AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Edema (examen físico),categorico,,false,true,false,false,false,true,false,false,false,false,false,false,false,,
+ciel_uuid,nombre_es,tipo_resultado,aplica_respiratorio,aplica_cardiovascular,aplica_diabetes,aplica_digestivo,aplica_osteomuscular,aplica_urologico,aplica_infeccioso,aplica_endocrino,aplica_neurologico,aplica_dermatologico,aplica_salud_mental,aplica_ginecoobstetrico,aplica_trauma,res_min,res_max
+160347AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Escala de Glasgow para coma,numerico,false,false,false,false,false,false,false,false,true,false,false,false,true,12,15
+166082AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Escala de dolor (0-10),numerico,false,false,false,true,true,false,false,false,false,false,false,false,true,3,9
+159434AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Flujo pico espiratorio pre-broncodilatador,numerico,true,false,false,false,false,false,false,false,false,false,false,false,false,200,550
+166590AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Puntaje PHQ-4 (tamizaje ansiedad/depresión),numerico,false,false,false,false,false,false,false,false,false,false,true,false,false,2,10
+1440AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Frecuencia cardíaca fetal,numerico,false,false,false,false,false,false,false,false,false,false,false,true,false,110,160
+1439AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Altura del fondo uterino,numerico,false,false,false,false,false,false,false,false,false,false,false,true,false,18,34
+160622AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Reflejo plantar,categorico,false,false,false,false,false,false,false,false,true,false,false,false,true,,
+160348AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Agudeza visual cualitativa,categorico,false,false,true,false,false,false,false,true,true,false,false,false,false,,
+91db94e5-bc72-4210-a2ed-c9202f53f741,Prueba de sensibilidad con monofilamento (pie),categorico,false,false,true,false,false,false,false,false,false,false,false,false,false,,
+460AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Edema (examen físico),categorico,false,true,false,false,false,true,false,false,false,false,false,false,false,,

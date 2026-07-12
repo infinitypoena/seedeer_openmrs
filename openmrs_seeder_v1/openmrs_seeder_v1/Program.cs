@@ -10,7 +10,8 @@ using OpenmrsSeeder.Services;
 
 // Simulador clínico OpenMRS — ejecución batch: `dotnet run` corre la simulación completa según
 // appsettings.json y termina. `dotnet run -- clear` anula (void) todos los datos SIM- previos.
-// Exit codes: 0 = corrida completada · 1 = fallo del proceso · 2 = OpenMRS inaccesible / uso inválido.
+// Exit codes: 0 = corrida completada · 1 = fallo del proceso · 2 = OpenMRS inaccesible / uso inválido /
+// catálogos inválidos (en los tres casos no se toca ningún dato).
 
 // Content root = carpeta del binario (allí se copian appsettings.json y catalogs/), así la app
 // funciona igual desde cualquier directorio de trabajo (dotnet run, exe publicado, Docker).
@@ -95,6 +96,20 @@ foreach (var clave in clavesDesconocidas)
 
 var catalogLoader = host.Services.GetRequiredService<CatalogLoader>();
 catalogLoader.Load(Path.Combine(AppContext.BaseDirectory, "catalogs"));
+
+// Fail-fast de catálogos: el loader es mudo (CSV ausente → lista vacía, booleano mal escrito → false),
+// así que una errata se manifestaría como una feature apagada en silencio o como comportamiento raro a
+// mitad de la corrida. Se valida ANTES de tocar OpenMRS.
+var (erroresCatalogo, avisosCatalogo) = CatalogValidator.Validate(catalogLoader);
+foreach (var aviso in avisosCatalogo)
+    logger.LogWarning("Catálogo: {Aviso}", aviso);
+if (erroresCatalogo.Count > 0)
+{
+    logger.LogError("Catálogos inválidos ({N} problema(s)) — no se toca ningún dato:", erroresCatalogo.Count);
+    foreach (var error in erroresCatalogo)
+        logger.LogError("  - {Error}", error);
+    return 2;
+}
 
 // Ctrl+C → cancelación limpia (los datos ya insertados persisten)
 using var cts = new CancellationTokenSource();

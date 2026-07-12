@@ -6,8 +6,7 @@ public class ExamenClinicoEntry
     public string NombreEs { get; set; } = "";
     /// <summary>numerico | categorico</summary>
     public string TipoResultado { get; set; } = "";
-    public string Unidad { get; set; } = "";
-    /// <summary>Banda del valor numérico (opcional; ambas en 0 = derivar de la unidad, retrocompatible).</summary>
+    /// <summary>Banda del valor numérico. Obligatoria si <c>TipoResultado</c> es numerico (la valida CatalogValidator).</summary>
     public double ResMin { get; set; }
     public double ResMax { get; set; }
     public bool AplicaRespiratorio { get; set; }

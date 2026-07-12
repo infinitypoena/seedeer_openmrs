@@ -281,17 +281,16 @@ SAMPLE_metformina,Metformina,850mg,SAMPLE_oral,false,false,true,false,false,fals
 Extraído de OpenMRS (concept class Test/LabSet) + columnas booleanas de categoría + **columnas de resultado** que alimentan `LabResultGenerator` (el resultado se registra como obs ligada a la orden).
 
 ```csv
-ciel_uuid,nombre_es,clase,aplica_respiratorio,...,aplica_trauma,datatype,res_min,res_max,res_min_anormal,res_max_anormal,res_normal_uuid,res_anormal_uuid,res_trigger,res_trigger_dx
-160912AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Glucemia en ayunas,Test,false,...,false,numeric,70,99,126,260,,,diabetes|endocrino,
-58b969e7-77ef-4941-a0ec-72372a2fa716,Antígeno NS1 dengue,Test,false,...,false,coded,,,,,664AAAA...(Negativo),703AAAA...(Positivo),,142592AAAA...|61304dd2...(dengue)
-1019AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hemograma completo,Test,true,...,true,panel,,,,,,,,
+ciel_uuid,nombre_es,aplica_respiratorio,...,aplica_trauma,datatype,res_min,res_max,res_min_anormal,res_max_anormal,res_normal_uuid,res_anormal_uuid,res_trigger,res_trigger_dx
+160912AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Glucemia en ayunas,false,...,false,numeric,70,99,126,260,,,diabetes|endocrino,
+58b969e7-77ef-4941-a0ec-72372a2fa716,Antígeno NS1 dengue,false,...,false,coded,,,,,664AAAA...(Negativo),703AAAA...(Positivo),,142592AAAA...|61304dd2...(dengue)
+1019AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hemograma completo,true,...,true,panel,,,,,,,,
 ```
 
 | Columna | Descripción |
 |---------|-------------|
 | `ciel_uuid` | UUID del concept — se usa en `POST /order` tipo testorder |
-| `nombre_es` | Nombre del examen en español |
-| `clase` | `Test`, `LabSet`, `Lab Findings` |
+| `nombre_es` | Nombre del examen en español (documental: no lo lee la simulación, pero identifica la fila en los errores de `CatalogValidator`) |
 | `aplica_CATEGORIA` | `true`/`false` — si este lab es coherente para esa categoría diagnóstica |
 | `datatype` | `numeric` \| `coded` \| `panel` \| `imagen` (vacío = sin resultado; solo numeric/coded generan valor) |
 | `res_min` / `res_max` | Banda numérica **normal** (inclusive) |
@@ -334,19 +333,18 @@ Cada componente sortea su banda **de forma independiente** (`LabResultGenerator.
 Diferencia fundamental con `laboratorios.csv`: estos exámenes los realiza el médico en el consultorio y el resultado se registra **inmediatamente** como observación (`POST /obs`). No se genera una orden.
 
 ```csv
-ciel_uuid,nombre_es,tipo_resultado,unidad,aplica_respiratorio,aplica_cardiovascular,aplica_diabetes,...
-887AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Glucometría capilar,numerico,mg/dL,false,true,true,...
-5242AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Oximetría de pulso,numerico,%,true,true,false,...
-159568AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Electrocardiograma,categorico,,false,true,false,...
+ciel_uuid,nombre_es,tipo_resultado,aplica_respiratorio,...,aplica_trauma,res_min,res_max
+160347AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Escala de Glasgow para coma,numerico,false,...,true,12,15
+159434AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Flujo pico espiratorio,numerico,true,...,false,200,550
+160622AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Reflejo plantar,categorico,false,...,false,,
 ```
 
 | Columna | Descripción |
 |---------|-------------|
-| `ciel_uuid` | UUID del concept OpenMRS — se usa en `POST /obs` dentro del encounter ADULTINITIAL |
-| `nombre_es` | Nombre del examen en español |
-| `tipo_resultado` | `numerico` (registra valor + unidad) o `categorico` (normal / anormal) |
-| `unidad` | Unidad de medida si es numérico (ej: `mg/dL`, `%`, `mmHg`). Vacío si categorico. |
-| `res_min` / `res_max` *(opcional)* | Banda del valor numérico. Si están, **mandan sobre la unidad** (entero si límites enteros — Glasgow, escala de dolor —, 1 decimal si no). Vacías = rango derivado de la unidad (histórico). |
+| `ciel_uuid` | UUID del concept OpenMRS — se usa en `POST /obs` dentro del encounter de consulta |
+| `nombre_es` | Nombre del examen en español (documental: identifica la fila en los errores de `CatalogValidator`) |
+| `tipo_resultado` | `numerico` (registra un valor de la banda) o `categorico` (normal / anormal, answers genéricos `1115`/`1116`) |
+| `res_min` / `res_max` | Banda del valor numérico — **obligatoria** si `tipo_resultado=numerico` (la exige `CatalogValidator` al arranque); entero si los límites son enteros (Glasgow, escala de dolor), 1 decimal si no. Vacías si `categorico`. |
 | `aplica_CATEGORIA` | `true`/`false` — si este examen es coherente para la categoría diagnóstica |
 
 > Si el diagnóstico tiene `requiere_examen_clinico = true`, la probabilidad sube al 90% independientemente del valor de `ClinicalExam`.

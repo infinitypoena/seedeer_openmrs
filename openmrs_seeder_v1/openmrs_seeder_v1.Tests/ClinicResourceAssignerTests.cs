@@ -123,6 +123,59 @@ public class ClinicResourceAssignerTests
         Assert.All(activos, a => Assert.Contains(a, Consultorios));
     }
 
+    // ── ElegirMedicoCita (médico con el que se agenda el control) ─────────────
+
+    [Fact]
+    public void ElegirMedicoCita_MedicoActualDeTurno_LoConserva()
+    {
+        // El que ordena el control es quien lo da: si estará de turno ese día, la cita es con él.
+        var roster = new List<(string, string)> { ("loc-2", "med-2"), ("loc-3", "med-3") };
+        var elegido = ClinicResourceAssigner.ElegirMedicoCita(
+            actual: ("loc-3", "med-3"), cabecera: ("loc-1", "med-1"), roster, _ => 0);
+
+        Assert.Equal(("loc-3", "med-3"), elegido);
+    }
+
+    [Fact]
+    public void ElegirMedicoCita_ActualNoDeTurno_CaeALaCabeceraSiEstaDeTurno()
+    {
+        var roster = new List<(string, string)> { ("loc-1", "med-1"), ("loc-2", "med-2") };
+        var elegido = ClinicResourceAssigner.ElegirMedicoCita(
+            actual: ("loc-4", "med-4"), cabecera: ("loc-1", "med-1"), roster, _ => 1);
+
+        Assert.Equal(("loc-1", "med-1"), elegido);
+    }
+
+    [Fact]
+    public void ElegirMedicoCita_NiActualNiCabeceraDeTurno_SorteaDelRoster()
+    {
+        var roster = new List<(string, string)> { ("loc-2", "med-2"), ("loc-3", "med-3") };
+        var elegido = ClinicResourceAssigner.ElegirMedicoCita(
+            actual: ("loc-4", "med-4"), cabecera: ("loc-1", "med-1"), roster, _ => 1);
+
+        Assert.Equal(("loc-3", "med-3"), elegido);
+    }
+
+    [Fact]
+    public void ElegirMedicoCita_SinCabecera_YActualNoDeTurno_SorteaDelRoster()
+    {
+        var roster = new List<(string, string)> { ("loc-2", "med-2") };
+        var elegido = ClinicResourceAssigner.ElegirMedicoCita(
+            actual: ("loc-4", "med-4"), cabecera: null, roster, _ => 0);
+
+        Assert.Equal(("loc-2", "med-2"), elegido);
+    }
+
+    [Fact]
+    public void ElegirMedicoCita_RosterVacio_ConservaElMedicoActual()
+    {
+        // Sin catálogo de consultorios (modo proveedor único): la cita queda con el médico de la visita.
+        var elegido = ClinicResourceAssigner.ElegirMedicoCita(
+            actual: ("fb-loc", "fb-prov"), cabecera: null, [], _ => 0);
+
+        Assert.Equal(("fb-loc", "fb-prov"), elegido);
+    }
+
     // ── ResolvePool (fail-fast) ───────────────────────────────────────────────
 
     private static ConsultorioEntry Entry(string loc, string id) =>

@@ -25,6 +25,8 @@ public class ClinicResourceAssigner
     private List<(string Location, string Provider)> _consultorios = [];
     /// <summary>Médicos que atienden HOY (subconjunto de <c>_consultorios</c>, refrescado por día).</summary>
     private List<(string Location, string Provider)> _consultoriosActivos = [];
+    /// <summary>Roster ya calculado por fecha (memoización: el turno de un día es siempre el mismo).</summary>
+    private readonly Dictionary<DateOnly, List<(string Location, string Provider)>> _rosterPorFecha = [];
     /// <summary>Prob. de la corrida de que un recurrente vuelva con su médico de cabecera.</summary>
     private double _runCabeceraProb;
 
@@ -78,18 +80,34 @@ public class ClinicResourceAssigner
     }
 
     /// <summary>
-    /// Sortea los médicos que atienden HOY: un subconjunto de tamaño aleatorio en
-    /// [<c>MinMedicosPorDia</c>, <c>MaxMedicosPorDia</c>] (recortado al pool). Se llama una vez por
-    /// día desde el orquestador para modelar una clínica pequeña donde no siempre están todos.
+    /// Fija los médicos que atienden en <paramref name="fecha"/> (el roster de ese día). Se llama una
+    /// vez por día desde el orquestador para modelar una clínica pequeña donde no siempre están todos.
     /// </summary>
-    public void ActivarMedicosDelDia(Random rng)
+    public void ActivarMedicosDelDia(DateOnly fecha)
     {
-        _consultoriosActivos = SeleccionarActivos(
-            _consultorios, _simSettings.MinMedicosPorDia, _simSettings.MaxMedicosPorDia, rng);
+        _consultoriosActivos = RosterDe(fecha);
 
         if (_consultoriosActivos.Count > 0 && _consultoriosActivos.Count < _consultorios.Count)
             _logger.LogInformation("[Clinic] Médicos de hoy: {N} de {Total} consultorios activos",
                 _consultoriosActivos.Count, _consultorios.Count);
+    }
+
+    /// <summary>
+    /// Roster de una fecha: subconjunto de tamaño aleatorio en [<c>MinMedicosPorDia</c>,
+    /// <c>MaxMedicosPorDia</c>] del pool de consultorios. Es <b>determinista por fecha</b> (RNG sembrado
+    /// con la fecha y memoizado), no una tirada del RNG de la corrida: así, al agendar una cita, se puede
+    /// saber HOY qué médicos estarán de turno el día de esa cita futura — y el médico con el que se agenda
+    /// es uno que efectivamente atenderá ese día.
+    /// </summary>
+    public List<(string Location, string Provider)> RosterDe(DateOnly fecha)
+    {
+        if (_rosterPorFecha.TryGetValue(fecha, out var cached)) return cached;
+
+        var roster = SeleccionarActivos(
+            _consultorios, _simSettings.MinMedicosPorDia, _simSettings.MaxMedicosPorDia,
+            new Random(_simSettings.RandomSeed + 18 + fecha.DayNumber));
+        _rosterPorFecha[fecha] = roster;
+        return roster;
     }
 
     /// <summary>
@@ -111,9 +129,27 @@ public class ClinicResourceAssigner
     /// Asigna consultorio + médico a la visita y mantiene el médico de cabecera del paciente:
     /// los nuevos estrenan cabecera; los recurrentes vuelven a su cabecera con probabilidad
     /// <c>_runCabeceraProb</c> —siempre que ese médico esté disponible hoy—, o caen con otro médico.
+    /// <para>
+    /// Excepción: si el paciente <b>viene a una cita de control</b> (<paramref name="cita"/> con los
+    /// recursos con los que se agendó), la atiende ese mismo médico, sin sortear — un médico entra a
+    /// atender las citas que tiene reservadas. Así el provider de la cita en la agenda y el del
+    /// encounter de la visita nunca divergen.
+    /// </para>
     /// </summary>
-    public void AssignVisit(SimulatedPatient patient)
+    public void AssignVisit(SimulatedPatient patient, (string Location, string Provider)? cita = null)
     {
+        if (cita is { } c)
+        {
+            patient.AssignedLocationUuid = c.Location;
+            patient.AssignedProviderUuid = c.Provider;
+            if (string.IsNullOrEmpty(patient.CabeceraProviderUuid))
+            {
+                patient.CabeceraLocationUuid = c.Location;
+                patient.CabeceraProviderUuid = c.Provider;
+            }
+            return;
+        }
+
         var tieneCabecera = !string.IsNullOrEmpty(patient.CabeceraProviderUuid);
         var activos = _consultoriosActivos.Count > 0 ? _consultoriosActivos : _consultorios;
         var cabeceraDisponible = tieneCabecera &&
@@ -141,6 +177,44 @@ public class ClinicResourceAssigner
     /// <summary>Decisión pura: ¿atender a este paciente con su médico de cabecera? (RNG inyectado, testeable).</summary>
     public static bool UsarCabecera(bool tieneCabecera, bool esNuevo, double roll, double runProb) =>
         tieneCabecera && !esNuevo && roll < runProb;
+
+    /// <summary>
+    /// Reserva el consultorio + médico de la cita de control del paciente (fecha ya decidida en la
+    /// consulta) y los deja en <see cref="SimulatedPatient.ProximaCitaProviderUuid"/>/
+    /// <c>ProximaCitaLocationUuid</c>. Los usa <c>AppointmentSeeder</c> para la cita real en la agenda y
+    /// el orquestador para atender esa visita con el mismo médico.
+    /// </summary>
+    public void ReservarCita(SimulatedPatient patient, DateOnly fechaCita)
+    {
+        var actual = (patient.AssignedLocationUuid ?? _settings.Defaults.LocationUuid,
+                      patient.AssignedProviderUuid ?? _settings.Defaults.ProviderUuid);
+        (string, string)? cabecera = string.IsNullOrEmpty(patient.CabeceraProviderUuid)
+            ? null
+            : (patient.CabeceraLocationUuid ?? _settings.Defaults.LocationUuid, patient.CabeceraProviderUuid);
+
+        var (loc, prov) = ElegirMedicoCita(actual, cabecera, RosterDe(fechaCita), _rng.Next);
+        patient.ProximaCitaLocationUuid = loc;
+        patient.ProximaCitaProviderUuid = prov;
+    }
+
+    /// <summary>
+    /// Decisión pura (RNG inyectado): ¿con qué médico se agenda la cita de control? Entre los que estarán
+    /// de turno esa fecha (<paramref name="roster"/>) se prefiere (1) el médico de la visita actual —el
+    /// que ordena el control es quien lo da—, si no está de turno (2) el médico de cabecera del paciente,
+    /// y si tampoco (3) uno cualquiera del roster. Roster vacío (sin catálogo de consultorios) → el médico
+    /// actual, conservando el modo de proveedor único.
+    /// </summary>
+    public static (string Location, string Provider) ElegirMedicoCita(
+        (string Location, string Provider) actual,
+        (string Location, string Provider)? cabecera,
+        IReadOnlyList<(string Location, string Provider)> roster,
+        Func<int, int> nextInt)
+    {
+        if (roster.Count == 0) return actual;
+        if (roster.Any(c => c.Provider == actual.Provider)) return actual;
+        if (cabecera is { } cab && roster.Any(c => c.Provider == cab.Provider)) return cab;
+        return roster[nextInt(roster.Count)];
+    }
 
     /// <summary>Devuelve un par (ubicación, médico) aleatorio de entre los médicos activos hoy.</summary>
     public (string Location, string Provider) Assign() =>

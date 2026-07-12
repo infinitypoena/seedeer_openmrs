@@ -14,7 +14,7 @@ public class ConsultaSeederTests
 
         for (int i = 0; i < 100; i++)
         {
-            var v = ConsultaSeeder.ValorExamenNumerico(examen, "trauma", rng);
+            var v = ConsultaSeeder.ValorExamenNumerico(examen, rng);
             Assert.InRange(v, 12, 15);
             Assert.Equal(v, Math.Round(v)); // sin decimales
         }
@@ -28,25 +28,8 @@ public class ConsultaSeederTests
 
         for (int i = 0; i < 50; i++)
         {
-            var v = ConsultaSeeder.ValorExamenNumerico(examen, "cardiovascular", rng);
+            var v = ConsultaSeeder.ValorExamenNumerico(examen, rng);
             Assert.InRange(v, 0.5, 1.3);
-        }
-    }
-
-    [Fact]
-    public void ValorExamenNumerico_SinBanda_UsaLogicaHistoricaPorUnidad()
-    {
-        // Retrocompatibilidad: fila sin res_min/res_max → rangos derivados de la unidad
-        var examen = new ExamenClinicoEntry { Unidad = "mg/dL" };
-        var rng = new Random(42);
-
-        for (int i = 0; i < 50; i++)
-        {
-            var normal = ConsultaSeeder.ValorExamenNumerico(examen, "respiratorio", rng);
-            Assert.InRange(normal, 70, 130);
-
-            var diabetico = ConsultaSeeder.ValorExamenNumerico(examen, "diabetes", rng);
-            Assert.InRange(diabetico, 100, 300);
         }
     }
 }

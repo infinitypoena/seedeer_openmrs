@@ -203,7 +203,6 @@ public class CatalogLoader
     {
         CielUuid            = S(row, "ciel_uuid"),
         NombreEs            = S(row, "nombre_es"),
-        Clase               = S(row, "clase"),
         AplicaRespiratorio  = B(row, "aplica_respiratorio"),
         AplicaCardiovascular= B(row, "aplica_cardiovascular"),
         AplicaDiabetes      = B(row, "aplica_diabetes"),
@@ -238,7 +237,6 @@ public class CatalogLoader
         CielUuid            = S(row, "ciel_uuid"),
         NombreEs            = S(row, "nombre_es"),
         TipoResultado       = S(row, "tipo_resultado"),
-        Unidad              = S(row, "unidad"),
         ResMin              = D(row, "res_min"),
         ResMax              = D(row, "res_max"),
         AplicaRespiratorio  = B(row, "aplica_respiratorio"),

@@ -12,6 +12,13 @@ namespace OpenmrsSeeder.Services;
 public static class RecurrentSelector
 {
     /// <summary>
+    /// ¿El paciente viene HOY a su cita de control? (cita agendada dentro de ±tolerancia de la fecha).
+    /// Es la misma noción que usa el orquestador para atenderlo con el médico y el motivo de esa cita.
+    /// </summary>
+    public static bool TieneCitaHoy(SimulatedPatient p, DateOnly fecha, int toleranciaDias) =>
+        p.ProximaCita is { } c && Math.Abs(c.DayNumber - fecha.DayNumber) <= toleranciaDias;
+
+    /// <summary>
     /// <paramref name="elegibles"/> ya viene filtrado (no atendidos hoy y que cumplieron su intervalo
     /// mínimo). Devuelve hasta <paramref name="cupo"/> pacientes, sin repetir, priorizando los que
     /// tienen <see cref="SimulatedPatient.ProximaCita"/> dentro de ±<paramref name="toleranciaDias"/>.
@@ -28,7 +35,7 @@ public static class RecurrentSelector
         // 1) Citas de control para hoy (±tolerancia): asisten con probabilidad asistenciaProb.
         //    Las citas más antiguas primero (llevan más tiempo esperando su control).
         var conCita = elegibles
-            .Where(p => p.ProximaCita is { } c && Math.Abs(c.DayNumber - fecha.DayNumber) <= toleranciaDias)
+            .Where(p => TieneCitaHoy(p, fecha, toleranciaDias))
             .OrderBy(p => p.ProximaCita!.Value.DayNumber)
             .ToList();
         var conCitaUuids = conCita.Select(p => p.OpenMrsUuid).ToHashSet();

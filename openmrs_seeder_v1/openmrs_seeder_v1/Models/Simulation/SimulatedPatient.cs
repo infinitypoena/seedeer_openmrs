@@ -131,6 +131,20 @@ public class SimulatedPatient
     /// </summary>
     public DateOnly? ProximaCita { get; set; }
     /// <summary>
+    /// Dx primario que motivó la cita de control. Si el paciente acude a ella, ESTE es el motivo de la
+    /// visita (la consulta de seguimiento es del mismo cuadro que la generó), en vez de sortear un dx.
+    /// <c>null</c> = no hay cita agendada.
+    /// </summary>
+    public DiagnosticoEntry? MotivoProximaCita { get; set; }
+    /// <summary>
+    /// Médico con el que quedó agendada la cita de control (se elige entre los que estarán de turno esa
+    /// fecha, prefiriendo al que ordena el control). Al acudir el paciente, la visita se atiende con él:
+    /// así el provider de la cita en la agenda y el del encounter coinciden. <c>null</c> = sin cita.
+    /// </summary>
+    public string? ProximaCitaProviderUuid { get; set; }
+    /// <summary>Consultorio de la cita de control (par del médico de <see cref="ProximaCitaProviderUuid"/>).</summary>
+    public string? ProximaCitaLocationUuid { get; set; }
+    /// <summary>
     /// Episodio agudo abierto (dx primario NO crónico de la última visita). Si el paciente vuelve
     /// dentro de la ventana (<c>VentanaSeguimientoAgudoDias</c>), con alta probabilidad regresa por
     /// este mismo dx (control) en vez de una enfermedad aleatoria. Se cierra tras su visita de control.

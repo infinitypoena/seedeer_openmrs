@@ -121,11 +121,21 @@ public class AppointmentSeeder
             ["startDateTime"]   = VisitSeeder.FormatDatetime(inicio),
             ["endDateTime"]     = VisitSeeder.FormatDatetime(fin),
             ["appointmentKind"] = "Scheduled",
+            // Médico/consultorio reservados para el control (ClinicResourceAssigner.ReservarCita): uno de
+            // los que estarán de turno ese día — el mismo que atenderá la visita cuando el paciente acuda.
             ["providers"]       = new[]
             {
-                new { uuid = patient.AssignedProviderUuid ?? _settings.Defaults.ProviderUuid, response = "ACCEPTED" }
+                new
+                {
+                    uuid = patient.ProximaCitaProviderUuid
+                           ?? patient.AssignedProviderUuid
+                           ?? _settings.Defaults.ProviderUuid,
+                    response = "ACCEPTED"
+                }
             },
-            ["locationUuid"]    = patient.AssignedLocationUuid ?? _settings.Defaults.LocationUuid,
+            ["locationUuid"]    = patient.ProximaCitaLocationUuid
+                                  ?? patient.AssignedLocationUuid
+                                  ?? _settings.Defaults.LocationUuid,
             ["comments"]        = "SEEDED_BY_SIMULATOR"
         };
         if (!string.IsNullOrWhiteSpace(_settings.Defaults.AppointmentServiceTypeUuid))

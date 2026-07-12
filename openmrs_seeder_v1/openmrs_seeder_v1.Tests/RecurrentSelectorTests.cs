@@ -74,4 +74,24 @@ public class RecurrentSelectorTests
         Assert.Empty(RecurrentSelector.Seleccionar([P("a", Hoy)], Hoy, 0, 3, 1.0, new Random(5)));
         Assert.Empty(RecurrentSelector.Seleccionar([], Hoy, 5, 3, 1.0, new Random(6)));
     }
+
+    // ── TieneCitaHoy (mismo criterio que usa el orquestador para el médico y el motivo) ──
+
+    [Theory]
+    [InlineData(0, true)]    // la cita es hoy
+    [InlineData(-3, true)]   // llega 3 días tarde (límite de tolerancia)
+    [InlineData(3, true)]    // se adelanta 3 días
+    [InlineData(-4, false)]  // fuera de tolerancia: ya no es "su cita"
+    [InlineData(4, false)]
+    public void TieneCitaHoy_RespetaLaTolerancia(int offsetDias, bool esperado)
+    {
+        var p = P("x", Hoy.AddDays(offsetDias));
+        Assert.Equal(esperado, RecurrentSelector.TieneCitaHoy(p, Hoy, toleranciaDias: 3));
+    }
+
+    [Fact]
+    public void TieneCitaHoy_SinCita_EsFalso()
+    {
+        Assert.False(RecurrentSelector.TieneCitaHoy(P("x"), Hoy, toleranciaDias: 3));
+    }
 }
