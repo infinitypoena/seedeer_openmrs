@@ -105,7 +105,7 @@ foreach (var clave in clavesDesconocidas)
 var catalogLoader = host.Services.GetRequiredService<CatalogLoader>();
 catalogLoader.Load(Path.Combine(AppContext.BaseDirectory, "catalogs"));
 
-logger.LogInformation("══ Etapa 1/3 · Validación de catálogos ══");
+logger.LogInformation("══ Etapa 1/4 · Validación de catálogos ══");
 foreach (var (archivo, filas, opcional) in new (string, int, bool)[]
 {
     ("epidemiology-profile.csv",     catalogLoader.EpidemiologyProfile.Count, false),
@@ -185,15 +185,15 @@ async Task<int> EjecutarSimulacionAsync()
     var tracker      = host.Services.GetRequiredService<SeedProgressTracker>();
     var orchestrator = host.Services.GetRequiredService<SeedOrchestrator>();
 
-    // ══ Etapa 2/3 · Días a simular ═══════════════════════════════════════════════════════════════
+    // ══ Etapa 2/4 · Días a simular ═══════════════════════════════════════════════════════════════
     // El plan se genera aquí una sola vez y el orquestador reusa ESTE mismo (PlanificarDias lo cachea):
     // el informe describe la corrida que realmente se va a ejecutar, no una tirada distinta.
     var plan = orchestrator.PlanificarDias();
     ReportarPlan(plan);
 
-    // ══ Etapa 3/3 · Ejecución ════════════════════════════════════════════════════════════════════
+    // ══ Etapa 3/4 · Ejecución ════════════════════════════════════════════════════════════════════
     // Margen para abortar (Ctrl+C) tras leer el informe: a partir de aquí se escribe en OpenMRS.
-    logger.LogInformation("══ Etapa 3/3 · Ejecución — comenzando en {S} s (Ctrl+C para abortar) ══",
+    logger.LogInformation("══ Etapa 3/4 · Ejecución — comenzando en {S} s (Ctrl+C para abortar) ══",
         PausaPreviaSegundos);
     try
     {
@@ -205,6 +205,7 @@ async Task<int> EjecutarSimulacionAsync()
         return 0;
     }
 
+    var cronometro = System.Diagnostics.Stopwatch.StartNew();
     var runId = tracker.CreateRun();
     tracker.Update(runId, r => { r.Etapa = "iniciando"; r.Porcentaje = 0; });
     errorTally.Reset();
@@ -257,12 +258,17 @@ async Task<int> EjecutarSimulacionAsync()
         await reporter;
     }
 
+    // ══ Etapa 4/4 · Resumen final ════════════════════════════════════════════════════════════════
     var run = tracker.GetRun(runId)!;
+    logger.LogInformation("══ Etapa 4/4 · Resumen final ══");
     logger.LogInformation(
-        "Resumen final: etapa '{Etapa}' | {Pacientes} pacientes creados | {Dias}/{Total} días | " +
+        "Etapa '{Etapa}' | {Pacientes} pacientes creados | {Dias}/{Total} días simulados | " +
         "{Errores} errores de proceso | {Operacion} errores de operación",
         run.Etapa, run.PacientesCreados, run.DiasProcesados, run.TotalDias,
         run.Errores.Count, errorTally.Total);
+    logger.LogInformation(
+        "Ventana sembrada: {Inicio:yyyy-MM-dd} → {Fin:yyyy-MM-dd} | duración de la corrida: {Duracion:hh\\:mm\\:ss}",
+        simSettings.StartDate, simSettings.EndDate, cronometro.Elapsed);
     foreach (var error in run.Errores)
         logger.LogWarning("  [proceso] {Error}", error);
     if (errorTally.Total > 0)
@@ -272,7 +278,28 @@ async Task<int> EjecutarSimulacionAsync()
             logger.LogWarning("  {Mensaje}", mensaje);
     }
 
+    EsperarTecla();
     return run.Etapa == "error" ? 1 : 0;
+}
+
+/// <summary>
+/// Deja el resumen final en pantalla hasta que el usuario pulse una tecla (si se ejecuta a doble clic
+/// o desde una terminal que se cierra al terminar, si no no habría tiempo de leerlo). Se omite si la
+/// entrada no es interactiva (Docker, CI, salida redirigida a un fichero) — ahí colgaría el proceso — o
+/// si la corrida se canceló con Ctrl+C.
+/// </summary>
+void EsperarTecla()
+{
+    if (cts.IsCancellationRequested) return;
+    if (Console.IsInputRedirected)
+    {
+        logger.LogInformation("Fin (entrada no interactiva: no se espera tecla).");
+        return;
+    }
+
+    logger.LogInformation("Pulsa cualquier tecla para finalizar…");
+    try { Console.ReadKey(intercept: true); }
+    catch (InvalidOperationException) { /* sin consola asociada: terminar sin esperar */ }
 }
 
 /// <summary>
@@ -289,7 +316,7 @@ void ReportarPlan(IReadOnlyList<DailySchedule> plan)
     var nuevos      = plan.Sum(d => d.NuevosPacientes);
     var recurrentes = plan.Sum(d => d.PacientesRecurrentes);
 
-    logger.LogInformation("══ Etapa 2/3 · Días a simular ══");
+    logger.LogInformation("══ Etapa 2/4 · Días a simular ══");
     logger.LogInformation(
         "Ventana: {Inicio:yyyy-MM-dd} → {Fin:yyyy-MM-dd} | {Dias} días naturales, {ConAtencion} con " +
         "atención ({Cerrados} cerrados por peso 0 en WeekdayWeights)",
