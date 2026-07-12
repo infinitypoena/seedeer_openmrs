@@ -95,17 +95,33 @@ Cada visita registra **8 observaciones** (peso, talla, PA sistólica/diastólica
 | Hipertiroidismo (`vital_imc=bajo`) | IMC 16–19 (adelgazamiento) |
 | Apendicitis (`vital_fiebre=true`) | Fiebre aunque su categoría sea digestivo |
 
-> **Ejemplo**: paciente con dengue → temperatura 38.9 °C, pulso 104, FR 22, SpO₂ 97%. Paciente sano de control → 36.6 °C, pulso 76, FR 15, SpO₂ 98%. El peso ya no puede ser absurdo respecto a la talla (se calcula desde un IMC objetivo).
+Además de la categoría, **cada enfermedad puede forzar su propio vital** con las columnas opcionales de `diagnosticos.csv` (el override gana sobre la categoría):
+
+| Columna | Efecto | Ejemplos |
+|---|---|---|
+| `vital_fiebre=true` | Temperatura 37.5–40 °C | Apendicitis, absceso |
+| `vital_imc=alto` \| `bajo` | IMC objetivo 27–38 o 16–19 | Obesidad · hipertiroidismo, desnutrición |
+| `vital_pa=alta` | PA 140–180 / 90–110 | Preeclampsia, enfermedad renal, Cushing |
+| `vital_fc=alta` \| `baja` | Pulso 100–130 o 42–58 | Hipertiroidismo, anemia · hipotiroidismo, bloqueo AV |
+| `vital_spo2=baja` | SpO₂ 88–94% sin ser respiratorio | Insuficiencia cardíaca, TEP |
+
+> **Ejemplo**: paciente con dengue → temperatura 38.9 °C, pulso 104, FR 22, SpO₂ 97%. Paciente con **hipotiroidismo** (endocrino) → pulso 51 e IMC alto, aunque tenga fiebre por otra causa (la bradicardia gana). Paciente sano de control → 36.6 °C, pulso 76, FR 15, SpO₂ 98%. El peso ya no puede ser absurdo respecto a la talla (se calcula desde un IMC objetivo).
 
 ### 2.7 Laboratorios con resultado (ciclo orden → resultado)
 
-Las órdenes de laboratorio no quedan "huérfanas": ~90% recibe el mismo día una **obs de resultado ligada a la orden**, coherente con la enfermedad. El ~10% restante queda pendiente (realista).
+Las órdenes de laboratorio no quedan "huérfanas": ~90% recibe el mismo día una **obs de resultado ligada a la orden**, coherente con la enfermedad.
 
 > **Ejemplos**:
 > - Diabético → HbA1c **7.8%** (banda anormal); paciente sin diabetes → HbA1c 5.2%.
 > - Paciente con dengue → antígeno NS1 **Positivo**; sin dengue → Negativo.
 > - ITU → BUN/creatinina elevados.
 > Los conceptos que no admiten decimales (ASAT, amilasa) reciben valores enteros automáticamente.
+
+**Paneles (obs-group)**: un hemograma no es un número suelto. Los labs con `datatype=panel` buscan sus componentes en `paneles.csv` y se registran como **obs padre** (el concepto del panel, ligado a la orden) **+ una obs hija por componente**, y cada componente sortea su banda de forma independiente.
+
+> **Ejemplo**: hemograma de un paciente con dengue → plaquetas **78 000** y leucocitos **12 400** (anormales por el trigger `infeccioso`), pero hemoglobina 14.1 y hematocrito 42 (normales). En la UI de O3 se ve como un grupo desplegable.
+
+**Resultados diferidos**: el ~10% que no vuelve el mismo día **no se pierde**. El valor se genera con el contexto clínico de la visita que lo ordenó, queda pendiente y se registra en la **siguiente visita** del paciente, ligado a la orden original ("ya llegó el resultado del laboratorio"). Si el paciente nunca vuelve, la orden queda sin resultado — como en la vida real.
 
 ### 2.8 Prescripciones coherentes
 
@@ -148,7 +164,16 @@ Dos mecanismos evitan el clásico defecto de los generadores de datos (cada visi
 
 Un paciente no puede volver a consulta externa día tras día: tras cada visita queda inelegible hasta su próxima fecha (7–21 días si es agudo, 30–120 si es crónico).
 
-### 2.15 Reproducibilidad
+### 2.15 Datos demográficos de contacto (teléfono y estado civil)
+
+Cada paciente nuevo se registra con dos **atributos de persona** además de su nombre y dirección:
+
+- **Teléfono salvadoreño sintético**: móvil `7###-####` (~80%) o fijo `2###-####` (~20%). En los menores de edad es el contacto del tutor.
+- **Estado civil coherente con la edad**: los menores de 18 son siempre *soltero*; con la edad crece la proporción de *casado/acompañado*; la *viudez* solo aparece de forma visible en 65+.
+
+> Ambos son opcionales: si `Defaults.TelephoneAttributeTypeUuid` / `CivilStatusAttributeTypeUuid` quedan vacíos, el paciente se crea sin ellos (el simulador no falla).
+
+### 2.16 Reproducibilidad
 
 Con la misma `RandomSeed` y la misma configuración, dos corridas generan exactamente la misma secuencia de pacientes, diagnósticos y horas — útil para comparar escenarios o compartir un dataset descriptible.
 
@@ -281,7 +306,10 @@ Claves importantes y cómo verificarlas:
 | `RegistrationLocationUuid` | Locación de registro (Recepción) | `GET /location` |
 | `PatientIdentifierTypeUuid`, `TrackingIdentifierTypeUuid` | "OpenMRS ID" y "Old Identification Number" | `GET /patientidentifiertype` |
 | `AppointmentServiceUuid`, `AppointmentServiceTypeUuid` | Servicio de la agenda (vacío = citas desactivadas) | `GET /appointmentService/all/default` |
+| `TelephoneAttributeTypeUuid`, `CivilStatusAttributeTypeUuid` | Atributos de persona (vacío = paciente sin teléfono/estado civil) | `GET /personattributetype` |
 | `ProviderUuid`, `LocationUuid` | Fallback si no hay `consultorios.csv` | `GET /provider`, `GET /location` |
+
+> **Nota sobre `CivilStatusAttributeTypeUuid`**: ese attribute type es de formato *Concept*, así que el valor que se envía es el **UUID de la respuesta** del concepto "Estado civil" (`1054`), no un texto. Para listar las respuestas hay que pedir el concepto **por UUID con `v=full`** (`GET /concept/1054…?v=full`); en esta instancia `GET /concept?q=…` con representación personalizada de `answers` devuelve un NPE.
 
 > ⚠️ **Regla de oro**: cualquier UUID nuevo (diagnóstico, lab, programa…) debe verificarse contra **esta** instancia con `GET /concept?q=nombre`. Un UUID equivocado puede ser un concepto *válido pero distinto* — OpenMRS lo acepta sin error y el dato queda mal.
 
@@ -450,9 +478,10 @@ Los catálogos viven en `openmrs_seeder_v1/openmrs_seeder_v1/catalogs/` y son **
 | Archivo | Filas | Estado | Para qué sirve |
 |---------|:-----:|--------|----------------|
 | `epidemiology-profile.csv` | 47 | Completo | Peso de cada categoría diagnóstica por edad/género |
-| `diagnosticos.csv` | ~948 | Completo | Diagnósticos CIEL: categoría, severidad, edades, pesos M/F, `sexo`, `clima`, `cronica`, `comun`, `requiere_lab/rx`, `vital_fiebre`, `vital_imc` |
+| `diagnosticos.csv` | ~948 | Completo | Diagnósticos CIEL: categoría, severidad, edades, pesos M/F, `sexo`, `clima`, `cronica`, `comun`, `requiere_lab/rx`, y los overrides de vitales `vital_fiebre`, `vital_imc`, `vital_pa`, `vital_fc`, `vital_spo2` |
 | `medicamentos.csv` | ~30 | Completo | Fármacos reales del formulario, con columnas `aplica_<categoría>` |
 | `laboratorios.csv` | 27 | Completo | Pruebas + **columnas de resultado** (bandas normal/anormal, triggers por categoría o dx) |
+| `paneles.csv` | 4 | Opcional | Componentes de los paneles (hoy el hemograma: Hb, Hto, leucocitos, plaquetas); panel sin filas = la orden queda sin resultado |
 | `alergenos.csv` | 15 | Completo | Alérgenos DRUG/FOOD/ENVIRONMENT verificados |
 | `motivos_consulta.csv` | 37 | Completo | Frases de motivo de consulta en español por categoría |
 | `nombres.csv` / `apellidos.csv` | ~155 / ~200 | Completo | Nombres y apellidos centroamericanos (2+2 por paciente) |

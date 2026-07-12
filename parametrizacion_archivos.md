@@ -142,12 +142,19 @@ Todo el comportamiento del simulador se controla desde aquí.
 | Parámetro | Descripción | Cómo obtenerlo |
 |-----------|-------------|----------------|
 | `PatientIdentifierTypeUuid` | UUID del tipo de ID "OpenMRS ID" | `GET /ws/rest/v1/patientidentifiertype` |
+| `TrackingIdentifierTypeUuid` | Tipo de ID "Old Identification Number" — lleva el prefijo `SIM-` que hace idempotente al `clear` | `GET /ws/rest/v1/patientidentifiertype` |
 | `LocationUuid` | Ubicación de **respaldo** si no hay `catalogs/consultorios.csv` | `GET /ws/rest/v1/location` |
 | `RegistrationLocationUuid` | Ubicación de registro/admisión (Recepción) del identificador del paciente | `GET /ws/rest/v1/location` |
 | `VisitTypeUuid` | UUID del tipo de visita "OPD Visit" (consulta externa; `287463d3-…`) | `GET /ws/rest/v1/visittype` |
 | `VitalsEncounterTypeUuid` | UUID del tipo de encuentro "Vitals" | `GET /ws/rest/v1/encountertype` |
 | `ConsultaEncounterTypeUuid` | UUID del tipo de encuentro "Consultation" | `GET /ws/rest/v1/encountertype` |
 | `ProviderUuid` | Médico de **respaldo** si no hay `catalogs/consultorios.csv` | `GET /ws/rest/v1/provider` |
+| `EncounterRoleUuid` | Rol del médico en el encuentro ("Clinician") | `GET /ws/rest/v1/encounterrole` |
+| `OutpatientCareSettingUuid` | Care setting de las órdenes (ambulatorio) | `GET /ws/rest/v1/caresetting` |
+| `OnceDailyFrequencyUuid`, `DaysConceptUuid`, `TabletConceptUuid` | Frecuencia, unidad de duración y unidad de dosis de las prescripciones | `GET /ws/rest/v1/orderfrequency`, `GET /ws/rest/v1/concept?q=` |
+| `AppointmentServiceUuid` / `AppointmentServiceTypeUuid` | Servicio (y tipo) de la agenda Bahmni. **Vacío = no se agendan citas** | `GET /ws/rest/v1/appointmentService/all/default` |
+| `TelephoneAttributeTypeUuid` | Person attribute "Telephone Number" (formato String). **Vacío = paciente sin teléfono** | `GET /ws/rest/v1/personattributetype` |
+| `CivilStatusAttributeTypeUuid` | Person attribute "Civil Status" (formato **Concept** → el valor enviado es el UUID de una *answer* del concepto `1054`). **Vacío = paciente sin estado civil** | `GET /ws/rest/v1/personattributetype`; las answers, con `GET /concept/1054…?v=full` (⚠️ `?q=` con rep. personalizada de `answers` da NPE en esta instancia) |
 
 ---
 
@@ -475,7 +482,25 @@ Si el escenario "muda" la clínica a otra ciudad, basta reponderar el CSV con es
 
 ---
 
-## 10. catalogs/comorbilidad_afinidades.csv — Clusters de comorbilidad
+## 10c. Atributos de persona — teléfono y estado civil
+
+No son un catálogo: se generan por código (`PatientProfileGenerator`, con el `Random` sembrado, así
+que son reproducibles) y viajan **anidados** como `attributes:[{attributeType,value}]` dentro del
+`person` del `POST /patient`. Se activan solo si el UUID del attribute type está configurado en
+`OpenMRS.Defaults` (vacío = el paciente se crea sin ese atributo, mismo patrón que
+`AppointmentServiceUuid`).
+
+| Atributo | Formato | Cómo se genera |
+|----------|---------|----------------|
+| Teléfono (`TelephoneAttributeTypeUuid`) | String | Número salvadoreño sintético: móvil `7###-####` (~80 %) o fijo `2###-####` (~20 %). En menores de edad representa el contacto del tutor. Seam puro `GenerarTelefono`. |
+| Estado civil (`CivilStatusAttributeTypeUuid`) | **Concept** → el valor es el UUID de una *answer* del concepto `1054` | Coherente con la edad (seam puro `GenerarEstadoCivil(edad, rng)`): <18 siempre **soltero**; conforme sube la edad crece **casado/acompañado**; la **viudez** solo se vuelve visible en 65+. |
+
+> ⚠️ Para listar las answers de `1054` hay que pedir el concepto **por UUID con `v=full`**;
+> `GET /concept?q=…` con representación personalizada de `answers` devuelve NPE en esta instancia.
+
+---
+
+## 10d. catalogs/comorbilidad_afinidades.csv — Clusters de comorbilidad
 
 **Opcional.** Por cada categoría, las categorías clínicamente afines que reciben el `AffinityBoost`
 al elegir una comorbilidad. Así un diabético tiende a presentar enfermedad cardiovascular/endocrina.
@@ -626,5 +651,8 @@ Esto permite:
 | % de pacientes con alergias | `appsettings.json` → `Allergy.BaseProbabilityMin/Max` |
 | Cuántas alergias por paciente alérgico | `appsettings.json` → `Allergy.SecondAllergyProbability` / `ThirdAllergyProbability` / `MaxAllergies` |
 | Qué alérgenos pueden aparecer | `alergenos.csv` |
+| Qué vital dispara una enfermedad concreta | `diagnosticos.csv` → `vital_fiebre` / `vital_imc` / `vital_pa` / `vital_fc` / `vital_spo2` |
+| % de resultados de lab que llegan el mismo día (el resto se difiere) | `appsettings.json` → `ReferralProbabilities.LabResult` |
+| Que el paciente lleve teléfono / estado civil | `appsettings.json` → `Defaults.TelephoneAttributeTypeUuid` / `CivilStatusAttributeTypeUuid` (vacío = off) |
 | UUIDs de OpenMRS (location, visita, encuentro) | `appsettings.json` → `OpenMRS.Defaults` |
 | Reproducibilidad | `appsettings.json` → `RandomSeed` |
