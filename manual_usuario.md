@@ -11,7 +11,7 @@
 4. [Arranque del entorno](#4-arranque-del-entorno)
 5. [Configuración](#5-configuración)
 6. [Flujo completo de la simulación](#6-flujo-completo-de-la-simulación)
-7. [Cómo usar la API](#7-cómo-usar-la-api)
+7. [Cómo ejecutar el simulador](#7-cómo-ejecutar-el-simulador)
 8. [Catálogos CSV — qué son y cómo extenderlos](#8-catálogos-csv--qué-son-y-cómo-extenderlos)
 9. [Casos de uso prácticos](#9-casos-de-uso-prácticos)
 10. [Manejo del tiempo](#10-manejo-del-tiempo)
@@ -145,20 +145,21 @@ Los diagnósticos marcados `cronica=true` (HTA, diabetes, EPOC, epilepsia, VIH�
 
 > **Ejemplo**: paciente con dx de VIH → condición "Infección por VIH" en su problem list + inscripción en *HIV Care and Treatment* con estado inicial "On Antiretrovirals Treatment". Un diabético → programa *Outpatient Diabetes Education*.
 
-### 2.12 Citas reales en la agenda de O3
+### 2.12 La cita gobierna el retorno
 
-Cuando la consulta decide seguimiento (~30% de las visitas), además de la nota "Return visit date" se **agenda una cita real** (módulo Bahmni Appointments) 7–30 días después, con el médico y consultorio de la visita, en slots de 15 minutos entre 08:00 y 15:45. Cuando el paciente efectivamente vuelve, su cita pasa a **Completed** (si llegó a ±3 días) o **Missed** (si la dejó vencer) — no-shows incluidos.
+Cuando la consulta decide seguimiento, se agenda un control cuya fecha sale de la **banda de recurrencia** (agudo 7–21 d, crónico 30–120 d), no de un plazo plano. Esa fecha es a la vez la cita en la agenda de O3 (módulo Bahmni Appointments, con el médico/consultorio de la visita) y el estado interno `ProximaCita` del paciente. La probabilidad de agendar depende del cuadro: **crónico ≈0,90 · grave ≈0,80 · resto `FollowUp` (≈0,30)**.
 
-> **Ejemplo** (corrida de 1 mes): 91 citas agendadas → 84 quedaron *Scheduled* (a futuro o el paciente no volvió aún), 4 *Completed*, 3 *Missed*. El calendario por médico se ve poblado en la UI de O3.
+Al repartir el cupo de recurrentes de cada día, el simulador atiende **primero a los pacientes con cita para hoy** (±`ToleranciaDias`), cada uno con probabilidad `AsistenciaProb` (0,75); el resto del cupo se sortea. Así **vuelve el mismo paciente que tenía cita**, no uno al azar. Cuando llega, su cita pasa a **Completed** (si cae a ±tolerancia) o **Missed** (si la dejó vencer). La agenda deja de ser decorativa: la mayoría de las citas ya vencidas al cierre quedan resueltas (Completed/Missed), no *Scheduled* para siempre.
+
+> La feature de cita real de O3 requiere `Defaults.AppointmentServiceUuid`; si está vacío, la agenda **interna** sigue gobernando el retorno (solo no se crea el registro visible en O3).
 
 ### 2.13 Continuidad longitudinal (la historia tiene hilo)
 
-Dos mecanismos evitan el clásico defecto de los generadores de datos (cada visita con una enfermedad aleatoria nueva):
+Varios mecanismos evitan el clásico defecto de los generadores de datos (cada visita con una enfermedad, talla y comorbilidades aleatorias nuevas):
 
-- **Crónicos**: un paciente con HTA que vuelve tiene 70% de probabilidad de que la visita sea **control de su HTA** (no una queja nueva), con intervalo de control de 30–120 días.
+- **Crónicos**: un paciente con HTA que vuelve tiene 70% de probabilidad de que la visita sea **control de su HTA** (no una queja nueva), con intervalo de control de 30–120 días. En ese control su **lista de problemas es estable** (se reutilizan sus crónicas conocidas, no se sortean comorbilidades nuevas) y puede **repetir sus mismos labs y fármacos** una vez vencida la orden anterior (HbA1c y metformina control tras control).
 - **Agudos**: un paciente con neumonía que vuelve a los 7–21 días tiene 70% de probabilidad de que la visita sea **control de la misma neumonía** (dentro de una ventana de 30 días); la visita de control cierra el episodio.
-
-> **Efecto medido**: antes de esta lógica solo el 2,3% de las visitas consecutivas de un mismo paciente repetía diagnóstico; ahora ~62-64% (dengue→control de dengue a los 14 días, EDA→EDA a los 9, ITU→ITU a los 7).
+- **Físico**: su **talla es constante** entre visitas y su peso deriva poco alrededor del IMC basal; su **edad avanza** con el tiempo simulado (la franja de edad se recalcula desde la fecha de nacimiento).
 
 ### 2.14 Espaciamiento realista entre visitas
 
@@ -329,8 +330,11 @@ Claves importantes y cómo verificarlas:
 | `Comorbidity` | — | Prob. base, escalado por edad y boost de afinidad |
 | `Climate` | Enabled=true | Boost estacional y efecto en temperatura |
 | `Allergy` | 0.15–0.25 | Banda de prevalencia (sorteada por corrida) + decaída del nº |
-| `Recurrence` | 7–21 / 30–120 | Días mínimos entre visitas (agudo / crónico) |
-| `Appointments.ToleranciaDias` | 3 | Margen para marcar una cita como cumplida |
+| `Recurrence` | 7–21 / 30–120 | Días mínimos entre visitas = fecha de la cita de control (agudo / crónico) |
+| `Appointments.ToleranciaDias` | 3 | Margen para marcar una cita como cumplida y para atender al que vuelve a su cita |
+| `Appointments.AsistenciaProb` | 0.75 | Prob. de que un paciente con cita para hoy efectivamente asista (resto = no-show → Missed) |
+| `Orders.LabVigenciaDias` | 7 | Días que una orden de lab sigue activa (`autoExpireDate`) antes de poder re-ordenarse |
+| `Variedad.RepeticionDamping` | 0.25 | Amortiguación anti-repetición: baja el peso efectivo de un dx cada vez que sale (0 = off) |
 | `RandomSeed` | 42 | Reproducibilidad |
 
 **Probabilidades de derivación** (`ReferralProbabilities`):
@@ -341,8 +345,10 @@ Claves importantes y cómo verificarlas:
 | `DrugOrder` | 0.65 | Prescribir (sube a 90% si `requiere_rx`) |
 | `ClinicalExam` | 0.35 | Examen en consultorio: obs inmediata coherente (Glasgow, escala de dolor, flujo pico, FC fetal…) |
 | `Urgent` | 0.20 | Urgencia STAT del lab (50% si el dx es grave) |
-| `FollowUp` | 0.30 | Indicar seguimiento → obs "Return visit date" **+ cita en agenda** |
-| `LabResult` | 0.90 | Fracción de órdenes que reciben resultado el mismo día |
+| `FollowUp` | 0.30 | Indicar seguimiento (cuadro leve) → obs "Return visit date" **+ cita en agenda** |
+| `FollowUpCronico` | 0.90 | Prob. de seguimiento cuando el cuadro incluye una condición crónica |
+| `FollowUpGrave` | 0.80 | Prob. de seguimiento cuando el cuadro (no crónico) es grave |
+| `LabResult` | 0.90 | Fracción de órdenes que reciben resultado el mismo día (incluye paneles obs-group) |
 
 **Pesos por día de semana** (`WeekdayWeights`): Lun/Mar 1.20, Mié/Jue 1.00, Vie 0.90, Sáb 0.50, **Dom 0.00** (cerrado).
 
@@ -477,18 +483,18 @@ Los catálogos viven en `openmrs_seeder_v1/openmrs_seeder_v1/catalogs/` y son **
 
 | Archivo | Filas | Estado | Para qué sirve |
 |---------|:-----:|--------|----------------|
-| `epidemiology-profile.csv` | 47 | Completo | Peso de cada categoría diagnóstica por edad/género |
+| `epidemiology-profile.csv` | 73 | Completo | Peso de cada categoría diagnóstica por edad/género |
 | `diagnosticos.csv` | ~948 | Completo | Diagnósticos CIEL: categoría, severidad, edades, pesos M/F, `sexo`, `clima`, `cronica`, `comun`, `requiere_lab/rx`, y los overrides de vitales `vital_fiebre`, `vital_imc`, `vital_pa`, `vital_fc`, `vital_spo2` |
-| `medicamentos.csv` | ~30 | Completo | Fármacos reales del formulario, con columnas `aplica_<categoría>` |
+| `medicamentos.csv` | ~30 | Completo | Fármacos reales del formulario, con columnas `aplica_<categoría>` y posología opcional (`dosis`, `unidad_dosis_uuid`, `frecuencia_uuid`, `dias_tratamiento`) |
 | `laboratorios.csv` | 27 | Completo | Pruebas + **columnas de resultado** (bandas normal/anormal, triggers por categoría o dx) |
 | `paneles.csv` | 4 | Opcional | Componentes de los paneles (hoy el hemograma: Hb, Hto, leucocitos, plaquetas); panel sin filas = la orden queda sin resultado |
-| `alergenos.csv` | 15 | Completo | Alérgenos DRUG/FOOD/ENVIRONMENT verificados |
-| `motivos_consulta.csv` | 37 | Completo | Frases de motivo de consulta en español por categoría |
+| `alergenos.csv` | 21 | Completo | Alérgenos DRUG/FOOD/ENVIRONMENT verificados |
+| `motivos_consulta.csv` | 86 | Completo | Frases de motivo de consulta en español por categoría |
 | `nombres.csv` / `apellidos.csv` | ~155 / ~200 | Completo | Nombres y apellidos centroamericanos (2+2 por paciente) |
 | `direcciones.csv` | ~142 | Opcional | Colonias/barrios/cantones de los 14 departamentos de El Salvador, con peso (captación de la clínica); ausente = direcciones genéricas |
 | `consultorios.csv` | 3-4 | Opcional | Consultorios + médico; vacío = un solo médico/locación por defecto |
 | `programas.csv` | 2 | Opcional | Programas de atención y sus disparadores (dx o categoría) |
-| `clima.csv` | 52 | Opcional | Estación por semana ISO; ausente = sin estacionalidad |
+| `clima.csv` | 53 | Opcional | Estación por semana ISO; ausente = sin estacionalidad |
 | `comorbilidad_afinidades.csv` | 13 | Opcional | Qué categorías "atraen" a cuáles como comorbilidad |
 | `examenes_clinicos.csv` | 10 | Completo | Exámenes en consultorio (Glasgow, dolor, flujo pico, PHQ-4, FC fetal, altura uterina, reflejos, agudeza visual, monofilamento, edema) — UUIDs verificados con datatype+clase |
 
@@ -565,7 +571,7 @@ Correr ≥3 meses. Buscar un paciente con HTA o diabetes en su problem list: sus
 "PacientesPorDiaMedio": 30, "RandomSeed": 777
 ```
 
-Misma seed + misma config = mismo dataset exacto. Limpiar con `DELETE /clear` y volver a correr para regenerarlo idéntico.
+Misma seed + misma config = mismo dataset exacto. Limpiar con `dotnet run -- clear` y volver a correr para regenerarlo idéntico.
 
 ### Caso 6 — Escenario de alta carga cardiovascular
 
@@ -614,15 +620,15 @@ PicoAM (40%): 08:00–10:00 · PicoPM (30%): 13:00–15:00 · Resto (30%): 07:00
 | Inicio de visita / vitales | `VisitDatetime` |
 | Consulta médica | `VisitDatetime + 30 min` (el médico atiende tras el triaje) |
 | Cierre de visita | `VisitDatetime + 1–4 h` |
-| Cita de seguimiento | 7–30 días después, slot de 15 min entre 08:00 y 15:45 |
+| Cita de seguimiento | banda de recurrencia (agudo 7–21 d, crónico 30–120 d), slot de 15 min entre 08:00 y 15:45 |
 
 ### 10.5 Formato de fecha enviado a OpenMRS
 
 ```
-"2024-03-15T09:45:00.000+0000"   (UTC)
+"2024-03-15T09:45:00.000-06:00"   (con Simulation.UtcOffset = "-06:00")
 ```
 
-Si la instancia tiene zona horaria local configurada (p. ej. UTC−6 El Salvador), la UI mostrará las horas desplazadas. Es el comportamiento estándar de OpenMRS, no un bug del simulador.
+Las fechas se envían con el **offset UTC** configurado en `Simulation.UtcOffset` (vacío = UTC `+0000`, comportamiento histórico). Debe coincidir con la zona horaria del backend (p. ej. `America/El_Salvador`, UTC−6) para que la UI de O3 muestre las horas como hora local correcta. Si se cambia el offset después de insertar datos, los ya insertados quedan con el offset anterior — pensado para fijarse antes de regenerar.
 
 ### 10.6 Fecha de nacimiento
 
@@ -667,7 +673,7 @@ La latencia típica en instancia local es 80–150 ms/request. La corrida es sec
 ### Reglas de idempotencia
 
 - **Pacientes reales nunca se tocan** (no tienen prefijo `SIM-`).
-- Cada `POST /run` crea pacientes nuevos con identificadores únicos — no hay colisión, pero sí dos "poblaciones" si no se limpia entre corridas.
+- Cada ejecución (`dotnet run`) crea pacientes nuevos con identificadores únicos — no hay colisión, pero sí dos "poblaciones" si no se limpia entre corridas.
 - Si OpenMRS rechaza una visita por solapamiento (`visitCannotOverlapAnother`), el simulador reutiliza la visita activa existente en lugar de fallar.
 - Los médicos del catálogo se crean **solo si no existen** (búsqueda exacta por identificador antes de crear).
 
@@ -750,7 +756,7 @@ Fallo del proceso completo (no de un paciente). Causas típicas: OpenMRS caído 
 
 ### Las horas aparecen desfasadas en la UI de O3
 
-Las fechas se envían en UTC (`+0000`); si la instancia tiene zona horaria local, la UI las desplaza. Comportamiento estándar de OpenMRS (ver §10.5).
+Casi siempre es un `Simulation.UtcOffset` que **no coincide** con la zona horaria del backend. Fijar `UtcOffset` al offset de la instancia (p. ej. `"-06:00"` para `America/El_Salvador`) para que la UI muestre la hora local correcta; dejarlo vacío envía en UTC (`+0000`) y una instancia con TZ local desplazará las horas (ver §10.5).
 
 ### Windows bloquea los binarios recién compilados
 
@@ -762,9 +768,9 @@ El concepto no admite decimales (`concept_numeric.allow_decimal=0`). El generado
 
 ### No se crean citas en la agenda
 
-- `Defaults.AppointmentServiceUuid` vacío = funcionalidad desactivada (comportamiento intencional).
+- `Defaults.AppointmentServiceUuid` vacío = funcionalidad desactivada (comportamiento intencional). Aun así la agenda interna (`ProximaCita`) gobierna el retorno del paciente; solo no se crea el registro de cita en O3.
 - Verificar que el servicio existe: `GET /appointmentService/all/default`.
-- Solo ~30% de las visitas (las que disparan `FollowUp`) generan cita.
+- La probabilidad de agendar control depende del cuadro: crónico ≈0,90, grave ≈0,80, resto `ReferralProbabilities.FollowUp` (≈0,30).
 
 ### El subcomando `clear` es muy lento
 
@@ -782,9 +788,9 @@ Para quien quiera extender el simulador sin romper su coherencia:
 
 **Catálogos CSV, no código.** Cualquier persona puede ampliar el conocimiento clínico (diagnósticos, pesos, fármacos, programas) editando CSVs, sin tocar C#. La contracara: los UUIDs de los CSV son de **una instancia concreta** y deben verificarse al migrar a otra.
 
-**Seams puros y testeables.** Toda decisión probabilística o de clasificación (selección de diagnóstico, comorbilidades, vitales, resultados de lab, clasificación de citas, roster de médicos, elegibilidad de recurrentes) está aislada en funciones puras con RNG inyectado, cubiertas por la suite de tests (`dotnet test`, 128 tests). Las llamadas HTTP quedan en la cáscara de los seeders.
+**Seams puros y testeables.** Toda decisión probabilística o de clasificación (selección de diagnóstico, comorbilidades, vitales, resultados de lab, clasificación de citas, probabilidad de seguimiento, selección de recurrentes por cita, vigencia de órdenes, grupo de edad, roster de médicos) está aislada en funciones puras con RNG inyectado, cubiertas por la suite de tests (`dotnet test`, 210 tests). Las llamadas HTTP quedan en la cáscara de los seeders.
 
-**Estado compartido del paciente en el pool.** Las colecciones del paciente (problem list, programas, citas pendientes, crónicas activas) se comparten **por referencia** entre la copia del pool y la copia de cada visita recurrente — así la historia del paciente es acumulativa a lo largo de la simulación.
+**Estado compartido del paciente en el pool.** Las colecciones y rasgos del paciente (problem list, programas, citas pendientes, crónicas activas, vigencia de órdenes, talla e IMC basal) se comparten/heredan entre la copia del pool y la copia de cada visita recurrente — así la historia del paciente es acumulativa y físicamente coherente a lo largo de la simulación.
 
 **Encadenamiento de UUIDs.** Cada seeder escribe en `SimulatedPatient` los UUIDs que crea (visita, encuentro, orden) para que el siguiente los use. Si un seeder falla, los siguientes hacen skip y el error queda registrado sin detener la corrida.
 

@@ -110,10 +110,14 @@ Todo el comportamiento del simulador se controla desde aquí.
 | `ReferralProbabilities.ClinicalExam` | float (0-1) | Probabilidad base de examen en consultorio (obs inmediata). |
 | `ReferralProbabilities.DrugOrder` | float (0-1) | Probabilidad base de prescripción de medicamento. |
 | `ReferralProbabilities.Urgent` | float (0-1) | Probabilidad de que una orden de lab sea URGENTE. |
-| `ReferralProbabilities.FollowUp` | float (0-1) | Probabilidad de registrar una cita de control: obs fecha "Return visit date" (`5096`) 7–30 días después de la visita **+ cita real en la agenda** (Bahmni Appointments) con el médico/consultorio de la visita, si `Defaults.AppointmentServiceUuid` está configurado. |
-| `Appointments.ToleranciaDias` | int (días) | Resolución de citas al volver el paciente: cita a ±tolerancia de la visita → `Completed`; anterior a la ventana → `Missed` (no-show); futura → sigue `Scheduled` (def. 3). |
+| `ReferralProbabilities.FollowUp` | float (0-1) | Probabilidad de registrar una cita de control **cuando el cuadro es leve**: obs fecha "Return visit date" (`5096`) en la fecha de la banda de recurrencia (agudo 7–21 d / crónico 30–120 d) **+ cita real en la agenda** (Bahmni Appointments) con el médico/consultorio de la visita, si `Defaults.AppointmentServiceUuid` está configurado (def. 0.30). |
+| `ReferralProbabilities.FollowUpCronico` | float (0-1) | Probabilidad de agendar control cuando el cuadro incluye una condición crónica (def. 0.90). |
+| `ReferralProbabilities.FollowUpGrave` | float (0-1) | Probabilidad de agendar control cuando el cuadro (no crónico) es grave (def. 0.80). |
+| `Appointments.ToleranciaDias` | int (días) | Resolución de citas al volver el paciente: cita a ±tolerancia de la visita → `Completed`; anterior a la ventana → `Missed` (no-show); futura → sigue `Scheduled`. También es el margen con que la selección de recurrentes atiende a quien tiene cita para hoy (def. 3). |
+| `Appointments.AsistenciaProb` | float (0-1) | Probabilidad de que un paciente con cita para hoy (±tolerancia) efectivamente asista; el resto son no-shows cuya cita, al vencer, pasa a `Missed` (def. 0.75). |
+| `Orders.LabVigenciaDias` | int (días) | Días que una orden de laboratorio sigue activa (`autoExpireDate`). Mientras esté vigente no se re-ordena el mismo test; pasado el plazo, un control crónico puede volver a pedirlo (def. 7). |
 | `Variedad.RepeticionDamping` | float (≥0) | Amortiguación anti-repetición: cada vez que un dx sale en la corrida su peso efectivo baja (`peso / (1 + damping × usos)`) → se explora la cola larga del catálogo (~950 dx). No altera el perfil por edad/sexo/clima ni los controles crónicos/agudos. `0` = apagado (def. 0.25). |
-| `ReferralProbabilities.LabResult` | float (0-1) | Fracción de órdenes de lab numéricas/codificadas que "vuelven" con un resultado el mismo día (obs ligada a la orden). El resto queda pendiente (def. 0.90). Paneles e imágenes nunca registran valor. |
+| `ReferralProbabilities.LabResult` | float (0-1) | Fracción de órdenes de lab numéricas/codificadas y **paneles** (obs-group) que "vuelven" con resultado el mismo día. El resto queda pendiente (def. 0.90). Las imágenes ordenan pero no registran valor. |
 | `MinMedicosPorDia` / `MaxMedicosPorDia` | int | Roster diario: cada día se activan aleatoriamente entre `Min` y `Max` médicos del pool de `consultorios.csv` (def. 2/3). Pool ≤ Min = todos disponibles. |
 | `Allergy.BaseProbabilityMin` / `BaseProbabilityMax` | float (0-1) | Banda de prevalencia de alergias: cada corrida sortea su valor en `[min,max]` (def. 0.15–0.25, fracción clínicamente documentada del ~25-30% poblacional) → el % de pacientes nuevos alérgicos varía entre corridas. |
 | `Allergy.SecondAllergyProbability` | float (0-1) | Dado que el paciente ya tiene 1 alergia, probabilidad de sumar una 2ª (decaída condicional). |
@@ -261,7 +265,13 @@ SAMPLE_metformina,Metformina,850mg,SAMPLE_oral,false,false,true,false,false,fals
 | `strength` | Concentración (ej: `500mg`, `10mg`, `100mcg`) |
 | `via_uuid` | UUID CIEL de la vía de administración (oral, inhalado, IV, IM) |
 | `aplica_CATEGORIA` | `true`/`false` — si este medicamento es coherente para esa categoría diagnóstica |
+| `dosis` | *(opcional)* Dosis por toma (`1`, `0.5`, `5`). Vacío = `1` |
+| `unidad_dosis_uuid` | *(opcional)* UUID de la unidad de dosis (tableta, mL, mg). Vacío = tableta (`Defaults.TabletConceptUuid`) |
+| `frecuencia_uuid` | *(opcional)* UUID de la frecuencia (cada 8 h, dos veces al día). Vacío = una vez al día (`Defaults.OnceDailyFrequencyUuid`) |
+| `dias_tratamiento` | *(opcional)* Días de tratamiento. Vacío/`0` = duración aleatoria (7/14/30) |
 
+> **Posología opcional**: las cuatro últimas columnas son opcionales (el loader tolera su ausencia → comportamiento histórico: 1 tableta / una vez al día). Para usarlas hay que **verificar los UUID contra la instancia** (`GET /ws/rest/v1/orderfrequency`, `GET /ws/rest/v1/concept?q=`); un UUID inexistente rompería esa orden, así que ante la duda dejar la celda vacía.
+>
 > **Nota**: Los valores actuales usan prefijo `SAMPLE_` en los UUIDs. Deben reemplazarse con UUIDs reales extraídos de la DB OpenMRS (Query 2 en `fases_implementacion.md`).
 
 ---

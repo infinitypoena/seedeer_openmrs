@@ -369,6 +369,24 @@ Verificación final del paquete (al cerrar P6–P7): corrida de 1 mes comproband
 0 citas `Scheduled` vencidas, hemograma con `groupMembers`, resultados retrasados en segunda visita,
 atributos en `person_attribute`, vitales con distribución idéntica al hardcodeado.
 
+### Cierre de brechas de realismo longitudinal (Bloques 1–6, jul 2026)
+
+Auditoría del código vs. la historia esperada de un crónico a un año: la agenda no hacía volver al
+paciente, un crónico nunca repetía lab/fármaco, y su talla/edad/comorbilidades eran incoherentes.
+
+| # | Punto | Estado | Notas |
+|---|-------|--------|-------|
+| B2 | Órdenes repetibles: `OrderedConcepts` HashSet→`Dictionary<uuid,vigenteHasta>`, `autoExpireDate`, `Orders.LabVigenciaDias` | `[x]` | Seam `OrderVigencia.EstaActivo` + tests |
+| B1 | La cita gobierna el retorno: `SeguimientoPolicy` (dx-condicionado) + `RecurrentSelector` (cita hoy ±tol, `Appointments.AsistenciaProb`) + unificación cita=próxima elegible | `[x]` | Seams + tests |
+| B3 | Continuidad física: `TallaCm`/`ImcBasal` persistentes, talla pediátrica por edad, `GrupoEdad` recalculado | `[x]` | Seams `GrupoEdad`/`EdadEnMeses`/`TallaPediatricaCm` + tests |
+| B4 | Coherencia de la visita: A6 examen por unión de categorías · A8 obs fechadas con `FechaConsulta` · A9 comorbilidades estables en control · A10 Ctrl+C limpio (`ErrorTally.MarcarCancelacion`) · A11 relleno de cupo con nuevos | `[x]` | — |
+| B5 | Posología de catálogo: columnas opcionales `dosis`/`unidad_dosis_uuid`/`frecuencia_uuid`/`dias_tratamiento` (vacías = 1 tableta/una vez al día) | `[x]` | Verificar UUID de frecuencia/unidad contra la instancia antes de poblar |
+| B6 | Documentación: `manual_usuario.md`, `parametrizacion_archivos.md`, `CLAUDE.md`, este registro | `[x]` | UTC→`UtcOffset`, CLI batch, conteos 21/86/73/53, TOC §7, nº tests, docstring `LabResult`, `RepeticionDamping` |
+
+Verificación end-to-end pendiente (requiere instancia): agenda ≥60 % citas vencidas en `Completed`;
+crónico con ≥3 controles con ≥2 HbA1c y ≥2 recetas del mismo fármaco y problem list estable; una sola
+talla por adulto; 0 obs con `obs_datetime` < `encounter_datetime`; 0 `AmbiguousOrderException`.
+
 ---
 
 ## Registro de cambios
@@ -387,6 +405,7 @@ atributos en `person_attribute`, vitales con distribución idéntica al hardcode
 | 2026-06-19 | 10 | Fase 10 completada: manual_usuario.md con sección detallada de manejo del tiempo |
 | 2026-06 | 6-9 | Fases 6-9 completadas: LabOrderSeeder, PrescriptionSeeder + AllergySeeder, SeedOrchestrator + VisitCloseSeeder, DELETE /clear. Validación superada; corridas de año completo (2023 y 2024) |
 | 2026-06/07 | — | Iteración de realismo (post-fases, ver bullets en CLAUDE.md): comorbilidad, clima estacional, consultorios + médico de cabecera, problem list (crónicas), nombres únicos centroamericanos, continuidad de crónicos, espaciamiento entre visitas, coherencia por sexo, localización es de conceptos CIEL |
+| 2026-07 | — | Cierre de brechas longitudinales (Bloques 1–6): la cita gobierna el retorno, órdenes repetibles por vigencia, talla/IMC/edad persistentes, coherencia de la visita (A6/A8/A9/A10/A11), posología de catálogo, y sincronización documental. +33 tests (177→210) |
 | 2026-07 | — | Roster diario de médicos (2-3/día) + resultados de laboratorio ligados a la orden (ciclo orden→resultado) |
 | 2026-07 | — | Inscripción a programas de atención (HIV Care and Treatment, Diabetes Education) vía POST /programenrollment |
 | 2026-07 | — | Citas reales en la agenda O3 (Bahmni Appointments): FollowUp agenda cita; al volver el paciente se marca Completed/Missed. Fix precisión ASAT/amilasa (allow_decimal=0) |

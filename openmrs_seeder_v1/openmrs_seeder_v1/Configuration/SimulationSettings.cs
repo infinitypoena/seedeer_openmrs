@@ -234,7 +234,8 @@ public class ReferralProbabilitiesSettings
     /// <summary>
     /// Fracción de órdenes de laboratorio que "vuelven" con un resultado el mismo día (obs ligada a
     /// la orden). El resto queda pendiente (sin resultado), como en una clínica real. Def. 0.90.
-    /// Solo aplica a tests numéricos/codificados; paneles e imágenes nunca registran valor en v1.
+    /// Aplica a tests numéricos/codificados y a paneles (registran obs-group con sus componentes);
+    /// las imágenes sí ordenan pero no registran valor.
     /// </summary>
     public double LabResult { get; set; } = 0.90;
 }
