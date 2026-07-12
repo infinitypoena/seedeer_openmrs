@@ -15,6 +15,7 @@ public class LabOrderSeeder
     private readonly double _labOrderProb;
     private readonly double _urgentProb;
     private readonly double _labResultProb;
+    private readonly int _labVigenciaDias;
     private readonly Random _rng;
     private readonly ILogger<LabOrderSeeder> _logger;
 
@@ -31,6 +32,7 @@ public class LabOrderSeeder
         _labOrderProb  = simSettings.ReferralProbabilities.LabOrder;
         _urgentProb    = simSettings.ReferralProbabilities.Urgent;
         _labResultProb = simSettings.ReferralProbabilities.LabResult;
+        _labVigenciaDias = simSettings.Orders.LabVigenciaDias;
         _rng = new Random(simSettings.RandomSeed + 14);
         _logger        = logger;
     }
@@ -49,9 +51,10 @@ public class LabOrderSeeder
 
         if (!debeOrden) return;
 
+        var fechaVisita = DateOnly.FromDateTime(patient.VisitDatetime);
         var candidatos = _catalogs.Laboratorios
             .Where(l => patient.Categorias.Any(c => AplicaCategoria(l, c)))
-            .Where(l => !patient.OrderedConcepts.Contains(l.CielUuid)) // evita re-ordenar lo ya activo
+            .Where(l => !OrderVigencia.EstaActivo(patient.OrderedConcepts, l.CielUuid, fechaVisita)) // solo si no hay una orden aún vigente
             .ToList();
 
         if (candidatos.Count == 0) return;
@@ -74,7 +77,9 @@ public class LabOrderSeeder
             if (orderUuid is null) continue;
 
             ordenesOk++;
-            patient.OrderedConcepts.Add(lab.CielUuid);
+            // La orden queda activa hasta su autoExpireDate (fecha de la visita + vigencia): hasta
+            // entonces no se re-ordena el mismo test; después, un control crónico vuelve a pedirlo.
+            patient.OrderedConcepts[lab.CielUuid] = fechaVisita.AddDays(_labVigenciaDias);
 
             // Generar el resultado con el contexto clínico de ESTA visita (aunque se registre después)
             var result = LabResultGenerator.Generar(lab, categorias, dxUuids, _rng);
@@ -186,7 +191,11 @@ public class LabOrderSeeder
             // Sin esto OpenMRS usa el reloj real: la orden quedaba fechada el día de la corrida,
             // no el de la visita simulada. Debe coincidir con el datetime del encounter de consulta
             // (no puede ser anterior a él).
-            dateActivated = VisitSeeder.FormatDatetime(ConsultaSeeder.FechaConsulta(patient))
+            dateActivated = VisitSeeder.FormatDatetime(ConsultaSeeder.FechaConsulta(patient)),
+            // Caducidad: pasada la vigencia la orden deja de estar activa, así un control crónico
+            // posterior puede volver a pedir el mismo test sin AmbiguousOrderException.
+            autoExpireDate = VisitSeeder.FormatDatetime(
+                ConsultaSeeder.FechaConsulta(patient).AddDays(_labVigenciaDias))
         };
 
         try

@@ -102,6 +102,10 @@ public static class SettingsValidator
         // Variedad
         NoNegativo(sim.Variedad.RepeticionDamping, "Variedad.RepeticionDamping");
 
+        // Órdenes
+        if (sim.Orders.LabVigenciaDias < 1)
+            violaciones.Add($"Orders.LabVigenciaDias debe ser al menos 1 (valor: {sim.Orders.LabVigenciaDias})");
+
         // Pesos por día de semana
         var w = sim.WeekdayWeights;
         NoNegativo(w.Monday, "WeekdayWeights.Monday");

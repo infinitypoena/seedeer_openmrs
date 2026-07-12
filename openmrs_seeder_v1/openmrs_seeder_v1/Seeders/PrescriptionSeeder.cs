@@ -46,9 +46,10 @@ public class PrescriptionSeeder
 
         if (!debeRx) return;
 
+        var fechaVisita = DateOnly.FromDateTime(patient.VisitDatetime);
         var candidatos = _catalogs.Medicamentos
             .Where(m => patient.Categorias.Any(c => AplicaCategoria(m, c)))
-            .Where(m => !patient.OrderedConcepts.Contains(m.ConceptUuid)) // evita re-ordenar lo ya activo
+            .Where(m => !OrderVigencia.EstaActivo(patient.OrderedConcepts, m.ConceptUuid, fechaVisita)) // solo si no hay una receta aún vigente
             .ToList();
 
         if (candidatos.Count == 0) return;
@@ -59,8 +60,10 @@ public class PrescriptionSeeder
         int rxOk = 0;
         foreach (var med in elegidos)
         {
-            var ok = await PostDrugOrderAsync(patient, med, ct);
-            if (ok) { rxOk++; patient.OrderedConcepts.Add(med.ConceptUuid); }
+            var duracion = Duraciones[_rng.Next(Duraciones.Length)];
+            var ok = await PostDrugOrderAsync(patient, med, duracion, ct);
+            // La receta expira sola por su duración: queda vigente hasta fecha de visita + duración.
+            if (ok) { rxOk++; patient.OrderedConcepts[med.ConceptUuid] = fechaVisita.AddDays(duracion); }
         }
         _logger.LogInformation("[Prescription] {N}/{Total} prescripciones para {Id}",
             rxOk, elegidos.Count, patient.Identifier);
@@ -69,10 +72,9 @@ public class PrescriptionSeeder
     private async Task<bool> PostDrugOrderAsync(
         SimulatedPatient patient,
         Models.Catalogs.MedicamentoEntry med,
+        int duracion,
         CancellationToken ct)
     {
-        var duracion = Duraciones[_rng.Next(Duraciones.Length)];
-
         var payload = new
         {
             type          = "drugorder",

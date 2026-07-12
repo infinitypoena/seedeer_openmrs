@@ -67,11 +67,13 @@ public class SimulatedPatient
     /// <summary>Datetime de la visita (fecha simulada + hora realista del día)</summary>
     public DateTime VisitDatetime { get; set; }
     /// <summary>
-    /// Conceptos (fármacos/labs) ya ordenados para esta persona durante la simulación.
-    /// Evita el AmbiguousOrderException de OpenMRS al re-ordenar lo mismo en visitas recurrentes.
-    /// Las visitas recurrentes comparten esta colección con el paciente original.
+    /// Conceptos (fármacos/labs) ordenados para esta persona → fecha hasta la que la orden sigue ACTIVA
+    /// (vigencia: <c>autoExpireDate</c> del lab o <c>dateActivated + duración</c> del fármaco). Evita el
+    /// AmbiguousOrderException de OpenMRS solo mientras la orden vive; pasada la vigencia, un control
+    /// crónico vuelve a ordenar el mismo lab/fármaco (ver <see cref="Services.OrderVigencia"/>).
+    /// Las visitas recurrentes comparten esta colección por referencia con el paciente original.
     /// </summary>
-    public HashSet<string> OrderedConcepts { get; set; } = [];
+    public Dictionary<string, DateOnly> OrderedConcepts { get; set; } = [];
     /// <summary>Estación climática activa en la fecha de la visita (null si no hay catálogo de clima).</summary>
     public string? ClimaEstacion { get; set; }
     /// <summary>Temperatura ambiente promedio (°C) de la semana de la visita (null si no aplica).</summary>

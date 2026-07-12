@@ -60,6 +60,18 @@ public class SimulationSettings
     public RecurrenceSettings Recurrence { get; set; } = new();
     public AppointmentsSettings Appointments { get; set; } = new();
     public VariedadSettings Variedad { get; set; } = new();
+    public OrdersSettings Orders { get; set; } = new();
+}
+
+/// <summary>Parámetros de las órdenes clínicas (labs y prescripciones).</summary>
+public class OrdersSettings
+{
+    /// <summary>
+    /// Días de vigencia de una orden de laboratorio (su <c>autoExpireDate</c>). Mientras la orden esté
+    /// vigente, el mismo test no se vuelve a pedir (evita el AmbiguousOrderException); pasado ese plazo,
+    /// un control crónico puede re-ordenarlo. Las prescripciones expiran solas por su <c>duration</c>.
+    /// </summary>
+    public int LabVigenciaDias { get; set; } = 7;
 }
 
 /// <summary>
