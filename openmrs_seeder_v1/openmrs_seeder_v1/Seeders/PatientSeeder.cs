@@ -22,13 +22,35 @@ public class PatientSeeder
 
     public async Task<string?> CreateAsync(SimulatedPatient patient, CancellationToken ct)
     {
+        // Registro del paciente en Recepción/Admisión (no en un consultorio); fallback a LocationUuid
+        var registrationLocation = string.IsNullOrEmpty(_settings.Defaults.RegistrationLocationUuid)
+            ? _settings.Defaults.LocationUuid
+            : _settings.Defaults.RegistrationLocationUuid;
+
+        // Atributos de persona (teléfono, estado civil): solo si el attribute type está configurado
+        // Y el generador produjo valor (vacío = feature off, patrón AppointmentServiceUuid).
+        var atributos = new List<object>();
+        if (!string.IsNullOrEmpty(_settings.Defaults.TelephoneAttributeTypeUuid) &&
+            !string.IsNullOrEmpty(patient.Telefono))
+            atributos.Add(new { attributeType = _settings.Defaults.TelephoneAttributeTypeUuid, value = patient.Telefono });
+        if (!string.IsNullOrEmpty(_settings.Defaults.CivilStatusAttributeTypeUuid) &&
+            !string.IsNullOrEmpty(patient.EstadoCivilUuid))
+            atributos.Add(new { attributeType = _settings.Defaults.CivilStatusAttributeTypeUuid, value = patient.EstadoCivilUuid });
+
         var payload = new
         {
             person = new
             {
                 names = new[]
                 {
-                    new { givenName = patient.GivenName, familyName = patient.FamilyName, preferred = true }
+                    new
+                    {
+                        givenName   = patient.GivenName,
+                        middleName  = patient.SecondGivenName,
+                        familyName  = patient.FamilyName,
+                        familyName2 = patient.SecondFamilyName,
+                        preferred   = true
+                    }
                 },
                 gender    = patient.Gender,
                 birthdate = patient.BirthDate.ToString("yyyy-MM-dd"),
@@ -36,12 +58,15 @@ public class PatientSeeder
                 {
                     new
                     {
-                        address1    = patient.Address1,
-                        cityVillage = patient.City,
-                        country     = "España",
-                        preferred   = true
+                        address1      = patient.Address1,
+                        cityVillage   = patient.City,
+                        stateProvince = patient.StateProvince,
+                        // Vacío = fallback histórico Bogus (catálogo de direcciones ausente)
+                        country       = string.IsNullOrEmpty(patient.Country) ? "España" : patient.Country,
+                        preferred     = true
                     }
-                }
+                },
+                attributes = atributos.Count == 0 ? null : atributos.ToArray()
             },
             identifiers = new object[]
             {
@@ -50,7 +75,7 @@ public class PatientSeeder
                 {
                     identifier     = LuhnMod30Generator.Next(),
                     identifierType = _settings.Defaults.PatientIdentifierTypeUuid,
-                    location       = _settings.Defaults.LocationUuid,
+                    location       = registrationLocation,
                     preferred      = false
                 },
                 // Old Identification Number: prefijo SIM- para identificar y borrar datos simulados
@@ -58,7 +83,7 @@ public class PatientSeeder
                 {
                     identifier     = patient.Identifier,
                     identifierType = _settings.Defaults.TrackingIdentifierTypeUuid,
-                    location       = _settings.Defaults.LocationUuid,
+                    location       = registrationLocation,
                     preferred      = true
                 }
             }

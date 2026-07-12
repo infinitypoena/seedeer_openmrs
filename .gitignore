@@ -13,12 +13,17 @@ obj/
 appsettings.json
 appsettings.*.json
 !appsettings.example.json
-!appsettings.Development.json
 docker/.env
+
+# ── Configuración local de Claude Code (por máquina) ──────────────────────────
+.claude/
 
 # ── OS ────────────────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
+
+# ── Respaldos de la BD (scripts/backup_openmrs.ps1) ───────────────────────────
+backups/
 
 # ── Publicación y NuGet ───────────────────────────────────────────────────────
 publish/

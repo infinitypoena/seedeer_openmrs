@@ -26,7 +26,7 @@ public class VisitSeeder
             patient       = patient.OpenMrsUuid,
             visitType     = _settings.Defaults.VisitTypeUuid,
             startDatetime = FormatDatetime(patient.VisitDatetime),
-            location      = _settings.Defaults.LocationUuid
+            location      = patient.AssignedLocationUuid ?? _settings.Defaults.LocationUuid
         };
 
         try
@@ -79,6 +79,24 @@ public class VisitSeeder
         return null;
     }
 
-    internal static string FormatDatetime(DateTime dt) =>
-        dt.ToString("yyyy-MM-dd'T'HH:mm:ss.000+0000");
+    /// <summary>
+    /// Offset UTC adjuntado a TODA fecha enviada a OpenMRS (formato "±HHmm"). Se fija una vez al
+    /// arranque desde <c>Simulation.UtcOffset</c> (Program.cs). "+0000" = UTC (comportamiento
+    /// histórico); "-0600" = hora de El Salvador, para que las horas se lean como hora local en la
+    /// UI cuando el backend tiene TZ America/El_Salvador.
+    /// </summary>
+    public static string UtcOffset { get; set; } = "+0000";
+
+    public static string FormatDatetime(DateTime dt) =>
+        dt.ToString("yyyy-MM-dd'T'HH:mm:ss.000") + UtcOffset;
+
+    /// <summary>Seam puro: normaliza el offset de config ("-06:00", "-0600", "" → "±HHmm").</summary>
+    public static string NormalizarOffset(string? offset)
+    {
+        if (string.IsNullOrWhiteSpace(offset)) return "+0000";
+        var limpio = offset.Trim().Replace(":", "");
+        if (!System.Text.RegularExpressions.Regex.IsMatch(limpio, @"^[+-]\d{4}$"))
+            throw new FormatException($"UtcOffset inválido: '{offset}' (esperado ±HH:mm, p.ej. -06:00)");
+        return limpio;
+    }
 }

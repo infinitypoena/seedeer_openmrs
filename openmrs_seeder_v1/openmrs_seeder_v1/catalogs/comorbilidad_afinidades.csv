@@ -1,0 +1,14 @@
+categoria,afines
+diabetes,cardiovascular|endocrino|neurologico
+cardiovascular,diabetes|endocrino|neurologico
+endocrino,diabetes|cardiovascular
+respiratorio,infeccioso
+infeccioso,respiratorio|digestivo|dermatologico
+digestivo,infeccioso
+neurologico,cardiovascular|diabetes|salud_mental
+salud_mental,neurologico
+dermatologico,infeccioso
+ginecoobstetrico,urologico
+urologico,ginecoobstetrico
+osteomuscular,trauma
+trauma,osteomuscular

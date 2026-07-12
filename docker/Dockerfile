@@ -5,9 +5,8 @@ RUN dotnet restore
 COPY openmrs_seeder_v1/openmrs_seeder_v1/ .
 RUN dotnet publish -c Release -o /app/publish --no-restore
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0
+# App de consola (batch): corre la simulación y termina — sin servidor web ni puertos
+FROM mcr.microsoft.com/dotnet/runtime:10.0
 WORKDIR /app
 COPY --from=build /app/publish .
-EXPOSE 8080
-ENV ASPNETCORE_URLS=http://+:8080
 ENTRYPOINT ["dotnet", "openmrs_seeder_v1.dll"]

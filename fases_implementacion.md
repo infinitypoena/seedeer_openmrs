@@ -146,7 +146,7 @@ GET /api/seed/progress/{runId} → porcentaje aumenta hasta 100%, fechaActual av
 ---
 
 ## FASE 4 — Seeder de visitas + vitales
-**Estado:** `[ ]`
+**Estado:** `[x]`
 **Depende de:** Fase 3
 
 ### Objetivo
@@ -162,7 +162,8 @@ Crear visitas con hora realista del día y registrar signos vitales coherentes c
 | PA diastólica (mmHg) | `5086AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA` |
 | Temperatura (°C) | `5088AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA` |
 | Pulso (lpm) | `5087AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA` |
-| SpO2 (%) | `5242AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA` |
+| Frecuencia respiratoria (rpm) | `5242AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA` (hiAbsolute=99) |
+| SpO2 (%) | `5092AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA` (⚠️ NO `5242`, que es frecuencia respiratoria) |
 
 ### Entregables
 - [ ] `Models/Api/VisitRequest.cs`, `EncounterRequest.cs`, `ObsRequest.cs`
@@ -184,7 +185,7 @@ Crear visitas con hora realista del día y registrar signos vitales coherentes c
 ---
 
 ## FASE 5 — Seeder de consulta clínica
-**Estado:** `[ ]`
+**Estado:** `[x]`
 **Depende de:** Fase 4, Fase 2
 
 ### Objetivo
@@ -219,7 +220,7 @@ Crear el encounter ADULTINITIAL con diagnóstico coherente con el perfil epidemi
 ---
 
 ## FASE 6 — Seeder de órdenes de laboratorio
-**Estado:** `[ ]`
+**Estado:** `[x]`
 **Depende de:** Fase 5, Fase 2
 
 ### Objetivo
@@ -243,7 +244,7 @@ Crear órdenes de exámenes externos coherentes con el diagnóstico elegido.
 ---
 
 ## FASE 7 — Prescripciones + Alergias
-**Estado:** `[ ]`
+**Estado:** `[x]`
 **Depende de:** Fase 5, Fase 2
 
 ### Objetivo
@@ -272,7 +273,7 @@ Crear prescripciones coherentes con el diagnóstico y registrar alergias para pa
 ---
 
 ## FASE 8 — SeedOrchestrator + cierre de visitas
-**Estado:** `[ ]`
+**Estado:** `[x]`
 **Depende de:** Fases 3-7
 
 ### Objetivo
@@ -298,7 +299,7 @@ GET /api/seed/progress/{runId} → progreso hasta 100% con etapa y fecha actual
 ---
 
 ## FASE 9 — Endpoint de limpieza
-**Estado:** `[ ]`
+**Estado:** `[x]`
 **Depende de:** Fase 3+
 
 ### Objetivo
@@ -341,8 +342,50 @@ Crear documentación de usuario completa con énfasis especial en el manejo del 
 
 ### Verificación
 ```
-manual_usuario.md existe en la raíz del proyecto junto con fases_implementacion.md y detalle-seeder.md
+manual_usuario.md existe en la raíz del proyecto junto con fases_implementacion.md
 ```
+
+---
+
+## Backlog de mejoras (inventario P1–P9, jul 2026)
+
+> Inventario de pendientes acordado en jul 2026. **Fuente de verdad del "qué sigue"** — actualizar
+> el estado aquí al completar cada punto (un commit por bloque a `develop2`).
+> Patrón por bloque: verificar UUIDs contra la instancia → código+tests → smoke REST → corrida corta → docs → commit.
+
+| # | Punto | Estado | Notas |
+|---|-------|--------|-------|
+| P1 | Rotar password root de MariaDB (quedó en historial de git) | `[ ]` decisión del usuario | Solo importa si el repo se hace público |
+| P2 | Doc de usuario/rol dedicado para el seeder (privilegios mínimos) | `[x]` | `manual_usuario.md` §5 — commit `f4f99b0` |
+| P3 | Revivir exámenes clínicos (rama muerta, UUIDs malos) | `[x]` | 10 conceptos smoke-tested + `res_min/max` — commit `f4f99b0` |
+| P4 | Citas: sweep global de vencidas al cierre + `clear` cancela citas | `[x]` | commit `12b8db4` |
+| P5 | Labs v2: paneles (obs-group hemograma) + resultado retrasado | `[x]` | `paneles.csv` + `ResultadosPendientes` — esta entrega. De paso: fix `dateActivated` de órdenes |
+| P6 | ~~Vitales a catálogo~~ → **reformulado**: overrides de vitales por enfermedad (`vital_pa`, `vital_fc`, `vital_spo2`) | `[x]` | El CSV de rangos aportaba poco (lógica acoplada, constantes estables); lo que se quería era que la ENFERMEDAD dispare el vital anormal — mismo patrón `vital_fiebre`/`vital_imc` |
+| P7 | Atributos de persona: teléfono salvadoreño + estado civil coherente con edad | `[x]` | Anidados en el `person` del `POST /patient`; answers de Estado civil `1054` verificados; `Defaults.*AttributeTypeUuid` vacío = off |
+| P8 | Address Hierarchy de El Salvador (best-effort) | `[ ]` | Si el módulo no expone REST práctico, documentar procedimiento UI/CSV con `direcciones.csv` como fuente; no bloquear |
+| P9 | Quitar `_poolLock` vestigial (la corrida es secuencial) | `[x]` | Eliminado con P6 |
+
+Verificación final del paquete (al cerrar P6–P7): corrida de 1 mes comprobando exámenes presentes,
+0 citas `Scheduled` vencidas, hemograma con `groupMembers`, resultados retrasados en segunda visita,
+atributos en `person_attribute`, vitales con distribución idéntica al hardcodeado.
+
+### Cierre de brechas de realismo longitudinal (Bloques 1–6, jul 2026)
+
+Auditoría del código vs. la historia esperada de un crónico a un año: la agenda no hacía volver al
+paciente, un crónico nunca repetía lab/fármaco, y su talla/edad/comorbilidades eran incoherentes.
+
+| # | Punto | Estado | Notas |
+|---|-------|--------|-------|
+| B2 | Órdenes repetibles: `OrderedConcepts` HashSet→`Dictionary<uuid,vigenteHasta>`, `autoExpireDate`, `Orders.LabVigenciaDias` | `[x]` | Seam `OrderVigencia.EstaActivo` + tests |
+| B1 | La cita gobierna el retorno: `SeguimientoPolicy` (dx-condicionado) + `RecurrentSelector` (cita hoy ±tol, `Appointments.AsistenciaProb`) + unificación cita=próxima elegible | `[x]` | Seams + tests |
+| B3 | Continuidad física: `TallaCm`/`ImcBasal` persistentes, talla pediátrica por edad, `GrupoEdad` recalculado | `[x]` | Seams `GrupoEdad`/`EdadEnMeses`/`TallaPediatricaCm` + tests |
+| B4 | Coherencia de la visita: A6 examen por unión de categorías · A8 obs fechadas con `FechaConsulta` · A9 comorbilidades estables en control · A10 Ctrl+C limpio (`ErrorTally.MarcarCancelacion`) · A11 relleno de cupo con nuevos | `[x]` | — |
+| B5 | Posología de catálogo: columnas opcionales `dosis`/`unidad_dosis_uuid`/`frecuencia_uuid`/`dias_tratamiento` (vacías = 1 tableta/una vez al día) | `[x]` | Verificar UUID de frecuencia/unidad contra la instancia antes de poblar |
+| B6 | Documentación: `manual_usuario.md`, `parametrizacion_archivos.md`, `CLAUDE.md`, este registro | `[x]` | UTC→`UtcOffset`, CLI batch, conteos 21/86/73/53, TOC §7, nº tests, docstring `LabResult`, `RepeticionDamping` |
+
+Verificación end-to-end pendiente (requiere instancia): agenda ≥60 % citas vencidas en `Completed`;
+crónico con ≥3 controles con ≥2 HbA1c y ≥2 recetas del mismo fármaco y problem list estable; una sola
+talla por adulto; 0 obs con `obs_datetime` < `encounter_datetime`; 0 `AmbiguousOrderException`.
 
 ---
 
@@ -360,3 +403,17 @@ manual_usuario.md existe en la raíz del proyecto junto con fases_implementacion
 | 2026-06-18 | 4 | Fase 4 completada: VisitSeeder + VitalsSeeder + pipeline actualizado |
 | 2026-06-19 | 5 | Fase 5 completada: ConsultaSeeder (ADULTINITIAL + dx + certeza + motivo + examen clínico) |
 | 2026-06-19 | 10 | Fase 10 completada: manual_usuario.md con sección detallada de manejo del tiempo |
+| 2026-06 | 6-9 | Fases 6-9 completadas: LabOrderSeeder, PrescriptionSeeder + AllergySeeder, SeedOrchestrator + VisitCloseSeeder, DELETE /clear. Validación superada; corridas de año completo (2023 y 2024) |
+| 2026-06/07 | — | Iteración de realismo (post-fases, ver bullets en CLAUDE.md): comorbilidad, clima estacional, consultorios + médico de cabecera, problem list (crónicas), nombres únicos centroamericanos, continuidad de crónicos, espaciamiento entre visitas, coherencia por sexo, localización es de conceptos CIEL |
+| 2026-07 | — | Cierre de brechas longitudinales (Bloques 1–6): la cita gobierna el retorno, órdenes repetibles por vigencia, talla/IMC/edad persistentes, coherencia de la visita (A6/A8/A9/A10/A11), posología de catálogo, y sincronización documental. +33 tests (177→210) |
+| 2026-07 | — | Roster diario de médicos (2-3/día) + resultados de laboratorio ligados a la orden (ciclo orden→resultado) |
+| 2026-07 | — | Inscripción a programas de atención (HIV Care and Treatment, Diabetes Education) vía POST /programenrollment |
+| 2026-07 | — | Citas reales en la agenda O3 (Bahmni Appointments): FollowUp agenda cita; al volver el paciente se marca Completed/Missed. Fix precisión ASAT/amilasa (allow_decimal=0) |
+| 2026-07-10 | — | Seguimiento agudo coherente: el no-crónico que vuelve retorna por el MISMO dx agudo (2,3% → ~62-64% de pares consecutivos con mismo dx; verificado en corridas feb/mar 2025) |
+| 2026-07-10 | — | **Conversión a app de consola batch** (`develop2`): `dotnet run` ejecuta la simulación completa y termina (exit codes 0/1/2, Ctrl+C limpio); se elimina la capa de controllers/Swagger (la Web API queda en `develop1`). Saneamiento de appsettings + validación fail-fast (`SettingsValidator`); fix TSH (concepto Drug datatype N/A) + contador preciso de errores (`ErrorTally`); variedad de diagnósticos (damping anti-repetición: 144→182 dx distintos); hardening de la instancia (backup, TZ America/El_Salvador, UI en es); direcciones salvadoreñas (`direcciones.csv`) |
+| 2026-07-11 | — | Direcciones ampliadas a los 14 departamentos (~142 zonas) con pesos por **anillos de distancia** (clínica en San Salvador); paquete de auditoría: reproducibilidad, retry REST, credencial y hardening |
+| 2026-07-11 | — | Exámenes clínicos revividos (10 UUIDs smoke-tested: Glasgow, dolor, PHQ-4, flujo pico, obstétricos…) + doc de usuario/rol dedicado; sweep de citas vencidas al cierre (0 `Scheduled` vencidas) + `clear` cancela citas antes de voidear |
+| 2026-07-11 | — | **Resultados de paneles (obs-group) + resultados diferidos**: nuevo `catalogs/paneles.csv` (hemograma: Hb/Hto/leucocitos/plaquetas con bandas normal/anormal por componente y trigger por categoría); el resultado se postea como obs padre ligada a la orden + `groupMembers`. El ~10% que no "vuelve el mismo día" ya no se pierde: queda en `ResultadosPendientes` y se entrega en la **siguiente visita** del paciente (`LabOrderSeeder.ProcesarPendientesAsync`). Verificado con corrida dic-2025 (152 pac, 0 errores, 104 órdenes, paneles con 4 componentes en BD, 1 entrega diferida) |
+| 2026-07-11 | — | **Atributos de persona (P7)**: teléfono salvadoreño sintético (móvil/fijo 80/20) y estado civil coherente con la edad (answers del concepto `1054`: <18 soltero, adultos mayoría casado/acompañado, viudez en 65+), anidados como `attributes` en el `POST /patient`. Feature off si los `Defaults.*AttributeTypeUuid` están vacíos. Verificado con corrida 26-27 dic 2025 (13 pac, 0 errores, atributos correctos en `person_attribute`) |
+| 2026-07-11 | — | **Overrides de vitales por enfermedad (P6 reformulado) + limpieza `_poolLock` (P9)**: columnas opcionales `vital_pa`=alta, `vital_fc`=alta\|baja, `vital_spo2`=baja en `diagnosticos.csv` (~35/48/11 filas por reglas de keywords en `ajustar_diagnosticos.ps1`; `fetal` excluido de fc, anemia sin spo2) → `ComputeVitals` con 3 overrides que ganan sobre la categoría (preeclampsia→PA alta, hipotiroidismo→bradicardia 42-58 incluso febril, insuf. cardíaca→SpO2 88-94). Verificado: taquicardia ventricular → pulso 120 en BD. `_poolLock` eliminado (corrida secuencial) |
+| 2026-07-11 | — | **Fix fecha de órdenes (`dateActivated`)**: sin el campo, OpenMRS fechaba toda orden (lab y prescripción) con el **reloj real de la corrida** en vez del día de la visita simulada (afecta a todos los datos previos). Ambos seeders de órdenes envían ahora `dateActivated` = datetime del encounter de consulta (helper `ConsultaSeeder.FechaConsulta`; no puede ser anterior al encounter — `Order.error.encounterDatetimeAfterDateActivated`) |

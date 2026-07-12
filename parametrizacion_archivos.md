@@ -8,26 +8,26 @@ Este documento describe todos los archivos de configuración y catálogos del si
 
 Todo el comportamiento del simulador se controla desde aquí.
 
+> **Validación al arranque (fail-fast):** `SettingsValidator` revisa la configuración al iniciar el
+> proceso. Valores inválidos (probabilidades fuera de `[0,1]`, bandas invertidas `Min > Max`,
+> `StartDate > EndDate`, volúmenes ≤ 0…) **impiden arrancar** con un mensaje que lista cada campo
+> violado. Las claves del JSON que no correspondan a ningún parámetro (p. ej. una clave obsoleta de
+> una versión anterior) generan un **warning** en el log — el binding de .NET las ignoraría en
+> silencio.
+
 ```json
 {
   "OpenMRS": {
-    "SeedMode": "RestApi",
     "RestApi": {
       "BaseUrl": "http://localhost/openmrs/ws/rest/v1",
       "Username": "admin",
-      "Password": "Admin123"
-    },
-    "DirectDb": {
-      "Server": "localhost",
-      "Port": 3306,
-      "Database": "openmrs",
-      "User": "openmrs",
-      "Password": "openmrs"
+      "Password": "Prueba01$$xD"
     },
     "Defaults": {
       "PatientIdentifierTypeUuid": "05a29f94-c0ed-11e2-94be-8c13b969e334",
       "LocationUuid": "44c3efb0-2583-4c80-a79e-1f756a03c0a1",
-      "VisitTypeUuid": "7b0f5697-27e3-40c4-8bae-f4049abfb4ed",
+      "RegistrationLocationUuid": "c1000000-0000-0000-0000-000000000002",
+      "VisitTypeUuid": "287463d3-2233-4c69-9851-5841a1f5e109",
       "VitalsEncounterTypeUuid": "67a71486-1a54-468f-ac3e-7091a9a79584",
       "ConsultaEncounterTypeUuid": "92a52cce-c614-4046-b5f2-07f32f0bcf91",
       "ProviderUuid": "f9badd80-ab76-11e2-9e96-0800200c9a66"
@@ -40,7 +40,6 @@ Todo el comportamiento del simulador se controla desde aquí.
     "PorcentajeRecurrentes": 30,
     "Locale": "es",
     "RandomSeed": 42,
-    "ClinicType": "ConsultaExterna",
     "HorarioAtencion": {
       "PicoAM": { "Inicio": "08:00", "Fin": "10:00", "Peso": 40 },
       "PicoPM": { "Inicio": "14:00", "Fin": "16:00", "Peso": 30 }
@@ -60,12 +59,25 @@ Todo el comportamiento del simulador se controla desde aquí.
       "ClinicalExam": 0.35,
       "DrugOrder": 0.65,
       "Urgent": 0.20,
-      "FollowUp": 0.30,
-      "AllergyOnNew": 0.15
+      "FollowUp": 0.30
+    },
+    "Allergy": {
+      "BaseProbabilityMin": 0.15,
+      "BaseProbabilityMax": 0.25,
+      "SecondAllergyProbability": 0.30,
+      "ThirdAllergyProbability": 0.25,
+      "MaxAllergies": 3
     },
     "WeekdayWeights": {
       "Monday": 1.20, "Tuesday": 1.20, "Wednesday": 1.00,
       "Thursday": 1.00, "Friday": 0.90, "Saturday": 0.50, "Sunday": 0.00
+    },
+    "Comorbidity": {
+      "BaseProbability": 0.20,
+      "MaxAdditional": 2,
+      "SecondExtraProbability": 0.25,
+      "AffinityBoost": 4.0,
+      "AgeScaling": { "0-14": 0.3, "15-29": 0.5, "30-44": 0.8, "45-64": 1.3, "65+": 1.8 }
     }
   }
 }
@@ -78,30 +90,75 @@ Todo el comportamiento del simulador se controla desde aquí.
 | `StartDate` / `EndDate` | date | Rango temporal de la simulación. |
 | `PacientesPorDiaMedio` | int | Promedio de pacientes por día hábil. Se aplica variación σ ≈ 20% con distribución normal (Box-Muller). |
 | `PorcentajeRecurrentes` | int (0-100) | % de visitas de pacientes ya existentes (controles, crónicos). |
-| `Locale` | string | Locale de Bogus. `"es"` = español latinoamericano. |
+| `SeguimientoCronicoProb` | float (0-1) | Continuidad longitudinal: prob. (def. 0.70) de que una visita recurrente de un paciente con condición crónica conocida sea un **control de esa misma condición** en vez de un motivo agudo nuevo. Solo aplica si el paciente arrastra ≥1 dx crónico. |
+| `SeguimientoAgudoProb` | float (0-1) | Espejo agudo: prob. (def. 0.70) de que un recurrente NO crónico que vuelve dentro de la ventana de su episodio agudo regrese por el **mismo dx** (control/mejoría) en vez de una enfermedad aleatoria. El control cierra el episodio. |
+| `VentanaSeguimientoAgudoDias` | int (días) | Vigencia del episodio agudo desde su última visita (def. 30). Fuera de la ventana el retorno vuelve a ser un motivo nuevo. |
+| `Recurrence.MinDiasAgudo` / `MaxDiasAgudo` | int (días) | Intervalo mínimo/máximo para que un paciente **no crónico** vuelva (seguimiento agudo, def. 7–21). Evita retornos día-a-día. |
+| `Recurrence.MinDiasCronico` / `MaxDiasCronico` | int (días) | Intervalo del **control crónico** (def. 30–120). En ventanas cortas la proporción real de recurrentes puede quedar algo bajo `PorcentajeRecurrentes`. |
+| `Locale` | string | Locale de Bogus (solo fallback de nombres si faltan `nombres.csv`/`apellidos.csv`). `"es"` = español. |
+| `UtcOffset` | string | Offset UTC de TODAS las fechas enviadas a OpenMRS (`"±HH:mm"`, p.ej. `"-06:00"` El Salvador). Debe coincidir con la `TZ` del backend para que las horas se lean como hora local en la UI. Vacío = UTC (histórico). ⚠️ Cambiarlo desalinea los datos ya insertados con el offset anterior — aplicar antes de regenerar. |
 | `RandomSeed` | int | Semilla para reproducibilidad. Mismo seed = misma simulación. |
-| `ClinicType` | string | Perfil del establecimiento: `ConsultaExterna`, `HospitalUrgencias`, `CentroComunitario`. Referencia semántica, no fuerza valores. |
+| `CommonProbMin` / `CommonProbMax` | float (0-1) | Factor inicial: cada corrida sortea su P(común) en `[min,max]` (def. 0.75–0.95) → el principal cae mayormente en el pool `comun=true`, variando entre corridas. |
+| `MedicoCabeceraProbMin` / `MedicoCabeceraProbMax` | float (0-1) | Médico de cabecera: cada corrida sortea en `[min,max]` (def. 0.70–0.90) la prob. de que un recurrente vuelva con el mismo médico/consultorio de su primera visita; si no, cae con otro. Requiere `catalogs/consultorios.csv`. |
 | `HorarioAtencion.PicoAM/PM` | objeto | Bloque horario pico con peso (% de atenciones). El resto se distribuye uniformemente. |
 | `DemographicProfile.AgeGroups` | array | Distribución etaria. Los `Weight` se normalizan al 100%. |
 | `DemographicProfile.GenderRatio` | objeto | Proporción M/F (se normalizan entre sí). |
+| `DemographicProfile.MinPatientAgeMonths` | int | Edad mínima de pacientes en meses (def. 6). La fecha de nacimiento se ancla a la fecha de la visita. |
+| `DemographicProfile.PediatricClinic` | bool | Consultorio pediátrico: baja el mínimo a `PediatricMinAgeMonths`. |
+| `DemographicProfile.PediatricMinAgeMonths` | int | Edad mínima en meses en modo pediátrico (def. 1). |
 | `ReferralProbabilities.LabOrder` | float (0-1) | Probabilidad base de orden de laboratorio externo (testorder). |
 | `ReferralProbabilities.ClinicalExam` | float (0-1) | Probabilidad base de examen en consultorio (obs inmediata). |
 | `ReferralProbabilities.DrugOrder` | float (0-1) | Probabilidad base de prescripción de medicamento. |
 | `ReferralProbabilities.Urgent` | float (0-1) | Probabilidad de que una orden de lab sea URGENTE. |
-| `ReferralProbabilities.FollowUp` | float (0-1) | Probabilidad de nota de seguimiento. |
-| `ReferralProbabilities.AllergyOnNew` | float (0-1) | Probabilidad de que un paciente **nuevo** tenga alergias registradas. |
+| `ReferralProbabilities.FollowUp` | float (0-1) | Probabilidad de registrar una cita de control **cuando el cuadro es leve**: obs fecha "Return visit date" (`5096`) en la fecha de la banda de recurrencia (agudo 7–21 d / crónico 30–120 d) **+ cita real en la agenda** (Bahmni Appointments) con el médico/consultorio de la visita, si `Defaults.AppointmentServiceUuid` está configurado (def. 0.30). |
+| `ReferralProbabilities.FollowUpCronico` | float (0-1) | Probabilidad de agendar control cuando el cuadro incluye una condición crónica (def. 0.90). |
+| `ReferralProbabilities.FollowUpGrave` | float (0-1) | Probabilidad de agendar control cuando el cuadro (no crónico) es grave (def. 0.80). |
+| `Appointments.ToleranciaDias` | int (días) | Resolución de citas al volver el paciente: cita a ±tolerancia de la visita → `Completed`; anterior a la ventana → `Missed` (no-show); futura → sigue `Scheduled`. También es el margen con que la selección de recurrentes atiende a quien tiene cita para hoy (def. 3). |
+| `Appointments.AsistenciaProb` | float (0-1) | Probabilidad de que un paciente con cita para hoy (±tolerancia) efectivamente asista; el resto son no-shows cuya cita, al vencer, pasa a `Missed` (def. 0.75). |
+| `Orders.LabVigenciaDias` | int (días) | Días que una orden de laboratorio sigue activa (`autoExpireDate`). Mientras esté vigente no se re-ordena el mismo test; pasado el plazo, un control crónico puede volver a pedirlo (def. 7). |
+| `Variedad.RepeticionDamping` | float (≥0) | Amortiguación anti-repetición: cada vez que un dx sale en la corrida su peso efectivo baja (`peso / (1 + damping × usos)`) → se explora la cola larga del catálogo (~950 dx). No altera el perfil por edad/sexo/clima ni los controles crónicos/agudos. `0` = apagado (def. 0.25). |
+| `ReferralProbabilities.LabResult` | float (0-1) | Fracción de órdenes de lab numéricas/codificadas y **paneles** (obs-group) que "vuelven" con resultado el mismo día. El resto queda pendiente (def. 0.90). Las imágenes ordenan pero no registran valor. |
+| `MinMedicosPorDia` / `MaxMedicosPorDia` | int | Roster diario: cada día se activan aleatoriamente entre `Min` y `Max` médicos del pool de `consultorios.csv` (def. 2/3). Pool ≤ Min = todos disponibles. |
+| `Allergy.BaseProbabilityMin` / `BaseProbabilityMax` | float (0-1) | Banda de prevalencia de alergias: cada corrida sortea su valor en `[min,max]` (def. 0.15–0.25, fracción clínicamente documentada del ~25-30% poblacional) → el % de pacientes nuevos alérgicos varía entre corridas. |
+| `Allergy.SecondAllergyProbability` | float (0-1) | Dado que el paciente ya tiene 1 alergia, probabilidad de sumar una 2ª (decaída condicional). |
+| `Allergy.ThirdAllergyProbability` | float (0-1) | Dado que ya tiene 2, probabilidad de sumar una 3ª. |
+| `Allergy.MaxAllergies` | int | Tope de alergias por paciente (también limitado por el tamaño de `alergenos.csv`). |
 | `WeekdayWeights` | objeto | Multiplicador de volumen por día. `1.0` = promedio, `0.0` = sin atención. |
+| `Comorbidity.BaseProbability` | float (0-1) | Probabilidad base de que un paciente tenga ≥1 diagnóstico adicional (comorbilidad) en la misma visita. |
+| `Comorbidity.MaxAdditional` | int | Tope de diagnósticos adicionales además del primario. |
+| `Comorbidity.SecondExtraProbability` | float (0-1) | Dado que ya hay una comorbilidad, probabilidad de añadir una segunda. |
+| `Comorbidity.AffinityBoost` | float | Multiplicador del peso de las categorías clínicamente afines al elegir la enfermedad adicional. |
+| `Comorbidity.AgeScaling` | objeto | Multiplicador de `BaseProbability` por grupo de edad (la multimorbilidad crece con la edad). El producto se limita a 0.95. |
+| _Afinidades de comorbilidad_ | catálogo | Movido a `catalogs/comorbilidad_afinidades.csv` (ver §10). Clusters categoría→afines que reciben `AffinityBoost`. |
+
+> **Comorbilidad en una sola visita:** el primario se elige como antes; luego, con probabilidad `BaseProbability × AgeScaling[grupo]`, se añaden 1..`MaxAdditional` diagnósticos de **otras** categorías (priorizando las afines). Todos se registran en el mismo encounter (`rank=1` primario, `rank=2` secundarios) y las órdenes de laboratorio y prescripciones cubren las categorías de **todas** las enfermedades del paciente.
+
+| `Climate.Enabled` | bool | Activa el efecto estacional (requiere `catalogs/clima.csv`). Si `false`, se ignora el clima. |
+| `Climate.SeasonalBoost` | float | Multiplicador de peso de enfermedades y categorías favorecidas por la estación activa. |
+| `Climate.ComfortTempC` | float | Temperatura ambiente de confort; por encima sube la temperatura corporal registrada. |
+| `Climate.TempVitalsFactorC` | float | °C de temperatura corporal por cada °C ambiente sobre el confort. |
+| `Climate.TempVitalsMaxC` | float | Tope del ajuste de temperatura corporal por calor. |
+
+> **Clima estacional (opcional):** si existe `catalogs/clima.csv` (una fila por semana ISO: `semana,estacion,temp_promedio_c` con estación ∈ invierno/verano/lluvia/seca), la simulación favorece las enfermedades marcadas con esa estación en la columna `clima` de `diagnosticos.csv` (gripe→invierno, dengue/EDA→verano,lluvia) y el calor sube levemente la temperatura corporal. Si el archivo falta o la semana no está listada → efecto neutro.
 
 ### Referencia de parámetros — sección OpenMRS.Defaults
 
 | Parámetro | Descripción | Cómo obtenerlo |
 |-----------|-------------|----------------|
 | `PatientIdentifierTypeUuid` | UUID del tipo de ID "OpenMRS ID" | `GET /ws/rest/v1/patientidentifiertype` |
-| `LocationUuid` | UUID de la ubicación de atención | `GET /ws/rest/v1/location` |
-| `VisitTypeUuid` | UUID del tipo de visita "Outpatient" | `GET /ws/rest/v1/visittype` |
+| `TrackingIdentifierTypeUuid` | Tipo de ID "Old Identification Number" — lleva el prefijo `SIM-` que hace idempotente al `clear` | `GET /ws/rest/v1/patientidentifiertype` |
+| `LocationUuid` | Ubicación de **respaldo** si no hay `catalogs/consultorios.csv` | `GET /ws/rest/v1/location` |
+| `RegistrationLocationUuid` | Ubicación de registro/admisión (Recepción) del identificador del paciente | `GET /ws/rest/v1/location` |
+| `VisitTypeUuid` | UUID del tipo de visita "OPD Visit" (consulta externa; `287463d3-…`) | `GET /ws/rest/v1/visittype` |
 | `VitalsEncounterTypeUuid` | UUID del tipo de encuentro "Vitals" | `GET /ws/rest/v1/encountertype` |
 | `ConsultaEncounterTypeUuid` | UUID del tipo de encuentro "Consultation" | `GET /ws/rest/v1/encountertype` |
-| `ProviderUuid` | UUID del proveedor/médico autor de los encuentros | `GET /ws/rest/v1/provider` |
+| `ProviderUuid` | Médico de **respaldo** si no hay `catalogs/consultorios.csv` | `GET /ws/rest/v1/provider` |
+| `EncounterRoleUuid` | Rol del médico en el encuentro ("Clinician") | `GET /ws/rest/v1/encounterrole` |
+| `OutpatientCareSettingUuid` | Care setting de las órdenes (ambulatorio) | `GET /ws/rest/v1/caresetting` |
+| `OnceDailyFrequencyUuid`, `DaysConceptUuid`, `TabletConceptUuid` | Frecuencia, unidad de duración y unidad de dosis de las prescripciones | `GET /ws/rest/v1/orderfrequency`, `GET /ws/rest/v1/concept?q=` |
+| `AppointmentServiceUuid` / `AppointmentServiceTypeUuid` | Servicio (y tipo) de la agenda Bahmni. **Vacío = no se agendan citas** | `GET /ws/rest/v1/appointmentService/all/default` |
+| `TelephoneAttributeTypeUuid` | Person attribute "Telephone Number" (formato String). **Vacío = paciente sin teléfono** | `GET /ws/rest/v1/personattributetype` |
+| `CivilStatusAttributeTypeUuid` | Person attribute "Civil Status" (formato **Concept** → el valor enviado es el UUID de una *answer* del concepto `1054`). **Vacío = paciente sin estado civil** | `GET /ws/rest/v1/personattributetype`; las answers, con `GET /concept/1054…?v=full` (⚠️ `?q=` con rep. personalizada de `answers` da NPE en esta instancia) |
 
 ---
 
@@ -176,8 +233,17 @@ ciel_uuid,nombre_es,categoria,severidad,aplica_0_14,aplica_15_29,aplica_30_44,ap
 | `requiere_lab` | `true` si este dx siempre pide laboratorio (aumenta la probabilidad base de `LabOrder`) |
 | `requiere_rx` | `true` si este dx siempre recibe prescripción (aumenta la probabilidad base de `DrugOrder`) |
 | `requiere_examen_clinico` | `true` si este dx típicamente requiere examen en consultorio (sube prob. a 90%) |
+| `clima` | Estación(es) que favorecen el dx (`invierno`/`verano`/`lluvia`/`seca`, separadas por coma). Vacío = sin efecto estacional |
+| `cronica` | `true` → se agrega a la lista de problemas del paciente (`POST /condition`) |
+| `comun` | `true` → pertenece al pool de enfermedades frecuentes (sesgo de selección inicial) |
+| `vital_fiebre` *(opcional)* | `true` → fuerza fiebre en los vitales aunque la categoría no sea febril (p.ej. apendicitis, pielonefritis). Vacío = neutro |
+| `vital_imc` *(opcional)* | `alto` (sobrepeso/obesidad) o `bajo` (desnutrición/caquexia: TB, cáncer, hipertiroidismo, VIH…) para fijar el IMC objetivo. **Gana sobre la categoría.** Vacío = neutro |
+| `vital_pa` *(opcional)* | `alta` → banda hipertensiva (140-180/90-110) aunque la categoría no sea cardiovascular (preeclampsia/eclampsia, enfermedad renal, Cushing, hipertiroidismo). Vacío = neutro |
+| `vital_fc` *(opcional)* | `alta` → taquicardia 100-130 (hipertiroidismo, anemia, hipovolemia/hemorragia) o `baja` → bradicardia 42-58 (hipotiroidismo, bloqueos AV). **Gana incluso sobre la taquicardia febril.** Vacío = neutro |
+| `vital_spo2` *(opcional)* | `baja` → SpO2 88-94 fuera de respiratorio (insuficiencia cardíaca, TEP). ⚠️ La anemia NO va aquí (satura normal). Vacío = neutro |
+| `sexo` *(opcional)* | `M` o `F` → el dx **solo** aparece en ese sexo (exclusión dura: embarazo/eclampsia = F, próstata/testículo = M). Vacío = ambos. Se puebla con `scripts/ajustar_diagnosticos.ps1` (reglas por palabra clave) |
 
-> **Fuente**: Query SQL sobre `concept` + `concept_name` en la DB OpenMRS. Las columnas `aplica_*`, `peso_*` y `requiere_*` se agregan manualmente. Ver queries en `fases_implementacion.md` Fase 2.
+> **Fuente**: Query SQL sobre `concept` + `concept_name` en la DB OpenMRS. Las columnas `aplica_*`, `peso_*`, `requiere_*` y `vital_*` se agregan manualmente. Las columnas `vital_*` son **opcionales** (el loader tolera su ausencia → comportamiento neutro gobernado por la categoría). Ver queries en `fases_implementacion.md` Fase 2.
 
 ---
 
@@ -199,20 +265,26 @@ SAMPLE_metformina,Metformina,850mg,SAMPLE_oral,false,false,true,false,false,fals
 | `strength` | Concentración (ej: `500mg`, `10mg`, `100mcg`) |
 | `via_uuid` | UUID CIEL de la vía de administración (oral, inhalado, IV, IM) |
 | `aplica_CATEGORIA` | `true`/`false` — si este medicamento es coherente para esa categoría diagnóstica |
+| `dosis` | *(opcional)* Dosis por toma (`1`, `0.5`, `5`). Vacío = `1` |
+| `unidad_dosis_uuid` | *(opcional)* UUID de la unidad de dosis (tableta, mL, mg). Vacío = tableta (`Defaults.TabletConceptUuid`) |
+| `frecuencia_uuid` | *(opcional)* UUID de la frecuencia (cada 8 h, dos veces al día). Vacío = una vez al día (`Defaults.OnceDailyFrequencyUuid`) |
+| `dias_tratamiento` | *(opcional)* Días de tratamiento. Vacío/`0` = duración aleatoria (7/14/30) |
 
+> **Posología opcional**: las cuatro últimas columnas son opcionales (el loader tolera su ausencia → comportamiento histórico: 1 tableta / una vez al día). Para usarlas hay que **verificar los UUID contra la instancia** (`GET /ws/rest/v1/orderfrequency`, `GET /ws/rest/v1/concept?q=`); un UUID inexistente rompería esa orden, así que ante la duda dejar la celda vacía.
+>
 > **Nota**: Los valores actuales usan prefijo `SAMPLE_` en los UUIDs. Deben reemplazarse con UUIDs reales extraídos de la DB OpenMRS (Query 2 en `fases_implementacion.md`).
 
 ---
 
-## 5. catalogs/laboratorios.csv — Catálogo de exámenes externos con booleanos
+## 5. catalogs/laboratorios.csv — Catálogo de exámenes externos con booleanos + resultado
 
-Extraído de OpenMRS (concept class Test/LabSet) + columnas booleanas.
+Extraído de OpenMRS (concept class Test/LabSet) + columnas booleanas de categoría + **columnas de resultado** que alimentan `LabResultGenerator` (el resultado se registra como obs ligada a la orden).
 
 ```csv
-ciel_uuid,nombre_es,clase,aplica_respiratorio,aplica_cardiovascular,aplica_diabetes,aplica_digestivo,aplica_osteomuscular,aplica_urologico,aplica_infeccioso,aplica_endocrino
-1019AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hemograma completo,Test,true,true,true,true,true,true,true,false
-887AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Glucemia en ayunas,Test,false,true,true,false,false,false,false,true
-159799AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hemoglobina glicosilada HbA1c,Test,false,false,true,false,false,false,false,true
+ciel_uuid,nombre_es,clase,aplica_respiratorio,...,aplica_trauma,datatype,res_min,res_max,res_min_anormal,res_max_anormal,res_normal_uuid,res_anormal_uuid,res_trigger,res_trigger_dx
+160912AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Glucemia en ayunas,Test,false,...,false,numeric,70,99,126,260,,,diabetes|endocrino,
+58b969e7-77ef-4941-a0ec-72372a2fa716,Antígeno NS1 dengue,Test,false,...,false,coded,,,,,664AAAA...(Negativo),703AAAA...(Positivo),,142592AAAA...|61304dd2...(dengue)
+1019AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hemograma completo,Test,true,...,true,panel,,,,,,,,
 ```
 
 | Columna | Descripción |
@@ -221,6 +293,39 @@ ciel_uuid,nombre_es,clase,aplica_respiratorio,aplica_cardiovascular,aplica_diabe
 | `nombre_es` | Nombre del examen en español |
 | `clase` | `Test`, `LabSet`, `Lab Findings` |
 | `aplica_CATEGORIA` | `true`/`false` — si este lab es coherente para esa categoría diagnóstica |
+| `datatype` | `numeric` \| `coded` \| `panel` \| `imagen` (vacío = sin resultado; solo numeric/coded generan valor) |
+| `res_min` / `res_max` | Banda numérica **normal** (inclusive) |
+| `res_min_anormal` / `res_max_anormal` | Banda numérica **anormal** (cuando la enfermedad dispara el examen) |
+| `res_normal_uuid` / `res_anormal_uuid` | UUID de la respuesta normal/anormal para tests **codificados** (p.ej. Negativo/Positivo) |
+| `res_trigger` | Categorías (`\|`-separadas) que hacen anormal el resultado — típico de numéricos (p.ej. `diabetes\|endocrino`) |
+| `res_trigger_dx` | UUIDs de diagnósticos específicos que disparan el anormal — típico de codificados disease-specific (p.ej. dengue → NS1 Positivo) |
+
+Con disparo presente, el resultado es anormal con prob. `LabResultGenerator.ProbAnormalSiTrigger` (0.80); si no, normal. Las **imágenes** quedan solo como orden; los **paneles** (`datatype=panel`) buscan sus componentes en `paneles.csv` (§5b) — si el panel no tiene filas ahí, la orden queda sola.
+
+No todo resultado llega el mismo día: `ReferralProbabilities.LabResult` (def. 0.90) es la fracción que "vuelve" con la visita; el resto se genera igual (con el contexto clínico de esa visita) pero queda **pendiente** y se registra en la **siguiente visita** del paciente, ligado a la orden original. Si el paciente no vuelve, la orden queda sin resultado para siempre (realista).
+
+---
+
+## 5b. catalogs/paneles.csv — Componentes de paneles de laboratorio
+
+**Opcional.** Define los componentes de los labs con `datatype=panel` en `laboratorios.csv`. El resultado del panel se registra como **obs-group**: una obs padre (concepto del panel, ligada a la orden) + una obs hija por componente (`groupMembers`).
+
+```csv
+panel_uuid,componente_uuid,nombre,res_min,res_max,res_min_anormal,res_max_anormal,res_trigger
+1019AAAA...(hemograma),21AAAA...(Hb),Hemoglobina,12.0,16.5,7.5,10.9,digestivo
+1019AAAA...(hemograma),729AAAA...(plaquetas),Plaquetas,150,450,60,140,infeccioso
+```
+
+| Columna | Descripción |
+|---------|-------------|
+| `panel_uuid` | UUID del concepto del panel — debe coincidir con una fila `datatype=panel` de `laboratorios.csv` |
+| `componente_uuid` | UUID del concepto numérico del componente (Hb `21…`, Hto `1015…`, leucocitos `678…`, plaquetas `729…`) |
+| `nombre` | Nombre legible (documental) |
+| `res_min` / `res_max` | Banda numérica **normal** del componente |
+| `res_min_anormal` / `res_max_anormal` | Banda **anormal** cuando se dispara el trigger |
+| `res_trigger` | Categorías (`\|`-separadas) que disparan la banda anormal de **este** componente |
+
+Cada componente sortea su banda **de forma independiente** (`LabResultGenerator.GenerarComponentes`, misma prob. 0.80): un paciente infeccioso (dengue) sale con plaquetas bajas y leucocitos alterados pero hemoglobina normal; uno digestivo (sangrado) con anemia. Misma regla de precisión que los numéricos simples (límites enteros → valor entero). Panel sin filas = orden sola (hoy: lipídico, orina, urocultivo, VIH).
 
 ---
 
@@ -241,6 +346,7 @@ ciel_uuid,nombre_es,tipo_resultado,unidad,aplica_respiratorio,aplica_cardiovascu
 | `nombre_es` | Nombre del examen en español |
 | `tipo_resultado` | `numerico` (registra valor + unidad) o `categorico` (normal / anormal) |
 | `unidad` | Unidad de medida si es numérico (ej: `mg/dL`, `%`, `mmHg`). Vacío si categorico. |
+| `res_min` / `res_max` *(opcional)* | Banda del valor numérico. Si están, **mandan sobre la unidad** (entero si límites enteros — Glasgow, escala de dolor —, 1 decimal si no). Vacías = rango derivado de la unidad (histórico). |
 | `aplica_CATEGORIA` | `true`/`false` — si este examen es coherente para la categoría diagnóstica |
 
 > Si el diagnóstico tiene `requiere_examen_clinico = true`, la probabilidad sube al 90% independientemente del valor de `ClinicalExam`.
@@ -267,9 +373,11 @@ concept_uuid,nombre_es,tipo_alergeno,severidad_tipica
 | `severidad_tipica` | `leve`, `moderada`, `grave` — se usa como valor por defecto, con variación aleatoria |
 
 **Flujo de alergias en el pipeline**:
-1. Al crear paciente nuevo: si `rand < AllergyOnNew` (ej: 15%) → registrar alergias
-2. Elegir 1–3 alérgenos al azar del catálogo
-3. Para cada alérgeno: `POST /patient/{uuid}/allergy` con `allergenType`, `codedAllergen.uuid`, `severity.uuid`
+1. Al iniciar la corrida se sortea su prevalencia en `[Allergy.BaseProbabilityMin, BaseProbabilityMax]` (def. 15–25%).
+2. Al crear paciente nuevo: si `rand < prevalencia_de_la_corrida` → es alérgico.
+3. Nº de alergias por decaída condicional: 1 fija; +1 con `SecondAllergyProbability`; +1 más (si ya hay 2) con `ThirdAllergyProbability`; acotado por `MaxAllergies` y el tamaño del catálogo. La mayoría tiene 1, pocos 2, raros 3.
+4. Elegir esa cantidad de alérgenos al azar **sin repetir** del catálogo.
+5. Para cada alérgeno: `POST /patient/{uuid}/allergy` con `allergenType`, `codedAllergen` (UUID plano), `severity.uuid`.
 
 ---
 
@@ -292,7 +400,136 @@ digestivo,Dolor abdominal fuerte después de comer
 
 ---
 
-## 9. Coherencia entre archivos — Cómo se conectan
+## 9. catalogs/consultorios.csv — Consultorios y su médico
+
+**Opcional.** Define los consultorios entre los que rotan las visitas; cada uno con su médico, que se
+crea de forma **idempotente** en OpenMRS al iniciar la corrida (se busca por `medico_identifier`; si
+no existe se crea con `medico_nombre`). Si el archivo falta, el seeder cae al
+`Defaults.LocationUuid`/`ProviderUuid` (un solo recurso).
+
+```csv
+location_uuid,medico_identifier,medico_nombre,medico_genero
+c1000000-0000-0000-0000-000000000011,SIM-MED-C1,Carlos Méndez,M
+c1000000-0000-0000-0000-000000000012,SIM-MED-C2,Ana Rivas,F
+```
+
+| Columna | Descripción |
+|---------|-------------|
+| `location_uuid` | UUID de la ubicación (Visit Location) del consultorio — `GET /location`. |
+| `medico_identifier` | Identificador único del proveedor/médico (idempotencia). Prefijo `SIM-` recomendado. |
+| `medico_nombre` | Nombre del médico a crear si no existe (ej. "Carlos Méndez"). |
+| `medico_genero` | Género (`M` o `F`) con que se crea la persona en OpenMRS. Vacío = `M`. |
+
+> Los médicos son **datos de referencia** (personal): se reutilizan entre corridas y el subcomando
+> `clear` **no** los elimina. El registro del paciente va a `Defaults.RegistrationLocationUuid`
+> (Recepción), no a un consultorio. Los recurrentes vuelven a su médico de cabecera según
+> `MedicoCabeceraProbMin/Max`.
+
+> **Fail-fast:** si un médico del catálogo no se puede crear ni encontrar al iniciar la corrida, el
+> seeder **aborta** con un error claro (exit code 1, listando los identificadores en el resumen final)
+> **antes** de crear datos — así no quedan encuentros firmados por "Unknown Provider".
+
+---
+
+## 10. catalogs/nombres.csv y catalogs/apellidos.csv — Nombres realistas de pacientes
+
+**Opcionales pero recomendados.** Alimentan el nombre completo del paciente (primer + segundo nombre y
+primer + segundo apellido), lo que evita el cuello de botella del locale de Bogus (`"es"` daba solo ~24
+nombres de pila → miles de pacientes con nombre repetido). Si faltan, el generador cae al Bogus previo
+(un solo nombre y un apellido).
+
+```csv
+nombre,genero
+José,M
+María,F
+```
+```csv
+apellido
+García
+López
+```
+
+| Archivo | Columna | Descripción |
+|---------|---------|-------------|
+| `nombres.csv` | `nombre` | Nombre de pila. |
+| `nombres.csv` | `genero` | `M` o `F`. El generador elige 2 nombres distintos del pool del género del paciente. |
+| `apellidos.csv` | `apellido` | Apellido. Se eligen 2 distintos (primer y segundo apellido). |
+
+> Los campos se envían a OpenMRS como `givenName` / `middleName` / `familyName` / `familyName2`.
+> Con ~150 nombres/género y ~200 apellidos el espacio de combinaciones supera el millón → colisiones
+> de nombre completo prácticamente nulas para una corrida de un año.
+
+---
+
+## 10b. catalogs/direcciones.csv — Direcciones salvadoreñas coherentes
+
+**Opcional.** Una fila por zona residencial (colonia/barrio/cantón). El generador elige por `peso`
+— la mayoría de pacientes vive cerca de la clínica (área metropolitana de San Salvador) y hay una
+cola de municipios lejanos, como la captación real de una consulta externa.
+
+| Columna | Descripción |
+|---------|-------------|
+| `departamento` | Departamento (→ `state_province` en OpenMRS). |
+| `municipio` | Municipio (→ `city_village`). |
+| `zona` | Colonia/Barrio/Cantón, tal cual encabeza el `address1` (p.ej. "Colonia Zacamil"). |
+| `peso` | Peso relativo de la zona (mayor = más pacientes de allí). |
+
+El `address1` final añade detalle urbano ("Colonia Zacamil, pasaje C, casa #8"); los **cantones**
+(rurales) van sin numeración. `country` = "El Salvador". **Archivo ausente/vacío = fallback Bogus**
+(calles genéricas y país "España", comportamiento histórico).
+
+**Criterio de pesos — anillos de distancia (la clínica está en el municipio de San Salvador):**
+
+| Anillo | Zonas | Cuota objetivo | Pesos |
+|:------:|-------|:--------------:|-------|
+| 0 | San Salvador municipio | ~45 % | 8–20 |
+| 1 | Colindantes (Mejicanos, Soyapango, Ciudad Delgado, Cuscatancingo, Ayutuxtepeque, San Marcos) | ~28 % | 5–18 |
+| 2 | Resto del AMSS + metro La Libertad (Apopa, Ilopango, Santa Tecla, Antiguo Cuscatlán…) | ~18 % | 2–6 |
+| 3 | Interior del país (viaje de 1–3 h — caso ocasional) | ~9 % | 1 (2 en cabeceras con hospital de referencia: Santa Ana, San Miguel, Cojutepeque, Zacatecoluca) |
+
+Si el escenario "muda" la clínica a otra ciudad, basta reponderar el CSV con este mismo criterio
+(mayor peso = más cerca de la clínica); no hay que tocar código.
+
+---
+
+## 10c. Atributos de persona — teléfono y estado civil
+
+No son un catálogo: se generan por código (`PatientProfileGenerator`, con el `Random` sembrado, así
+que son reproducibles) y viajan **anidados** como `attributes:[{attributeType,value}]` dentro del
+`person` del `POST /patient`. Se activan solo si el UUID del attribute type está configurado en
+`OpenMRS.Defaults` (vacío = el paciente se crea sin ese atributo, mismo patrón que
+`AppointmentServiceUuid`).
+
+| Atributo | Formato | Cómo se genera |
+|----------|---------|----------------|
+| Teléfono (`TelephoneAttributeTypeUuid`) | String | Número salvadoreño sintético: móvil `7###-####` (~80 %) o fijo `2###-####` (~20 %). En menores de edad representa el contacto del tutor. Seam puro `GenerarTelefono`. |
+| Estado civil (`CivilStatusAttributeTypeUuid`) | **Concept** → el valor es el UUID de una *answer* del concepto `1054` | Coherente con la edad (seam puro `GenerarEstadoCivil(edad, rng)`): <18 siempre **soltero**; conforme sube la edad crece **casado/acompañado**; la **viudez** solo se vuelve visible en 65+. |
+
+> ⚠️ Para listar las answers de `1054` hay que pedir el concepto **por UUID con `v=full`**;
+> `GET /concept?q=…` con representación personalizada de `answers` devuelve NPE en esta instancia.
+
+---
+
+## 10d. catalogs/comorbilidad_afinidades.csv — Clusters de comorbilidad
+
+**Opcional.** Por cada categoría, las categorías clínicamente afines que reciben el `AffinityBoost`
+al elegir una comorbilidad. Así un diabético tiende a presentar enfermedad cardiovascular/endocrina.
+Si el archivo falta, las comorbilidades se eligen sin sesgo de afinidad.
+
+```csv
+categoria,afines
+diabetes,cardiovascular|endocrino|neurologico
+respiratorio,infeccioso
+```
+
+| Columna | Descripción |
+|---------|-------------|
+| `categoria` | Categoría origen (una de las 13). |
+| `afines` | Categorías afines **separadas por `\|`** (no por coma, que es el delimitador CSV). |
+
+---
+
+## 11. Coherencia entre archivos — Cómo se conectan
 
 ```
 appsettings.json
@@ -302,7 +539,7 @@ appsettings.json
 
 AL CREAR PACIENTE NUEVO:
 alergenos.csv
-  └── rand < AllergyOnNew (0.15) ────────► elegir 1-3 al azar → POST /patient/{uuid}/allergy
+  └── rand < prevalencia corrida (0.15-0.25) ──► nº por decaída condicional (≥1) → POST /patient/{uuid}/allergy
 
 POR CADA VISITA:
 
@@ -335,6 +572,9 @@ laboratorios.csv
   └── rand < LabOrder (0.40) o requiere_lab
         → filtrar por [aplica_CATEGORIA = true]
         → elegir 1-2 al azar → POST /order testorder
+        → resultado (numeric/coded, o panel vía paneles.csv como obs-group):
+            rand < LabResult (0.90) → POST /obs ligada a la orden, mismo día
+            si no → queda pendiente y se entrega en la SIGUIENTE visita del paciente
 
 PASO 6 — prescripción (si aplica):
 medicamentos.csv
@@ -349,40 +589,51 @@ motivos_consulta.csv
 
 ---
 
-## 10. Vitales coherentes con diagnóstico
+## 12. Vitales coherentes con diagnóstico
 
-Los signos vitales del encuentro VITALS se ajustan según la categoría del diagnóstico:
+Los signos vitales se derivan (`VitalsSeeder.ComputeVitals`) de la **unión de categorías** de
+**todos** los diagnósticos del paciente (primario + comorbilidades), la **peor severidad**, y
+los overrides opcionales por enfermedad (`vital_fiebre`, `vital_imc`, `vital_pa`, `vital_fc`,
+`vital_spo2`). El override gana sobre la categoría.
 
-| Categoría dx | Ajuste en vitales |
-|--------------|-------------------|
-| `cardiovascular` (HTA) | PA sistólica: 140-180 mmHg, diastólica: 90-110 |
-| `infeccioso` | Temperatura: 37.5-39.5°C, pulso elevado: 90-110 lpm |
-| `respiratorio` grave | SpO2: 88-94%, FR elevada |
-| `diabetes` | Peso tendencia alta (BMI 25-35) |
-| Resto | Rangos normales con variación estadística |
+| Condición | Ajuste en vitales |
+|-----------|-------------------|
+| `cardiovascular` o `vital_pa=alta` | PA 140-180 / 90-110 mmHg; pulso 80-110 (solo categoría) |
+| `infeccioso`, `respiratorio` (≥moderado) o `vital_fiebre=true` | Temperatura 37.5-39.5°C (hasta 40 si grave); pulso 90-120; FR elevada |
+| `respiratorio` grave / moderado | SpO2 88-93 / 92-96% |
+| `vital_fc=alta` (hipertiroidismo, anemia, hipovolemia) | Pulso 100-130 — gana sobre fiebre/categoría |
+| `vital_fc=baja` (hipotiroidismo, bloqueos) | Pulso 42-58 — gana sobre fiebre/categoría |
+| `vital_spo2=baja` (insuf. cardíaca, TEP) | SpO2 88-94% aunque no sea respiratorio |
+| `diabetes`, `endocrino` o `vital_imc=alto` | IMC objetivo 27-38 (sobrepeso/obesidad) |
+| `vital_imc=bajo` (TB, cáncer, hipertiroidismo, VIH…) | IMC objetivo 16-19 (bajo peso) |
+| Resto | IMC 18.5-27; temperatura/pulso/FR/SpO2 normales con variación |
 
-Rangos base (sin ajuste por dx):
+> **Peso acoplado a la talla:** el peso ya **no** es un rango independiente. Se elige un IMC
+> objetivo (según la tabla) y se calcula `peso = IMC × (talla/100)²`, de modo que peso y talla
+> siempre son coherentes (no más IMC de 50 en pacientes de consulta externa).
 
-| Signo vital | Rango base | Unidad |
+Rangos base de talla (de ahí sale el peso vía IMC):
+
+| Signo vital | Rango | Unidad |
 |---|---|---|
-| Peso | 45-120 | kg |
-| Talla | 145-195 | cm |
-| PA sistólica | 100-130 | mmHg |
-| PA diastólica | 60-85 | mmHg |
-| Temperatura | 36.0-37.4 | °C |
-| Pulso | 60-100 | lpm |
-| SpO2 | 96-100 | % |
+| Talla (hombre) | 160-185 | cm |
+| Talla (mujer) | 150-172 | cm |
+| Talla (0-14) | 90-160 | cm |
+| Temperatura (afebril) | 36.0-37.4 | °C |
+| Pulso (basal) | 60-100 | lpm |
+| Frecuencia respiratoria (basal) | 12-20 | rpm |
+| SpO2 (basal) | 95-99 | % |
 
 ---
 
-## 11. Idempotencia y limpieza
+## 13. Idempotencia y limpieza
 
 Todos los registros creados por el simulador son identificables:
 - **Pacientes**: identificador con prefijo `SIM-` (ej: `SIM-A3F8C201`)
 - **Visitas/Encounters**: campo `description` contiene `SEEDED_BY_SIMULATOR`
 
 Esto permite:
-- `DELETE /api/seed/clear` → busca pacientes `SIM-*` → void lógico en cascada (visitas, encounters, obs, orders)
+- `dotnet run -- clear` (pide confirmación) → busca pacientes `SIM-*` → void lógico en cascada (visitas, encounters, obs, orders)
 - Re-ejecuciones seguras: pacientes `SIM-` existentes se usan como "recurrentes"
 
 ---
@@ -394,7 +645,7 @@ Esto permite:
 | Período de simulación | `appsettings.json` → `StartDate/EndDate` |
 | Volumen de pacientes | `appsettings.json` → `PacientesPorDiaMedio` |
 | Variación estadística diaria | `DailyScheduleGenerator.cs` → parámetro σ del Normal |
-| Tipo de clínica / perfil | `appsettings.json` → `ClinicType` (referencia semántica) |
+| Perfil pediátrico de la clínica | `appsettings.json` → `DemographicProfile.PediatricClinic` |
 | Distribución etaria | `appsettings.json` → `DemographicProfile.AgeGroups` |
 | Volumen por día de semana | `appsettings.json` → `WeekdayWeights` |
 | Qué enfermedades predominan | `epidemiology-profile.csv` → `peso` por categoría |
@@ -402,11 +653,16 @@ Esto permite:
 | Peso de un dx entre hombres vs. mujeres | `diagnosticos.csv` → `peso_M` / `peso_F` |
 | Qué medicamentos se prescriben | `medicamentos.csv` → `aplica_CATEGORIA` |
 | Qué labs externos se piden | `laboratorios.csv` → `aplica_CATEGORIA` |
+| Qué componentes trae un panel (hemograma) | `paneles.csv` → filas con su `panel_uuid` |
 | Qué exámenes de consultorio aplican | `examenes_clinicos.csv` → `aplica_CATEGORIA` |
 | Frases de motivo de consulta | `motivos_consulta.csv` → `texto` |
 | % de visitas con labs externos | `appsettings.json` → `ReferralProbabilities.LabOrder` |
 | % de visitas con examen en consultorio | `appsettings.json` → `ReferralProbabilities.ClinicalExam` |
-| % de pacientes con alergias | `appsettings.json` → `ReferralProbabilities.AllergyOnNew` |
+| % de pacientes con alergias | `appsettings.json` → `Allergy.BaseProbabilityMin/Max` |
+| Cuántas alergias por paciente alérgico | `appsettings.json` → `Allergy.SecondAllergyProbability` / `ThirdAllergyProbability` / `MaxAllergies` |
 | Qué alérgenos pueden aparecer | `alergenos.csv` |
+| Qué vital dispara una enfermedad concreta | `diagnosticos.csv` → `vital_fiebre` / `vital_imc` / `vital_pa` / `vital_fc` / `vital_spo2` |
+| % de resultados de lab que llegan el mismo día (el resto se difiere) | `appsettings.json` → `ReferralProbabilities.LabResult` |
+| Que el paciente lleve teléfono / estado civil | `appsettings.json` → `Defaults.TelephoneAttributeTypeUuid` / `CivilStatusAttributeTypeUuid` (vacío = off) |
 | UUIDs de OpenMRS (location, visita, encuentro) | `appsettings.json` → `OpenMRS.Defaults` |
 | Reproducibilidad | `appsettings.json` → `RandomSeed` |

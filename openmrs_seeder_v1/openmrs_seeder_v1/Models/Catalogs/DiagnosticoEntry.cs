@@ -16,4 +16,22 @@ public class DiagnosticoEntry
     public bool RequiereLab { get; set; }
     public bool RequiereRx { get; set; }
     public bool RequiereExamenClinico { get; set; }
+    /// <summary>Estaciones (en minúscula) bajo las que la enfermedad es más frecuente. Vacío = sin efecto estacional.</summary>
+    public HashSet<string> Clima { get; set; } = [];
+    /// <summary>Si es una condición crónica → se agrega a la lista de problemas del paciente (POST /condition).</summary>
+    public bool EsCronica { get; set; }
+    /// <summary>Si es una enfermedad común/frecuente. El factor inicial de selección apunta mayormente a estas.</summary>
+    public bool EsComun { get; set; }
+    /// <summary>Override opcional de vitales: fuerza fiebre aunque la categoría no lo haría (col. <c>vital_fiebre</c>). Default false = neutro.</summary>
+    public bool VitalFiebre { get; set; }
+    /// <summary>Override opcional de IMC: <c>"alto"</c> (sobrepeso/obesidad) | <c>"bajo"</c> (desnutrición/caquexia) | <c>""</c> neutro (col. <c>vital_imc</c>).</summary>
+    public string VitalImc { get; set; } = "";
+    /// <summary>Override opcional de presión arterial: <c>"alta"</c> fuerza banda hipertensiva aunque no sea cardiovascular (preeclampsia, ERC…) | <c>""</c> neutro (col. <c>vital_pa</c>).</summary>
+    public string VitalPa { get; set; } = "";
+    /// <summary>Override opcional de frecuencia cardíaca: <c>"alta"</c> taquicardia (hipertiroidismo, anemia grave) | <c>"baja"</c> bradicardia (hipotiroidismo, bloqueos) | <c>""</c> neutro (col. <c>vital_fc</c>).</summary>
+    public string VitalFc { get; set; } = "";
+    /// <summary>Override opcional de SpO2: <c>"baja"</c> desaturación fuera de respiratorio (insuf. cardíaca, anemia grave) | <c>""</c> neutro (col. <c>vital_spo2</c>).</summary>
+    public string VitalSpo2 { get; set; } = "";
+    /// <summary>Sexo al que aplica el diagnóstico: <c>"M"</c> | <c>"F"</c> | <c>""</c> (ambos). Excluye duro el sexo contrario (embarazo→F, próstata→M).</summary>
+    public string Sexo { get; set; } = "";
 }

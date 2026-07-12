@@ -1,10 +1,12 @@
+# El seeder es un job batch: se ejecuta y termina. Uso:
+#   docker compose -f docker/docker-compose.yml run --rm seeder          → corre la simulación
+#   docker compose -f docker/docker-compose.yml run --rm seeder clear    → limpia los datos SIM-
 services:
   seeder:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    ports:
-      - "5197:8080"
+    restart: "no"
     env_file:
       - .env
     environment:

@@ -36,3 +36,52 @@ infeccioso,Dolor de cabeza intenso con fiebre y rigidez de cuello
 endocrino,Control de función tiroidea y resultados de laboratorio
 endocrino,Aumento de peso sin cambio en la dieta habitual
 endocrino,Caída excesiva del cabello y cansancio constante
+respiratorio,Estornudos, moqueo y malestar general como gripe
+respiratorio,Fiebre, dolor muscular y cansancio repentino
+respiratorio,Dolor de oído y sensación de oído tapado
+respiratorio,Congestión nasal y presión en la cara desde hace días
+respiratorio,Ojos llorosos, picazón en la nariz y estornudos seguidos
+digestivo,Diarrea líquida varias veces al día desde anoche
+digestivo,Vómitos y diarrea con dolor de estómago
+digestivo,Náuseas y malestar luego de comer fuera de casa
+digestivo,Picazón anal y molestias digestivas, sospecha de parásitos
+infeccioso,Fiebre alta con dolor de cabeza y dolor detrás de los ojos
+infeccioso,Dolor de cuerpo, fiebre y brote en la piel
+infeccioso,Ojo rojo con secreción y sensación de arenilla
+infeccioso,Ronchas con picazón y fiebre en los últimos días
+infeccioso,Enrojecimiento, calor e hinchazón en una zona de la piel
+urologico,Ardor al orinar y ganas frecuentes de ir al baño
+urologico,Dolor intenso en el costado que baja hacia la ingle
+cardiovascular,Revisión de presión arterial y ajuste de medicación
+osteomuscular,Dolor e inflamación en una articulación del pie
+osteomuscular,Torcedura de tobillo con dolor al apoyar
+diabetes,Episodios de mareo, sudor y temblor por azúcar baja
+neurologico,Dolor de cabeza intenso y pulsátil con náuseas
+neurologico,Mareos y sensación de que todo da vueltas
+neurologico,Hormigueo y entumecimiento en manos y pies
+neurologico,Episodios de pérdida de conocimiento y sacudidas
+neurologico,Desviación de la boca y dificultad para cerrar un ojo
+neurologico,Temblor en las manos y lentitud para moverse
+dermatologico,Ronchas con mucha picazón en todo el cuerpo
+dermatologico,Manchas rojas y descamación en la piel
+dermatologico,Granos en la cara que no mejoran
+dermatologico,Lesiones con ampollas y dolor en un costado
+dermatologico,Picazón intensa de noche y lesiones entre los dedos
+dermatologico,Uñas engrosadas y amarillentas
+salud_mental,Me siento triste y sin ganas de hacer nada desde hace semanas
+salud_mental,Preocupación constante y nerviosismo que no puedo controlar
+salud_mental,No logro dormir bien por las noches
+salud_mental,Episodios de palpitaciones y miedo intenso repentino
+salud_mental,Dificultad para concentrarme y cambios de ánimo
+ginecoobstetrico,Control de embarazo y chequeo de rutina
+ginecoobstetrico,Flujo vaginal con mal olor y picazón
+ginecoobstetrico,Dolor pélvico durante la menstruación
+ginecoobstetrico,Ausencia de menstruación y prueba de embarazo
+ginecoobstetrico,Sangrado durante el embarazo
+ginecoobstetrico,Bochornos y sudores nocturnos
+trauma,Caída con dolor e inflamación en el brazo
+trauma,Golpe en la cabeza con mareo y vómito
+trauma,Herida que necesita ser revisada y suturada
+trauma,Quemadura en la mano con agua caliente
+trauma,Torcedura del tobillo al caminar
+trauma,Mordedura de perro en la pierna

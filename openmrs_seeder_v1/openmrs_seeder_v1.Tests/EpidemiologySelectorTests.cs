@@ -7,7 +7,8 @@ namespace openmrs_seeder_v1.Tests;
 
 public class EpidemiologySelectorTests
 {
-    private static (CatalogLoader catalogs, EpidemiologySelector selector) CreateSelector()
+    private static (CatalogLoader catalogs, EpidemiologySelector selector) CreateSelector(
+        SimulationSettings? settings = null)
     {
         var catalogs = new CatalogLoader();
 
@@ -20,6 +21,7 @@ public class EpidemiologySelectorTests
             new() { Categoria = "cardiovascular", GrupoEdad = "45-64", Genero = "M",     Peso = 28 },
             new() { Categoria = "cardiovascular", GrupoEdad = "45-64", Genero = "F",     Peso = 22 },
             new() { Categoria = "diabetes",       GrupoEdad = "45-64", Genero = "Ambos", Peso = 20 },
+            new() { Categoria = "osteomuscular",  GrupoEdad = "45-64", Genero = "Ambos", Peso = 18 },
         };
 
         var diagnosticos = new List<DiagnosticoEntry>
@@ -29,7 +31,15 @@ public class EpidemiologySelectorTests
                 CielUuid  = "uuid-bronquitis", NombreEs = "Bronquitis aguda",
                 Categoria = "respiratorio", Severidad = "leve",
                 Aplica0_14 = true, PesoM = 10, PesoF = 10,
-                RequiereLab = false, RequiereRx = true
+                RequiereLab = false, RequiereRx = true, EsComun = true
+            },
+            new()
+            {
+                CielUuid  = "uuid-gripe", NombreEs = "Influenza (gripe)",
+                Categoria = "respiratorio", Severidad = "leve",
+                Aplica0_14 = true, PesoM = 10, PesoF = 10,
+                RequiereLab = false, RequiereRx = true,
+                Clima = ["invierno"], EsComun = false
             },
             new()
             {
@@ -38,13 +48,124 @@ public class EpidemiologySelectorTests
                 Aplica45_64 = true, PesoM = 28, PesoF = 22,
                 RequiereLab = true, RequiereRx = true
             },
+            new()
+            {
+                CielUuid  = "uuid-dm2", NombreEs = "Diabetes mellitus tipo 2",
+                Categoria = "diabetes", Severidad = "moderado",
+                Aplica45_64 = true, PesoM = 20, PesoF = 20,
+                RequiereLab = true, RequiereRx = true
+            },
+            new()
+            {
+                CielUuid  = "uuid-lumbalgia", NombreEs = "Lumbalgia",
+                Categoria = "osteomuscular", Severidad = "leve",
+                Aplica45_64 = true, PesoM = 18, PesoF = 18,
+                RequiereLab = false, RequiereRx = true
+            },
         };
 
-        catalogs.LoadFromLists(epidemiology, diagnosticos, [], [], [], [], []);
+        var afinidades = new List<AfinidadEntry>
+        {
+            new() { Categoria = "diabetes",       Afines = ["cardiovascular", "endocrino"] },
+            new() { Categoria = "cardiovascular", Afines = ["diabetes", "endocrino"] },
+        };
 
-        var settings = new SimulationSettings { RandomSeed = 42 };
+        catalogs.LoadFromLists(epidemiology, diagnosticos, [], [], [], [], [], afinidades: afinidades);
+
+        settings ??= new SimulationSettings { RandomSeed = 42 };
+        // Damping apagado: estos tests verifican pesos/boosts en aislamiento; la amortiguación
+        // anti-repetición tiene sus propios tests (SelectorConDosDx).
+        settings.Variedad = new VariedadSettings { RepeticionDamping = 0 };
         var selector = new EpidemiologySelector(catalogs, settings);
         return (catalogs, selector);
+    }
+
+    [Fact]
+    public void SelectDiagnostico_ExcluyeDuroPorSexo()
+    {
+        var catalogs = new CatalogLoader();
+        var dx = new List<DiagnosticoEntry>
+        {
+            new() { CielUuid = "f-emb", NombreEs = "Preeclampsia", Categoria = "ginecoobstetrico",
+                    Aplica15_29 = true, Aplica30_44 = true, PesoM = 4, PesoF = 4, Sexo = "F" },
+            new() { CielUuid = "m-pro", NombreEs = "Prostatitis", Categoria = "urologico",
+                    Aplica30_44 = true, Aplica45_64 = true, PesoM = 4, PesoF = 4, Sexo = "M" },
+            new() { CielUuid = "ambos", NombreEs = "Cistitis", Categoria = "urologico",
+                    Aplica30_44 = true, PesoM = 10, PesoF = 10, Sexo = "" },
+        };
+        catalogs.LoadFromLists([], dx, [], [], [], [], []);
+        var selector = new EpidemiologySelector(catalogs, new SimulationSettings { RandomSeed = 42 });
+
+        // Un hombre NUNCA debe recibir un dx femenino (y no hay dx masculino en ginecoobstetrico → null).
+        for (int i = 0; i < 50; i++)
+            Assert.Null(selector.SelectDiagnostico("ginecoobstetrico", "30-44", "M"));
+
+        // En urologico, el hombre puede recibir prostatitis o cistitis, nunca un dx femenino.
+        for (int i = 0; i < 100; i++)
+        {
+            var d = selector.SelectDiagnostico("urologico", "30-44", "M");
+            Assert.NotNull(d);
+            Assert.NotEqual("F", d!.Sexo);
+        }
+        // La mujer no recibe prostatitis.
+        for (int i = 0; i < 100; i++)
+        {
+            var d = selector.SelectDiagnostico("urologico", "30-44", "F");
+            Assert.NotNull(d);
+            Assert.NotEqual("M", d!.Sexo);
+        }
+    }
+
+    [Fact]
+    public void RollSeguimientoCronico_ProbabilidadLimite()
+    {
+        var (_, selector) = CreateSelector();
+        Assert.False(selector.RollSeguimientoCronico(0.0)); // nunca
+        Assert.True(selector.RollSeguimientoCronico(1.0));  // siempre
+    }
+
+    [Fact]
+    public void RollSeguimientoCronico_FrecuenciaAproximada()
+    {
+        var (_, selector) = CreateSelector();
+        int si = 0;
+        const int n = 1000;
+        for (int i = 0; i < n; i++) if (selector.RollSeguimientoCronico(0.70)) si++;
+        Assert.InRange(si, 640, 760); // ~70%
+    }
+
+    [Fact]
+    public void RollSeguimientoAgudo_ProbabilidadLimite()
+    {
+        var (_, selector) = CreateSelector();
+        Assert.False(selector.RollSeguimientoAgudo(0.0)); // nunca
+        Assert.True(selector.RollSeguimientoAgudo(1.0));  // siempre
+    }
+
+    [Theory]
+    [InlineData(10, 30, true)]   // dentro de la ventana
+    [InlineData(30, 30, true)]   // borde exacto
+    [InlineData(31, 30, false)]  // justo fuera
+    [InlineData(0, 30, true)]    // mismo día
+    public void EpisodioAgudoVigente_RespetaVentana(int diasTranscurridos, int ventana, bool esperado)
+    {
+        var episodio = new DateOnly(2025, 3, 1);
+        var visita   = episodio.AddDays(diasTranscurridos);
+        Assert.Equal(esperado, EpidemiologySelector.EpisodioAgudoVigente(episodio, visita, ventana));
+    }
+
+    [Fact]
+    public void EpisodioAgudoVigente_SinEpisodio_EsFalso()
+    {
+        Assert.False(EpidemiologySelector.EpisodioAgudoVigente(null, new DateOnly(2025, 3, 1), 30));
+    }
+
+    [Fact]
+    public void EpisodioAgudoVigente_VisitaAnteriorAlEpisodio_EsFalso()
+    {
+        // Defensa: una fecha de visita anterior al episodio no puede ser su control.
+        var episodio = new DateOnly(2025, 3, 10);
+        Assert.False(EpidemiologySelector.EpisodioAgudoVigente(episodio, episodio.AddDays(-5), 30));
     }
 
     [Fact]
@@ -98,5 +219,225 @@ public class EpidemiologySelectorTests
             Assert.NotNull(dx);
             Assert.Equal("uuid-hta", dx!.CielUuid);
         }
+    }
+
+    [Fact]
+    public void SelectComorbilidades_ConProbabilidadCero_DevuelveVacio()
+    {
+        var settings = new SimulationSettings
+        {
+            RandomSeed = 42,
+            Comorbidity = new ComorbiditySettings { BaseProbability = 0.0 }
+        };
+        var (_, selector) = CreateSelector(settings);
+        var primario = selector.SelectDiagnostico("diabetes", "45-64", "M");
+        Assert.NotNull(primario);
+
+        for (int i = 0; i < 20; i++)
+            Assert.Empty(selector.SelectComorbilidades(primario!, "45-64", "M"));
+    }
+
+    [Fact]
+    public void SelectComorbilidades_RespetaAfinidad_EligeCategoriaAsociada()
+    {
+        var settings = new SimulationSettings
+        {
+            RandomSeed = 42,
+            Comorbidity = new ComorbiditySettings
+            {
+                BaseProbability = 1.0,
+                MaxAdditional = 1,
+                AffinityBoost = 50.0
+            }
+        };
+        var (_, selector) = CreateSelector(settings);
+        var primario = selector.SelectDiagnostico("diabetes", "45-64", "M");
+        Assert.NotNull(primario);
+
+        int conComorbilidad = 0, afines = 0;
+        for (int i = 0; i < 200; i++)
+        {
+            var comorb = selector.SelectComorbilidades(primario!, "45-64", "M");
+            foreach (var dx in comorb)
+            {
+                conComorbilidad++;
+                // Nunca duplica la categoría del primario
+                Assert.NotEqual("diabetes", dx.Categoria);
+                // cardiovascular es afín a diabetes en los settings por defecto
+                if (dx.Categoria == "cardiovascular") afines++;
+            }
+        }
+
+        Assert.True(conComorbilidad > 0, "Debería generar comorbilidades con probabilidad 1.0");
+        // Con un boost de afinidad alto, la mayoría deben ser de la categoría afín (cardiovascular)
+        // frente a la alternativa no afín disponible (osteomuscular).
+        Assert.True(afines > conComorbilidad * 0.7,
+            $"Esperaba mayoría de comorbilidades afines; afines={afines}, total={conComorbilidad}");
+    }
+
+    [Fact]
+    public void SelectDiagnostico_ConClima_FavoreceEnfermedadDeLaEstacion()
+    {
+        // gripe (clima=invierno) y bronquitis (sin clima) tienen el mismo peso base
+        var (_, selector) = CreateSelector();
+
+        int gripe = 0, bronquitis = 0;
+        for (int i = 0; i < 400; i++)
+        {
+            var dx = selector.SelectDiagnostico("respiratorio", "0-14", "M", climate: "invierno");
+            if (dx?.CielUuid == "uuid-gripe") gripe++;
+            else if (dx?.CielUuid == "uuid-bronquitis") bronquitis++;
+        }
+
+        // Con SeasonalBoost (2.5) por defecto, la gripe debe dominar claramente en invierno
+        Assert.True(gripe > bronquitis * 1.5,
+            $"En invierno la gripe debería dominar; gripe={gripe}, bronquitis={bronquitis}");
+    }
+
+    [Fact]
+    public void SelectDiagnostico_PreferCommon_FiltraPorPoolComun()
+    {
+        var (_, selector) = CreateSelector();
+
+        // En respiratorio: bronquitis (comun) y gripe (no comun)
+        for (int i = 0; i < 50; i++)
+        {
+            var comun = selector.SelectDiagnostico("respiratorio", "0-14", "M", preferCommon: true);
+            Assert.Equal("uuid-bronquitis", comun!.CielUuid);
+
+            var raro = selector.SelectDiagnostico("respiratorio", "0-14", "M", preferCommon: false);
+            Assert.Equal("uuid-gripe", raro!.CielUuid);
+        }
+    }
+
+    [Fact]
+    public void DrawRunCommonProbability_DentroDeLaBanda_YVariaEntreCorridas()
+    {
+        var settings = new SimulationSettings { RandomSeed = 42, CommonProbMin = 0.70, CommonProbMax = 0.95 };
+        var (_, selector) = CreateSelector(settings);
+
+        var valores = new System.Collections.Generic.HashSet<double>();
+        for (int i = 0; i < 50; i++)
+        {
+            var p = selector.DrawRunCommonProbability();
+            Assert.InRange(p, 0.70, 0.95);   // siempre dentro de la banda (inclinado a común)
+            valores.Add(p);
+        }
+        Assert.True(valores.Count > 1, "La probabilidad de la corrida debe variar");
+    }
+
+    [Fact]
+    public void RollPreferCommon_RespetaLaProbabilidad()
+    {
+        var (_, selector) = CreateSelector();
+        int comunes = 0;
+        const int n = 2000;
+        for (int i = 0; i < n; i++) if (selector.RollPreferCommon(0.80)) comunes++;
+        Assert.InRange(comunes, (int)(n * 0.74), (int)(n * 0.86)); // ~80%
+    }
+
+    [Fact]
+    public void SelectDiagnostico_SinClima_NoAplicaBoost()
+    {
+        var (_, selector) = CreateSelector();
+
+        int gripe = 0, bronquitis = 0;
+        for (int i = 0; i < 400; i++)
+        {
+            var dx = selector.SelectDiagnostico("respiratorio", "0-14", "M"); // climate = null
+            if (dx?.CielUuid == "uuid-gripe") gripe++;
+            else if (dx?.CielUuid == "uuid-bronquitis") bronquitis++;
+        }
+
+        // Sin clima, pesos iguales → reparto aproximadamente parejo (ninguno domina abrumadoramente)
+        Assert.True(gripe > 0 && bronquitis > 0);
+        Assert.True(gripe < bronquitis * 2 && bronquitis < gripe * 2,
+            $"Sin clima el reparto debería ser parejo; gripe={gripe}, bronquitis={bronquitis}");
+    }
+
+    // ---- Amortiguación anti-repetición (variedad) ----
+
+    [Theory]
+    [InlineData(100, 0, 0.25, 100)]   // sin usos → peso intacto
+    [InlineData(100, 4, 0.25, 50)]    // 100 / (1 + 0.25·4) = 50
+    [InlineData(100, 10, 0, 100)]     // damping 0 = feature apagada
+    [InlineData(10, 12, 0.25, 2.5)]   // 10 / (1 + 3) = 2.5
+    public void PesoConDamping_DecaeConLosUsos(double peso, int usos, double damping, double esperado)
+    {
+        Assert.Equal(esperado, EpidemiologySelector.PesoConDamping(peso, usos, damping), 3);
+    }
+
+    [Fact]
+    public void PesoConDamping_EsMonotonoDecreciente()
+    {
+        var anterior = double.MaxValue;
+        for (int usos = 0; usos <= 20; usos++)
+        {
+            var actual = EpidemiologySelector.PesoConDamping(50, usos, 0.25);
+            Assert.True(actual <= anterior, $"Con {usos} usos el peso subió: {actual} > {anterior}");
+            anterior = actual;
+        }
+    }
+
+    private static EpidemiologySelector SelectorConDosDx(double damping)
+    {
+        var catalogs = new CatalogLoader();
+        var dx = new List<DiagnosticoEntry>
+        {
+            new() { CielUuid = "uuid-dominante", NombreEs = "Dominante", Categoria = "respiratorio",
+                    Severidad = "leve", Aplica0_14 = true, PesoM = 100, PesoF = 100 },
+            new() { CielUuid = "uuid-raro", NombreEs = "Raro", Categoria = "respiratorio",
+                    Severidad = "leve", Aplica0_14 = true, PesoM = 1, PesoF = 1 },
+        };
+        catalogs.LoadFromLists([], dx, [], [], [], [], []);
+        return new EpidemiologySelector(catalogs, new SimulationSettings
+        {
+            RandomSeed = 42,
+            Variedad = new VariedadSettings { RepeticionDamping = damping }
+        });
+    }
+
+    [Fact]
+    public void SelectDiagnostico_ConDamping_ExploraLaColaLarga()
+    {
+        var selector = SelectorConDosDx(damping: 5.0);
+
+        int raros = 0;
+        for (int i = 0; i < 200; i++)
+            if (selector.SelectDiagnostico("respiratorio", "0-14", "M")?.CielUuid == "uuid-raro") raros++;
+
+        // El dominante (peso 100 vs 1) decae con cada uso → el raro debe aparecer con regularidad
+        // (equilibrio teórico ~1:√(100/1) ≈ 18% de los sorteos)
+        Assert.True(raros >= 15, $"Con damping el dx raro debería explorarse; apareció {raros}/200 veces");
+    }
+
+    [Fact]
+    public void SelectDiagnostico_SinDamping_ElDominanteAcapara()
+    {
+        var selector = SelectorConDosDx(damping: 0);
+
+        int raros = 0;
+        for (int i = 0; i < 200; i++)
+            if (selector.SelectDiagnostico("respiratorio", "0-14", "M")?.CielUuid == "uuid-raro") raros++;
+
+        // Sin damping, el peso 100:1 mantiene al raro casi invisible (comportamiento anterior, ~1%)
+        Assert.True(raros <= 8, $"Sin damping el raro no debería aparecer casi nunca; apareció {raros}/200");
+    }
+
+    [Fact]
+    public void ResetUsos_ReiniciaLaAmortiguacion()
+    {
+        var selector = SelectorConDosDx(damping: 5.0);
+        for (int i = 0; i < 30; i++) selector.SelectDiagnostico("respiratorio", "0-14", "M");
+
+        selector.ResetUsos();
+
+        // Tras el reset, el dominante vuelve a pesar 100:1 → las primeras selecciones lo favorecen
+        int dominantesTrasReset = 0;
+        for (int i = 0; i < 5; i++)
+            if (selector.SelectDiagnostico("respiratorio", "0-14", "M")?.CielUuid == "uuid-dominante")
+                dominantesTrasReset++;
+        Assert.True(dominantesTrasReset >= 4,
+            $"Tras ResetUsos el dominante debería volver a acaparar; salió {dominantesTrasReset}/5");
     }
 }

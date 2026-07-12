@@ -7,51 +7,250 @@ public class EpidemiologySelector
 {
     private readonly CatalogLoader _catalogs;
     private readonly Random _rng;
+    private readonly ComorbiditySettings _comorbidity;
+    private readonly double _seasonalBoost;
+    private readonly double _commonProbMin;
+    private readonly double _commonProbMax;
+    /// <summary>estación → categorías que tienen ≥1 diagnóstico con esa etiqueta de clima.</summary>
+    private readonly Dictionary<string, HashSet<string>> _categoriasPorClima;
+    /// <summary>comun (true/false) → categorías que tienen ≥1 diagnóstico con ese flag.</summary>
+    private readonly Dictionary<bool, HashSet<string>> _categoriasPorComun;
+    /// <summary>categoría → categorías clínicamente afines (clusters de comorbilidad, desde catálogo).</summary>
+    private readonly Dictionary<string, List<string>> _afinidades;
+    /// <summary>uuid del dx → veces elegido en la corrida (amortiguación anti-repetición).</summary>
+    private readonly Dictionary<string, int> _usosDx = new();
+    private readonly double _repeticionDamping;
 
     public EpidemiologySelector(CatalogLoader catalogs, SimulationSettings settings)
     {
         _catalogs = catalogs;
         _rng = new Random(settings.RandomSeed + 3);
+        _comorbidity = settings.Comorbidity;
+        _seasonalBoost = settings.Climate.SeasonalBoost;
+        _commonProbMin = settings.CommonProbMin;
+        _commonProbMax = settings.CommonProbMax;
+        _repeticionDamping = settings.Variedad.RepeticionDamping;
+
+        _afinidades = _catalogs.Afinidades.ToDictionary(
+            a => a.Categoria, a => a.Afines, StringComparer.OrdinalIgnoreCase);
+
+        _categoriasPorClima = new Dictionary<string, HashSet<string>>();
+        _categoriasPorComun = new Dictionary<bool, HashSet<string>> { [true] = [], [false] = [] };
+        foreach (var d in _catalogs.Diagnosticos)
+        {
+            foreach (var estacion in d.Clima)
+            {
+                if (!_categoriasPorClima.TryGetValue(estacion, out var set))
+                    _categoriasPorClima[estacion] = set = new HashSet<string>();
+                set.Add(d.Categoria);
+            }
+            _categoriasPorComun[d.EsComun].Add(d.Categoria);
+        }
     }
 
-    public string SelectCategoria(string ageGroup, string gender)
+    /// <summary>
+    /// Sortea, una vez por corrida, la probabilidad de "común" uniformemente en la banda
+    /// [CommonProbMin, CommonProbMax]. Así la proporción varía entre corridas pero se inclina a común.
+    /// </summary>
+    public double DrawRunCommonProbability() =>
+        _commonProbMin + (_commonProbMax - _commonProbMin) * _rng.NextDouble();
+
+    /// <summary>Reinicia los contadores de uso de la amortiguación anti-repetición (1× por corrida).</summary>
+    public void ResetUsos() => _usosDx.Clear();
+
+    /// <summary>
+    /// Seam puro de la amortiguación anti-repetición: el peso efectivo de un dx decae con cada uso
+    /// en la corrida (peso / (1 + damping × usos)) para que la selección explore la cola larga del
+    /// catálogo. damping ≤ 0 = sin efecto.
+    /// </summary>
+    public static double PesoConDamping(double peso, int usos, double damping) =>
+        damping <= 0 || usos <= 0 ? peso : peso / (1.0 + damping * usos);
+
+    /// <summary>Factor inicial por paciente: con probabilidad <paramref name="pCommon"/> apunta a común.</summary>
+    public bool RollPreferCommon(double pCommon) => _rng.NextDouble() < pCommon;
+
+    /// <summary>
+    /// Decide si una visita recurrente es un control de una condición crónica ya conocida del paciente
+    /// (con probabilidad <paramref name="p"/>) en lugar de un motivo agudo nuevo.
+    /// </summary>
+    public bool RollSeguimientoCronico(double p) => _rng.NextDouble() < p;
+
+    /// <summary>
+    /// Decide si una visita recurrente es el control del episodio AGUDO abierto del paciente
+    /// (mismo dx, mejoría/persistencia) en vez de una enfermedad aleatoria nueva. Espejo de
+    /// <see cref="RollSeguimientoCronico"/> para no crónicos.
+    /// </summary>
+    public bool RollSeguimientoAgudo(double p) => _rng.NextDouble() < p;
+
+    /// <summary>
+    /// Seam puro: ¿el episodio agudo sigue vigente en la fecha de la visita? (última visita del
+    /// episodio a ≤ <paramref name="ventanaDias"/> días). Null = sin episodio abierto.
+    /// </summary>
+    public static bool EpisodioAgudoVigente(DateOnly? fechaEpisodio, DateOnly fechaVisita, int ventanaDias) =>
+        fechaEpisodio is not null &&
+        fechaVisita >= fechaEpisodio.Value &&
+        fechaVisita.DayNumber - fechaEpisodio.Value.DayNumber <= ventanaDias;
+
+    public string SelectCategoria(string ageGroup, string gender, string? climate = null, bool? preferCommon = null)
     {
         var candidates = _catalogs.EpidemiologyProfile
             .Where(e => e.GrupoEdad == ageGroup && (e.Genero == gender || e.Genero == "Ambos"))
             .ToList();
 
+        // Factor inicial: restringir a categorías que tienen una enfermedad del pool elegido
+        if (preferCommon is bool pc && _categoriasPorComun.TryGetValue(pc, out var poolCats))
+        {
+            var filtrado = candidates.Where(e => poolCats.Contains(e.Categoria)).ToList();
+            if (filtrado.Count > 0) candidates = filtrado; // si vacío → fallback (sin restringir)
+        }
+
         if (candidates.Count == 0) return "infeccioso";
 
-        var total = candidates.Sum(e => e.Peso);
+        // Categorías favorecidas por la estación activa (las que contienen enfermedades de ese clima)
+        var boostCats = climate is not null && _categoriasPorClima.TryGetValue(climate, out var s)
+            ? s : null;
+
+        double Peso(EpidemiologyEntry e) =>
+            e.Peso * (boostCats != null && boostCats.Contains(e.Categoria) ? _seasonalBoost : 1.0);
+
+        var total = candidates.Sum(Peso);
         var pick = _rng.NextDouble() * total;
         double cumulative = 0;
         foreach (var entry in candidates)
         {
-            cumulative += entry.Peso;
+            cumulative += Peso(entry);
             if (pick <= cumulative) return entry.Categoria;
         }
         return candidates.Last().Categoria;
     }
 
-    public DiagnosticoEntry? SelectDiagnostico(string categoria, string ageGroup, string gender)
+    public DiagnosticoEntry? SelectDiagnostico(string categoria, string ageGroup, string gender, string? climate = null, bool? preferCommon = null)
     {
         var candidates = _catalogs.Diagnosticos
             .Where(d => d.Categoria == categoria && AplicaAGrupo(d, ageGroup))
+            // Exclusión dura por sexo: un dx marcado M|F no puede caer en el sexo contrario
+            // (p.ej. embarazo/eclampsia solo F, próstata/testículo solo M). Vacío = ambos.
+            .Where(d => d.Sexo.Length == 0 || d.Sexo == gender)
             .ToList();
 
         if (candidates.Count == 0) return null;
 
-        var total = candidates.Sum(d => gender == "M" ? d.PesoM : d.PesoF);
+        // Factor inicial: quedarse con el pool elegido (común/no-común); si vacío → fallback a todos
+        if (preferCommon is bool pc)
+        {
+            var filtrado = candidates.Where(d => d.EsComun == pc).ToList();
+            if (filtrado.Count > 0) candidates = filtrado;
+        }
+
+        // Las enfermedades favorecidas por la estación activa pesan más; las ya elegidas en la
+        // corrida pesan menos (amortiguación anti-repetición → más variedad en la cola larga)
+        double Peso(DiagnosticoEntry d)
+        {
+            var baseP = gender == "M" ? d.PesoM : d.PesoF;
+            var conClima = baseP * (climate is not null && d.Clima.Contains(climate) ? _seasonalBoost : 1.0);
+            return PesoConDamping(conClima, _usosDx.GetValueOrDefault(d.CielUuid), _repeticionDamping);
+        }
+
+        var elegido = ElegirPonderado(candidates, Peso);
+        _usosDx[elegido.CielUuid] = _usosDx.GetValueOrDefault(elegido.CielUuid) + 1;
+        return elegido;
+    }
+
+    private DiagnosticoEntry ElegirPonderado(List<DiagnosticoEntry> candidates, Func<DiagnosticoEntry, double> peso)
+    {
+        var total = candidates.Sum(peso);
         if (total == 0) return candidates[_rng.Next(candidates.Count)];
 
         var pick = _rng.NextDouble() * total;
         double cumulative = 0;
         foreach (var dx in candidates)
         {
-            cumulative += gender == "M" ? dx.PesoM : dx.PesoF;
+            cumulative += peso(dx);
             if (pick <= cumulative) return dx;
         }
         return candidates.Last();
+    }
+
+    /// <summary>
+    /// Selecciona 0..N diagnósticos adicionales (comorbilidad) detectados en la misma visita.
+    /// La probabilidad escala con la edad y las categorías afines al primario reciben más peso.
+    /// </summary>
+    public List<DiagnosticoEntry> SelectComorbilidades(DiagnosticoEntry primario, string ageGroup, string gender, string? climate = null)
+    {
+        var resultado = new List<DiagnosticoEntry>();
+        if (_comorbidity.MaxAdditional <= 0) return resultado;
+
+        var ageMult = _comorbidity.AgeScaling.GetValueOrDefault(ageGroup, 1.0);
+        var effProb = Math.Min(_comorbidity.BaseProbability * ageMult, 0.95);
+        if (_rng.NextDouble() >= effProb) return resultado;
+
+        var extras = 1;
+        if (_comorbidity.MaxAdditional >= 2 && _rng.NextDouble() < _comorbidity.SecondExtraProbability)
+            extras = 2;
+        extras = Math.Min(extras, _comorbidity.MaxAdditional);
+
+        var usadas = new HashSet<string> { primario.Categoria };
+        var uuids  = new HashSet<string> { primario.CielUuid };
+
+        for (int i = 0; i < extras; i++)
+        {
+            var categoria = PickCategoriaPonderada(ageGroup, gender, usadas, climate);
+            if (categoria is null) break;
+
+            var dx = SelectDiagnostico(categoria, ageGroup, gender, climate);
+            if (dx is not null && uuids.Add(dx.CielUuid))
+            {
+                resultado.Add(dx);
+                usadas.Add(dx.Categoria);
+            }
+            else
+            {
+                usadas.Add(categoria); // evita reintentar una categoría sin Dx válido
+            }
+        }
+
+        return resultado;
+    }
+
+    /// <summary>
+    /// Elige una categoría por ruleta ponderada (pesos del perfil epidemiológico),
+    /// excluyendo las ya usadas y aumentando el peso de las categorías afines a ellas.
+    /// </summary>
+    private string? PickCategoriaPonderada(string ageGroup, string gender, HashSet<string> excluir, string? climate = null)
+    {
+        var afines = new HashSet<string>();
+        foreach (var cat in excluir)
+            if (_afinidades.TryGetValue(cat, out var lista))
+                foreach (var a in lista) afines.Add(a);
+
+        var boostCats = climate is not null && _categoriasPorClima.TryGetValue(climate, out var s)
+            ? s : null;
+
+        var pesos = _catalogs.EpidemiologyProfile
+            .Where(e => e.GrupoEdad == ageGroup && (e.Genero == gender || e.Genero == "Ambos"))
+            .GroupBy(e => e.Categoria)
+            .Where(g => !excluir.Contains(g.Key))
+            .Select(g => new
+            {
+                Categoria = g.Key,
+                Peso = g.Sum(e => e.Peso)
+                       * (afines.Contains(g.Key) ? _comorbidity.AffinityBoost : 1.0)
+                       * (boostCats != null && boostCats.Contains(g.Key) ? _seasonalBoost : 1.0)
+            })
+            .Where(x => x.Peso > 0)
+            .ToList();
+
+        if (pesos.Count == 0) return null;
+
+        var total = pesos.Sum(x => x.Peso);
+        var pick = _rng.NextDouble() * total;
+        double cumulative = 0;
+        foreach (var x in pesos)
+        {
+            cumulative += x.Peso;
+            if (pick <= cumulative) return x.Categoria;
+        }
+        return pesos[^1].Categoria;
     }
 
     private static bool AplicaAGrupo(DiagnosticoEntry d, string ageGroup) => ageGroup switch

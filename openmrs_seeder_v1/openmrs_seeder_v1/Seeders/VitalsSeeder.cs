@@ -3,9 +3,11 @@ using Microsoft.Extensions.Logging;
 using OpenmrsSeeder.Clients;
 using OpenmrsSeeder.Configuration;
 using OpenmrsSeeder.Models.Simulation;
+using OpenmrsSeeder.Services;
 
 namespace OpenmrsSeeder.Seeders;
 
+/// <summary>Signos vitales coherentes con la(s) enfermedad(es) del paciente.</summary>
 public class VitalsSeeder
 {
     private const string WeightUuid    = "5089AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
@@ -14,17 +16,21 @@ public class VitalsSeeder
     private const string DiastolicUuid = "5086AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
     private const string TempUuid      = "5088AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
     private const string PulseUuid     = "5087AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
-    private const string SpO2Uuid      = "5242AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+    private const string RespRateUuid  = "5242AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"; // Frecuencia respiratoria (hiAbsolute=99)
+    private const string SpO2Uuid      = "5092AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"; // Saturación periférica de oxígeno (hiAbsolute=100)
 
     private readonly OpenMrsRestClient _client;
     private readonly OpenMrsSettings _settings;
-    private readonly Random _rng = new();
+    private readonly ClimateSettings _climate;
+    private readonly Random _rng;
     private readonly ILogger<VitalsSeeder> _logger;
 
-    public VitalsSeeder(OpenMrsRestClient client, OpenMrsSettings settings, ILogger<VitalsSeeder> logger)
+    public VitalsSeeder(OpenMrsRestClient client, OpenMrsSettings settings, SimulationSettings simSettings, ILogger<VitalsSeeder> logger)
     {
         _client   = client;
         _settings = settings;
+        _climate  = simSettings.Climate;
+        _rng = new Random(simSettings.RandomSeed + 12);
         _logger   = logger;
     }
 
@@ -37,7 +43,7 @@ public class VitalsSeeder
             return;
         }
 
-        var vitals  = GenerateVitals(patient);
+        var vitals  = BuildVitalsObs(patient);
         int obsOk   = 0;
         foreach (var (conceptUuid, value) in vitals)
         {
@@ -56,12 +62,12 @@ public class VitalsSeeder
             patient            = patient.OpenMrsUuid,
             visit              = patient.VisitUuid,
             encounterDatetime  = VisitSeeder.FormatDatetime(patient.VisitDatetime),
-            location           = _settings.Defaults.LocationUuid,
+            location           = patient.AssignedLocationUuid ?? _settings.Defaults.LocationUuid,
             encounterProviders = new[]
             {
                 new
                 {
-                    provider      = _settings.Defaults.ProviderUuid,
+                    provider      = patient.AssignedProviderUuid ?? _settings.Defaults.ProviderUuid,
                     encounterRole = _settings.Defaults.EncounterRoleUuid
                 }
             }
@@ -105,46 +111,164 @@ public class VitalsSeeder
         }
     }
 
-    private Dictionary<string, double> GenerateVitals(SimulatedPatient patient)
+    /// <summary>Construye los inputs desde el paciente, llama al seam puro y mapea a {conceptUuid → valor}.</summary>
+    private Dictionary<string, double> BuildVitalsObs(SimulatedPatient patient)
     {
-        var cat = patient.Diagnostico?.Categoria ?? patient.Categoria;
-        var sev = patient.Diagnostico?.Severidad ?? "";
+        var dxs          = patient.TodosDiagnosticos.ToList();
+        var severityRank = dxs.Count == 0 ? 1 : dxs.Max(d => SeverityRank(d.Severidad));
+        var fiebre       = dxs.Any(d => d.VitalFiebre);
+        var imcOverride  = dxs.Any(d => d.VitalImc == "alto") ? "alto"
+                         : dxs.Any(d => d.VitalImc == "bajo") ? "bajo"
+                         : null;
+        var paOverride   = dxs.Any(d => d.VitalPa == "alta") ? "alta" : null;
+        var fcOverride   = dxs.Any(d => d.VitalFc == "alta") ? "alta"
+                         : dxs.Any(d => d.VitalFc == "baja") ? "baja"
+                         : null;
+        var spo2Override = dxs.Any(d => d.VitalSpo2 == "baja") ? "baja" : null;
 
-        // Peso
-        var (wMin, wMax) = cat == "diabetes" ? (70.0, 130.0) : (45.0, 120.0);
-        var weight = Math.Round(_rng.NextDouble() * (wMax - wMin) + wMin, 1);
+        var edadMeses = PatientProfileGenerator.EdadEnMeses(
+            patient.BirthDate, DateOnly.FromDateTime(patient.VisitDatetime));
 
-        // Talla
-        var height = (double)_rng.Next(145, 196);
+        var v = ComputeVitals(patient.Categorias, severityRank, patient.Gender, patient.AgeGroup,
+            fiebre, imcOverride, patient.TempAmbienteC, _climate, _rng,
+            paOverride, fcOverride, spo2Override,
+            patient.TallaCm, patient.ImcBasal, edadMeses);
 
-        // Presión arterial
-        var (sysMin, sysMax, diaMin, diaMax) = cat == "cardiovascular"
-            ? (140.0, 180.0, 90.0, 110.0)
-            : (100.0, 130.0, 60.0,  85.0);
-        var systolic  = Math.Round(_rng.NextDouble() * (sysMax - sysMin) + sysMin);
-        var diastolic = Math.Round(_rng.NextDouble() * (diaMax - diaMin) + diaMin);
-
-        // Temperatura
-        var (tMin, tMax) = cat == "infeccioso" ? (37.5, 39.5) : (36.0, 37.4);
-        var temp = Math.Round(_rng.NextDouble() * (tMax - tMin) + tMin, 1);
-
-        // Pulso
-        var (pMin, pMax) = cat == "infeccioso" ? (90.0, 115.0) : (60.0, 100.0);
-        var pulse = Math.Round(_rng.NextDouble() * (pMax - pMin) + pMin);
-
-        // SpO2 — baja solo en respiratorio grave (hiAbsolute=99 en esta instancia)
-        var (sMin, sMax) = (cat == "respiratorio" && sev == "grave") ? (88.0, 93.0) : (95.0, 98.0);
-        var spo2 = Math.Round(_rng.NextDouble() * (sMax - sMin) + sMin);
+        // Fijar la antropometría basal en la primera visita; las recurrentes la heredan (talla constante,
+        // peso derivando poco alrededor del IMC basal).
+        patient.TallaCm  ??= v.HeightCm;
+        patient.ImcBasal ??= Math.Round(v.WeightKg / Math.Pow(v.HeightCm / 100.0, 2), 1);
 
         return new Dictionary<string, double>
         {
-            [WeightUuid]    = weight,
-            [HeightUuid]    = height,
-            [SystolicUuid]  = systolic,
-            [DiastolicUuid] = diastolic,
-            [TempUuid]      = temp,
-            [PulseUuid]     = pulse,
-            [SpO2Uuid]      = spo2
+            [WeightUuid]    = v.WeightKg,
+            [HeightUuid]    = v.HeightCm,
+            [SystolicUuid]  = v.Systolic,
+            [DiastolicUuid] = v.Diastolic,
+            [TempUuid]      = v.TempC,
+            [PulseUuid]     = v.Pulse,
+            [RespRateUuid]  = v.RespRate,
+            [SpO2Uuid]      = v.SpO2
         };
+    }
+
+    /// <summary>Vitales como valores nombrados (resultado del seam puro).</summary>
+    public readonly record struct VitalSigns(
+        double WeightKg, double HeightCm, double Systolic, double Diastolic,
+        double TempC, double Pulse, double RespRate, double SpO2);
+
+    /// <summary>leve=1, moderado=2, grave=3 (default 1).</summary>
+    public static int SeverityRank(string? severidad) => (severidad ?? "").ToLowerInvariant() switch
+    {
+        "grave"    => 3,
+        "moderado" => 2,
+        _          => 1
+    };
+
+    /// <summary>
+    /// Talla (cm) aproximada por edad en meses (0–14 años): curva monótona simple ~50 cm al nacer,
+    /// ~74 al año, ~98 a los 3, luego ~6 cm/año. Evita que un lactante salga con talla de adolescente.
+    /// </summary>
+    public static double TallaPediatricaCm(int edadMeses)
+    {
+        var m = Math.Clamp(edadMeses, 0, 14 * 12);
+        return m <= 12 ? 50 + 2.0 * m
+             : m <= 36 ? 74 + 1.0 * (m - 12)
+             :           98 + 0.5 * (m - 36);
+    }
+
+    /// <summary>
+    /// Seam puro y testeable: deriva los signos vitales a partir de la UNIÓN de categorías del
+    /// paciente (incluye comorbilidades), la severidad y overrides opcionales por enfermedad.
+    /// El peso se acopla a la talla vía IMC para que sea clínicamente coherente.
+    /// </summary>
+    public static VitalSigns ComputeVitals(
+        IEnumerable<string> categorias,
+        int severityRank,
+        string gender,
+        string ageGroup,
+        bool fiebreForzada,
+        string? imcOverride,
+        double? tempAmbienteC,
+        ClimateSettings climate,
+        Random rng,
+        string? paOverride = null,
+        string? fcOverride = null,
+        string? spo2Override = null,
+        double? tallaFijaCm = null,
+        double? imcBasal = null,
+        int? edadMeses = null)
+    {
+        var cats = categorias as ISet<string> ?? new HashSet<string>(categorias);
+        bool Has(string c) => cats.Contains(c);
+        bool esNino = ageGroup == "0-14";
+
+        double Rand(double min, double max) => rng.NextDouble() * (max - min) + min;
+
+        // ── Talla (primero; el peso depende de ella) ──
+        // Si ya está fijada (visitas siguientes): constante. Si no: adultos por banda de sexo; niños por
+        // su edad en meses (curva simple) cuando se conoce, o la banda histórica 90–160 como fallback.
+        double height;
+        if (tallaFijaCm is double tf)
+            height = tf;
+        else if (esNino)
+            height = edadMeses is int em
+                ? Math.Round(Math.Clamp(TallaPediatricaCm(em) + Rand(-2.5, 2.5), 45, 175))
+                : Math.Round(Rand(90, 160));
+        else
+            height = Math.Round(gender == "M" ? Rand(160, 185) : Rand(150, 172));
+
+        // ── Peso vía IMC objetivo (coherente con talla) ──
+        // El override por enfermedad (vital_imc) tiene prioridad sobre la categoría.
+        var (imcMin, imcMax) =
+            imcOverride == "alto"                  ? (27.0, 38.0)
+          : imcOverride == "bajo"                  ? (16.0, 19.0)
+          : Has("diabetes") || Has("endocrino")    ? (27.0, 38.0)
+          : esNino                                 ? (14.0, 20.0)
+          :                                          (18.5, 27.0);
+        // Con IMC basal (visitas siguientes) y sin efecto puntual de enfermedad, el IMC deriva poco
+        // alrededor del basal; si hay override de enfermedad, o es la primera visita, manda la banda.
+        var imc = imcBasal is double ib && imcOverride is null
+            ? Math.Clamp(ib + Rand(-1.5, 1.5), 14.0, 40.0)
+            : Rand(imcMin, imcMax);
+        var weight = Math.Round(imc * Math.Pow(height / 100.0, 2), 1);
+
+        // ── Presión arterial (el override por enfermedad gana sobre la categoría) ──
+        var (sysMin, sysMax, diaMin, diaMax) = paOverride == "alta" || Has("cardiovascular")
+            ? (140.0, 180.0, 90.0, 110.0)
+            : (100.0, 130.0, 60.0,  85.0);
+        var systolic  = Math.Round(Rand(sysMin, sysMax));
+        var diastolic = Math.Round(Rand(diaMin, diaMax));
+
+        // ── Temperatura (fiebre por enfermedad febril; el calor ambiental la sube un poco) ──
+        bool febril = fiebreForzada || Has("infeccioso") || (Has("respiratorio") && severityRank >= 2);
+        var (tMin, tMax) = febril ? (37.5, severityRank >= 3 ? 40.0 : 39.5) : (36.0, 37.4);
+        var temp = Rand(tMin, tMax);
+        if (tempAmbienteC is double ambiente && ambiente > climate.ComfortTempC)
+            temp += Math.Min(climate.TempVitalsMaxC, (ambiente - climate.ComfortTempC) * climate.TempVitalsFactorC);
+        temp = Math.Round(temp, 1);
+
+        // ── Pulso (el override por enfermedad gana; si no: taquicardia con fiebre o cardiopatía) ──
+        var (pMin, pMax) = fcOverride == "alta" ? (100.0, 130.0)
+                         : fcOverride == "baja" ? (42.0, 58.0)
+                         : febril ? (90.0, 120.0)
+                         : Has("cardiovascular") ? (80.0, 110.0)
+                         : (60.0, 100.0);
+        var pulse = Math.Round(Rand(pMin, pMax));
+
+        // ── Frecuencia respiratoria (taquipnea en respiratorio/infeccioso); acotada ≤99 ──
+        var (frMin, frMax) = (Has("respiratorio") || Has("infeccioso"))
+            ? (20.0, severityRank >= 3 ? 34.0 : 30.0)
+            : (12.0, 20.0);
+        var respRate = Math.Min(99.0, Math.Round(Rand(frMin, frMax)));
+
+        // ── SpO2 (el override por enfermedad gana; si no: baja según severidad respiratoria); concepto 5092 ──
+        var (sMin, sMax) = spo2Override == "baja" ? (88.0, 94.0)
+                         : Has("respiratorio") && severityRank >= 3 ? (88.0, 93.0)
+                         : Has("respiratorio") && severityRank >= 2 ? (92.0, 96.0)
+                         : (95.0, 99.0);
+        var spo2 = Math.Round(Rand(sMin, sMax));
+
+        return new VitalSigns(weight, height, systolic, diastolic, temp, pulse, respRate, spo2);
     }
 }

@@ -1,9 +1,28 @@
-ciel_uuid,nombre_es,clase,aplica_respiratorio,aplica_cardiovascular,aplica_diabetes,aplica_digestivo,aplica_osteomuscular,aplica_urologico,aplica_infeccioso,aplica_endocrino
-1019AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hemograma completo,Test,true,true,true,true,true,true,true,false
-160912AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Glucemia en ayunas,Test,false,true,true,false,false,false,false,true
-1006AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Perfil lipídico,Test,false,true,true,false,false,false,false,false
-302AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Orina completa,Test,false,false,true,false,false,true,false,false
-159644AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hemoglobina glicosilada HbA1c,Test,false,false,true,false,false,false,false,true
-164364AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Creatinina sérica,Test,false,true,true,false,false,true,false,false
-653AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Transaminasa AST,Test,false,false,false,true,false,false,true,false
-654AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Transaminasa ALT,Test,false,false,false,true,false,false,true,false
+ciel_uuid,nombre_es,clase,aplica_respiratorio,aplica_cardiovascular,aplica_diabetes,aplica_digestivo,aplica_osteomuscular,aplica_urologico,aplica_infeccioso,aplica_endocrino,aplica_neurologico,aplica_dermatologico,aplica_salud_mental,aplica_ginecoobstetrico,aplica_trauma,datatype,res_min,res_max,res_min_anormal,res_max_anormal,res_normal_uuid,res_anormal_uuid,res_trigger,res_trigger_dx
+1019AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hemograma completo,Test,true,true,true,true,true,true,true,false,false,false,false,true,true,panel,,,,,,,,
+160912AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Glucemia en ayunas,Test,false,true,true,false,false,false,false,true,false,false,false,false,false,numeric,70,99,126,260,,,diabetes|endocrino,
+1006AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Perfil lipídico,Test,false,true,true,false,false,false,false,false,false,false,false,false,false,panel,,,,,,,,
+302AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Orina completa,Test,false,false,true,false,false,true,false,false,false,false,false,true,false,panel,,,,,,,,
+159644AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hemoglobina glicosilada HbA1c,Test,false,false,true,false,false,false,false,true,false,false,false,false,false,numeric,4.0,5.6,7.0,12.0,,,diabetes|endocrino,
+164364AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Creatinina sérica,Test,false,true,true,false,false,true,false,false,false,false,false,true,true,numeric,0.6,1.2,1.5,6.0,,,urologico|cardiovascular,
+653AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Transaminasa AST,Test,false,false,false,true,false,false,true,false,false,false,false,false,false,numeric,10,40,60,300,,,digestivo|infeccioso,
+654AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Transaminasa ALT,Test,false,false,false,true,false,false,true,false,false,false,false,false,false,numeric,10,40,60,300,,,digestivo|infeccioso,
+58b969e7-77ef-4941-a0ec-72372a2fa716,Antígeno NS1 dengue (prueba rápida),Test,false,false,false,false,false,false,true,false,false,false,false,false,false,coded,,,,,664AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,703AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,,142592AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA|142590AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA|142591AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA|61304dd2-7f0c-4933-9f31-c1a909200a71|67acf134-be8a-49ae-b90b-e8bb4a158494
+161505AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hormona estimulante de la tiroides (TSH),Test,false,false,false,false,false,false,false,true,false,false,false,false,false,numeric,0.4,4.0,6.0,20.0,,,endocrino,
+159825AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Ácido úrico en suero,Test,false,false,false,false,true,false,false,false,false,false,false,false,false,numeric,3.5,7.0,8.0,12.0,,,osteomuscular,
+161500AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Proteína C reactiva,Test,false,false,false,false,true,false,true,false,false,false,false,false,false,numeric,0,5,20,150,,,infeccioso|osteomuscular,
+123484AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Urocultivo,Test,false,false,false,false,false,true,false,false,false,false,false,true,false,panel,,,,,,,,
+857AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Nitrógeno ureico (BUN),Test,false,true,true,false,false,true,false,false,false,false,false,false,true,numeric,7,20,30,80,,,cardiovascular|urologico,
+1133AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Potasio sérico,Test,false,true,true,true,false,true,false,false,false,false,false,false,false,numeric,3.5,5.0,5.5,7.0,,,cardiovascular|urologico|digestivo,
+161504AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Tiroxina (T4),Test,false,false,false,false,false,false,false,true,false,false,false,false,false,numeric,5.0,12.0,13.0,25.0,,,endocrino,
+655AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Bilirrubina total,Test,false,false,false,true,false,false,true,false,false,false,false,false,false,numeric,0.1,1.2,2.0,15.0,,,digestivo,
+1299AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Amilasa sérica,Test,false,false,false,true,false,false,false,false,false,false,false,false,false,numeric,30,110,200,1000,,,digestivo,
+1945AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Prueba de embarazo (beta-hCG),Test,false,false,false,false,false,false,false,false,false,false,false,true,false,coded,,,,,664AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,703AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,,
+299AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Prueba VDRL,Test,false,false,false,false,false,false,true,false,false,false,false,true,false,coded,,,,,1229AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,1228AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,,
+1356AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Prueba de VIH,Test,false,false,false,false,false,false,true,false,false,false,false,true,false,panel,,,,,,,,
+12AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Radiografía de tórax,Test,true,true,false,false,false,false,false,false,false,false,false,false,false,imagen,,,,,,,,
+101AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Radiografía abdominal,Test,false,false,false,true,false,true,false,false,false,false,false,false,true,imagen,,,,,,,,
+390AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Radiografía de columna,Test,false,false,false,false,true,false,false,false,false,false,false,false,true,imagen,,,,,,,,
+846AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Tomografía de cráneo,Test,false,false,false,false,false,false,false,false,true,false,false,false,true,imagen,,,,,,,,
+164071AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Ecografía abdominal,Test,false,false,false,true,false,true,false,false,false,false,false,true,false,imagen,,,,,,,,
+164941AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Ecografía obstétrica,Test,false,false,false,false,false,false,false,false,false,false,false,true,false,imagen,,,,,,,,

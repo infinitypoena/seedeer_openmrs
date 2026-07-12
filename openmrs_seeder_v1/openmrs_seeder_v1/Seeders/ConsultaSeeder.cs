@@ -9,15 +9,18 @@ namespace OpenmrsSeeder.Seeders;
 
 public class ConsultaSeeder
 {
-    private const string ChiefComplaintUuid = "162169AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
-    private const string NormalUuid         = "1115AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
-    private const string AbnormalUuid       = "1116AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+    private const string ChiefComplaintUuid  = "162169AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+    private const string NormalUuid          = "1115AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+    private const string AbnormalUuid        = "1116AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+    private const string ReturnVisitDateUuid = "5096AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"; // Return visit date (datatype Date)
 
     private readonly OpenMrsRestClient _client;
     private readonly OpenMrsSettings _settings;
     private readonly CatalogLoader _catalogs;
     private readonly double _clinicalExamProb;
-    private readonly Random _rng = new();
+    private readonly ReferralProbabilitiesSettings _referral;
+    private readonly RecurrenceSettings _recurrence;
+    private readonly Random _rng;
     private readonly ILogger<ConsultaSeeder> _logger;
 
     public ConsultaSeeder(
@@ -31,6 +34,9 @@ public class ConsultaSeeder
         _settings         = settings;
         _catalogs         = catalogs;
         _clinicalExamProb = simSettings.ReferralProbabilities.ClinicalExam;
+        _rng = new Random(simSettings.RandomSeed + 13);
+        _referral         = simSettings.ReferralProbabilities;
+        _recurrence       = simSettings.Recurrence;
         _logger           = logger;
     }
 
@@ -44,10 +50,12 @@ public class ConsultaSeeder
         }
         patient.ConsultaEncounterUuid = encounterUuid;
 
-        // Motivo de consulta (texto libre)
+        // Motivo de consulta (texto libre). Las obs de la consulta se fechan con el datetime del encounter
+        // (llegada + 30 min), no con la hora de llegada: OpenMRS no admite obs anteriores a su encounter.
+        var fechaConsulta = FechaConsulta(patient);
         var motivo = PickMotivoConsulta(patient.Categoria);
         if (!string.IsNullOrEmpty(motivo))
-            await PostObsTextAsync(patient.Identifier, patient.OpenMrsUuid, encounterUuid, ChiefComplaintUuid, motivo, patient.VisitDatetime, ct);
+            await PostObsTextAsync(patient.Identifier, patient.OpenMrsUuid, encounterUuid, ChiefComplaintUuid, motivo, fechaConsulta, ct);
 
         // Examen en consultorio (si aplica)
         var debeExamen = patient.Diagnostico?.RequiereExamenClinico == true
@@ -57,39 +65,63 @@ public class ConsultaSeeder
         if (debeExamen)
             await SeedExamenClinicoAsync(patient, encounterUuid, ct);
 
-        _logger.LogInformation("[Consulta] Encounter {Uuid} para {Id} | Dx: {Dx}",
-            encounterUuid, patient.Identifier, patient.Diagnostico?.NombreEs ?? "—");
+        // Nota de seguimiento: la probabilidad se condiciona al cuadro (crónico ≫ grave ≫ resto) y la
+        // fecha sale de la banda clínica de recurrencia (crónico mensual/trimestral, agudo 1–3 semanas),
+        // NO de un 7–30 días plano. Así la cita coincide con la próxima elegibilidad del paciente y
+        // AppointmentSeeder puede agendar la cita real que después gobierna su retorno.
+        var esCronico = patient.TodosDiagnosticos.Any(d => d.EsCronica) || patient.CronicasActivas.Count > 0;
+        if (_rng.NextDouble() < SeguimientoPolicy.Probabilidad(patient.TodosDiagnosticos, _referral))
+        {
+            var fechaCita  = RecurrenceScheduler.ProximaFechaElegible(
+                DateOnly.FromDateTime(patient.VisitDatetime), esCronico, _rng, _recurrence);
+            var returnDate = fechaCita.ToDateTime(TimeOnly.FromDateTime(patient.VisitDatetime));
+            patient.FechaSeguimiento = returnDate;
+            await PostObsDateAsync(patient.Identifier, patient.OpenMrsUuid, encounterUuid,
+                ReturnVisitDateUuid, returnDate, fechaConsulta, ct);
+        }
+
+        _logger.LogInformation("[Consulta] Encounter {Uuid} para {Id} | Dx: {Dx} | comun: {Comun} | +{Comorb} comorbilidad(es)",
+            encounterUuid, patient.Identifier, patient.Diagnostico?.NombreEs ?? "—",
+            patient.Diagnostico?.EsComun, patient.Comorbilidades.Count);
     }
+
+    /// <summary>
+    /// Momento del encounter de consulta (30 min después de la llegada). Las órdenes de lab y
+    /// prescripciones deben fechar su <c>dateActivated</c> con ESTE valor: OpenMRS rechaza órdenes
+    /// activadas antes que su encounter (<c>Order.error.encounterDatetimeAfterDateActivated</c>).
+    /// </summary>
+    public static DateTime FechaConsulta(SimulatedPatient patient) => patient.VisitDatetime.AddMinutes(30);
 
     // ── Helpers privados ──────────────────────────────────────────────────────
 
     private async Task<string?> CreateEncounterAsync(SimulatedPatient patient, CancellationToken ct)
     {
-        var certainty = _rng.NextDouble() < 0.70 ? "CONFIRMED" : "PROVISIONAL";
+        // Primario rank=1, comorbilidades rank=2; cada Dx con su propia certeza.
+        var diagnoses = patient.TodosDiagnosticos
+            .Select((dx, i) => (object)new
+            {
+                rank      = i == 0 ? 1 : 2,
+                certainty = _rng.NextDouble() < 0.70 ? "CONFIRMED" : "PROVISIONAL",
+                diagnosis = new { coded = dx.CielUuid }
+            })
+            .ToArray();
+
         var payload = new
         {
             encounterType      = _settings.Defaults.ConsultaEncounterTypeUuid,
             patient            = patient.OpenMrsUuid,
             visit              = patient.VisitUuid,
-            encounterDatetime  = VisitSeeder.FormatDatetime(patient.VisitDatetime.AddMinutes(30)),
-            location           = _settings.Defaults.LocationUuid,
+            encounterDatetime  = VisitSeeder.FormatDatetime(FechaConsulta(patient)),
+            location           = patient.AssignedLocationUuid ?? _settings.Defaults.LocationUuid,
             encounterProviders = new[]
             {
                 new
                 {
-                    provider      = _settings.Defaults.ProviderUuid,
+                    provider      = patient.AssignedProviderUuid ?? _settings.Defaults.ProviderUuid,
                     encounterRole = _settings.Defaults.EncounterRoleUuid
                 }
             },
-            diagnoses = patient.Diagnostico is null ? null : new object[]
-            {
-                new
-                {
-                    rank = 1,
-                    certainty,
-                    diagnosis = new { coded = patient.Diagnostico.CielUuid }
-                }
-            }
+            diagnoses = diagnoses.Length == 0 ? null : diagnoses
         };
 
         try
@@ -108,25 +140,28 @@ public class ConsultaSeeder
 
     private async Task SeedExamenClinicoAsync(SimulatedPatient patient, string encounterUuid, CancellationToken ct)
     {
+        // El examen puede corresponder a cualquiera de las categorías del paciente (incluye
+        // comorbilidades), igual que labs y fármacos, no solo la categoría primaria.
         var candidatos = _catalogs.ExamenesClinicos
-            .Where(e => AplicaCategoria(e, patient.Categoria))
+            .Where(e => patient.Categorias.Any(c => AplicaCategoria(e, c)))
             .ToList();
 
         if (candidatos.Count == 0) return;
 
         var examen = candidatos[_rng.Next(candidatos.Count)];
+        var fechaConsulta = FechaConsulta(patient);
 
         if (examen.TipoResultado == "numerico")
         {
-            var valor = GenerateNumericValue(examen.Unidad, patient.Categoria);
+            var valor = ValorExamenNumerico(examen, patient.Categoria, _rng);
             await PostObsNumericAsync(patient.Identifier, patient.OpenMrsUuid, encounterUuid,
-                examen.CielUuid, valor, patient.VisitDatetime, ct);
+                examen.CielUuid, valor, fechaConsulta, ct);
         }
         else
         {
             var valorCoded = _rng.NextDouble() < 0.80 ? NormalUuid : AbnormalUuid;
             await PostObsCodedAsync(patient.Identifier, patient.OpenMrsUuid, encounterUuid,
-                examen.CielUuid, valorCoded, patient.VisitDatetime, ct);
+                examen.CielUuid, valorCoded, fechaConsulta, ct);
         }
     }
 
@@ -149,19 +184,41 @@ public class ConsultaSeeder
         "urologico"      => e.AplicaUrologico,
         "infeccioso"     => e.AplicaInfeccioso,
         "endocrino"      => e.AplicaEndocrino,
+        "neurologico"     => e.AplicaNeurologico,
+        "dermatologico"   => e.AplicaDermatologico,
+        "salud_mental"    => e.AplicaSaludMental,
+        "ginecoobstetrico"=> e.AplicaGinecoobstetrico,
+        "trauma"          => e.AplicaTrauma,
         _ => false
     };
 
-    private double GenerateNumericValue(string unidad, string categoria) => unidad switch
+    /// <summary>
+    /// Seam puro: valor del examen numérico. Si el catálogo trae banda (`res_min/res_max`), manda la
+    /// banda — entero cuando los límites son enteros (Glasgow, escala de dolor, FC fetal; mismo
+    /// criterio de precisión que LabResultGenerator), 1 decimal si no. Sin banda → lógica histórica
+    /// por unidad (retrocompatible).
+    /// </summary>
+    public static double ValorExamenNumerico(Models.Catalogs.ExamenClinicoEntry examen, string categoria, Random rng)
+    {
+        if (examen.ResMax > 0)
+        {
+            var valor = rng.NextDouble() * (examen.ResMax - examen.ResMin) + examen.ResMin;
+            var decimales = double.IsInteger(examen.ResMin) && double.IsInteger(examen.ResMax) ? 0 : 1;
+            return Math.Round(valor, decimales);
+        }
+        return GenerateNumericValue(examen.Unidad, categoria, rng);
+    }
+
+    private static double GenerateNumericValue(string unidad, string categoria, Random rng) => unidad switch
     {
         "mg/dL" => categoria == "diabetes"
-            ? Math.Round(_rng.NextDouble() * 200 + 100, 1)  // 100-300 en diabéticos
-            : Math.Round(_rng.NextDouble() * 60  + 70,  1), // 70-130 normal
+            ? Math.Round(rng.NextDouble() * 200 + 100, 1)  // 100-300 en diabéticos
+            : Math.Round(rng.NextDouble() * 60  + 70,  1), // 70-130 normal
         "%" => categoria == "respiratorio"
-            ? Math.Round(_rng.NextDouble() * 8 + 88, 1)     // 88-96 en respiratorio
-            : Math.Round(_rng.NextDouble() * 5 + 95, 1),    // 95-100 normal
-        "mmHg" => Math.Round(_rng.NextDouble() * 80 + 100), // 100-180
-        _      => Math.Round(_rng.NextDouble() * 0.7 + 0.6, 2) // 0.6-1.3 (ITB)
+            ? Math.Round(rng.NextDouble() * 8 + 88, 1)     // 88-96 en respiratorio
+            : Math.Round(rng.NextDouble() * 5 + 95, 1),    // 95-100 normal
+        "mmHg" => Math.Round(rng.NextDouble() * 80 + 100), // 100-180
+        _      => Math.Round(rng.NextDouble() * 0.7 + 0.6, 2) // 0.6-1.3 (ITB)
     };
 
     private async Task PostObsTextAsync(string identifier, string personUuid, string encounterUuid,
@@ -177,6 +234,21 @@ public class ConsultaSeeder
         };
         try { await _client.PostAsync("obs", payload, ct); }
         catch (Exception ex) { _logger.LogError("[Consulta] Error obs texto para {Id}: {Msg}", identifier, ex.Message); }
+    }
+
+    private async Task PostObsDateAsync(string identifier, string personUuid, string encounterUuid,
+        string conceptUuid, DateTime value, DateTime obsDatetime, CancellationToken ct)
+    {
+        var payload = new
+        {
+            concept     = conceptUuid,
+            person      = personUuid,
+            encounter   = encounterUuid,
+            obsDatetime = VisitSeeder.FormatDatetime(obsDatetime),
+            value       = VisitSeeder.FormatDatetime(value)
+        };
+        try { await _client.PostAsync("obs", payload, ct); }
+        catch (Exception ex) { _logger.LogError("[Consulta] Error obs fecha para {Id}: {Msg}", identifier, ex.Message); }
     }
 
     private async Task PostObsCodedAsync(string identifier, string personUuid, string encounterUuid,

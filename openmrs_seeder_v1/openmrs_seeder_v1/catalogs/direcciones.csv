@@ -1,0 +1,143 @@
+departamento,municipio,zona,peso
+San Salvador,San Salvador,Colonia Escalón,18
+San Salvador,San Salvador,Colonia San Benito,14
+San Salvador,San Salvador,Colonia Miramonte,18
+San Salvador,San Salvador,Colonia Miralvalle,14
+San Salvador,San Salvador,Colonia Flor Blanca,14
+San Salvador,San Salvador,Colonia Layco,18
+San Salvador,San Salvador,Colonia Médica,9
+San Salvador,San Salvador,Colonia Centroamérica,18
+San Salvador,San Salvador,Colonia Costa Rica,14
+San Salvador,San Salvador,Colonia La Rábida,14
+San Salvador,San Salvador,Colonia Dina,14
+San Salvador,San Salvador,Colonia Vista Hermosa,14
+San Salvador,San Salvador,Colonia San Mateo,9
+San Salvador,San Salvador,Colonia Maquilishuat,9
+San Salvador,San Salvador,Ciudad Satélite,14
+San Salvador,San Salvador,Barrio San Jacinto,22
+San Salvador,San Salvador,Barrio Concepción,18
+San Salvador,San Salvador,Barrio El Calvario,14
+San Salvador,San Salvador,Barrio Candelaria,14
+San Salvador,San Salvador,Barrio San Esteban,9
+San Salvador,San Salvador,Barrio Lourdes,9
+San Salvador,Mejicanos,Colonia Zacamil,18
+San Salvador,Mejicanos,Colonia Metrópolis,12
+San Salvador,Mejicanos,Colonia San Ramón,9
+San Salvador,Mejicanos,Colonia Montreal,9
+San Salvador,Mejicanos,Colonia Delicias del Norte,6
+San Salvador,Mejicanos,Barrio El Centro,9
+San Salvador,Soyapango,Colonia Las Margaritas,15
+San Salvador,Soyapango,Ciudad Credisa,9
+San Salvador,Soyapango,Colonia Guadalupe,9
+San Salvador,Soyapango,Colonia San José,9
+San Salvador,Soyapango,Colonia Sierra Morena,9
+San Salvador,Soyapango,Colonia Prados de Venecia,9
+San Salvador,Soyapango,Colonia Bosques del Río,6
+San Salvador,Soyapango,Colonia Amatepec,6
+San Salvador,Ciudad Delgado,Barrio Paleca,9
+San Salvador,Ciudad Delgado,Colonia San Sebastián,6
+San Salvador,Ciudad Delgado,Cantón Calle Real,3
+San Salvador,Apopa,Colonia Valle Verde,5
+San Salvador,Apopa,Colonia Madre Tierra,4
+San Salvador,Apopa,Colonia Popotlán,5
+San Salvador,Apopa,Colonia Chintuc,4
+San Salvador,Apopa,Barrio El Centro,4
+San Salvador,Apopa,Cantón Joya Galana,4
+San Salvador,Ilopango,Colonia Santa Lucía,5
+San Salvador,Ilopango,Colonia San Bartolo,5
+San Salvador,Ilopango,Colonia Vista al Lago,4
+San Salvador,San Martín,Residencial Altavista,5
+San Salvador,San Martín,Barrio El Centro,4
+San Salvador,Tonacatepeque,Distrito Italia,4
+San Salvador,Tonacatepeque,Barrio El Centro,2
+San Salvador,San Marcos,Barrio El Centro,6
+San Salvador,San Marcos,Colonia 10 de Octubre,6
+San Salvador,Cuscatancingo,Colonia Las Flores,6
+San Salvador,Cuscatancingo,Ciudad Futura,6
+San Salvador,Ayutuxtepeque,Colonia Bonanza,3
+San Salvador,Ayutuxtepeque,Barrio El Centro,3
+San Salvador,Nejapa,Barrio El Centro,2
+San Salvador,Nejapa,Cantón Aldea de Mercedes,2
+San Salvador,Guazapa,Barrio El Centro,2
+San Salvador,Aguilares,Barrio El Centro,2
+San Salvador,El Paisnal,Cantón San Francisco Dos Cerros,2
+San Salvador,Panchimalco,Barrio El Centro,2
+San Salvador,Panchimalco,Cantón Panchimalquito,2
+San Salvador,Santo Tomás,Barrio El Centro,2
+San Salvador,Santiago Texacuangos,Barrio El Centro,2
+San Salvador,Rosario de Mora,Barrio El Centro,2
+La Libertad,Santa Tecla,Colonia Las Delicias,5
+La Libertad,Santa Tecla,Barrio El Calvario,4
+La Libertad,Santa Tecla,Colonia Quezaltepec,4
+La Libertad,Santa Tecla,Colonia Utila,4
+La Libertad,Santa Tecla,Residencial Pinares de Suiza,4
+La Libertad,Santa Tecla,Ciudad Merliot,5
+La Libertad,Antiguo Cuscatlán,Colonia La Sultana,4
+La Libertad,Antiguo Cuscatlán,Colonia Jardines de Guadalupe,4
+La Libertad,Antiguo Cuscatlán,Residencial Santa Elena,4
+La Libertad,Colón,Urbanización Campos Verdes de Lourdes,4
+La Libertad,Colón,Cantón Lourdes,4
+La Libertad,Colón,Barrio El Centro,2
+La Libertad,San Juan Opico,Ciudad Versalles,2
+La Libertad,San Juan Opico,Cantón Sitio del Niño,2
+La Libertad,Quezaltepeque,Barrio El Centro,2
+La Libertad,Ciudad Arce,Barrio El Centro,2
+La Libertad,Zaragoza,Barrio El Centro,2
+La Libertad,La Libertad,Barrio El Centro,2
+La Libertad,Huizúcar,Barrio El Centro,2
+Chalatenango,Chalatenango,Barrio El Centro,1
+Chalatenango,Chalatenango,Barrio El Calvario,1
+Chalatenango,Nueva Concepción,Barrio El Centro,1
+Chalatenango,La Palma,Barrio San Antonio,1
+Cuscatlán,Cojutepeque,Barrio San Nicolás,2
+Cuscatlán,Cojutepeque,Colonia Fátima,2
+Cuscatlán,Cojutepeque,Barrio El Calvario,2
+Cuscatlán,Suchitoto,Barrio Santa Lucía,1
+Cuscatlán,San Pedro Perulapán,Cantón El Espino,1
+Cabañas,Sensuntepeque,Barrio El Calvario,1
+Cabañas,Ilobasco,Barrio El Centro,1
+San Vicente,San Vicente,Barrio El Santuario,1
+San Vicente,San Vicente,Barrio San Francisco,1
+San Vicente,Apastepeque,Barrio El Centro,1
+La Paz,Zacatecoluca,Barrio Candelaria,2
+La Paz,Zacatecoluca,Barrio Analco,2
+La Paz,Olocuilta,Barrio El Centro,1
+La Paz,Santiago Nonualco,Barrio El Centro,1
+La Paz,San Luis Talpa,Cantón El Porvenir,1
+Usulután,Usulután,Barrio La Merced,1
+Usulután,Usulután,Barrio La Parroquia,1
+Usulután,Jiquilisco,Barrio El Centro,1
+Usulután,Santiago de María,Barrio El Centro,1
+Usulután,Berlín,Barrio El Centro,1
+San Miguel,San Miguel,Colonia Ciudad Jardín,2
+San Miguel,San Miguel,Barrio San Felipe,2
+San Miguel,San Miguel,Barrio El Calvario,2
+San Miguel,San Miguel,Colonia Milagro de la Paz,2
+San Miguel,Chinameca,Barrio El Centro,1
+San Miguel,Moncagua,Barrio El Centro,1
+Morazán,San Francisco Gotera,Barrio El Centro,1
+Morazán,Perquín,Barrio El Centro,1
+La Unión,La Unión,Barrio El Centro,1
+La Unión,Santa Rosa de Lima,Barrio El Centro,1
+La Unión,Conchagua,Cantón El Faro,1
+Santa Ana,Santa Ana,Colonia El Palmar,2
+Santa Ana,Santa Ana,Barrio Santa Bárbara,2
+Santa Ana,Santa Ana,Barrio San Rafael,2
+Santa Ana,Santa Ana,Barrio Santa Lucía,2
+Santa Ana,Chalchuapa,Barrio El Centro,1
+Santa Ana,Metapán,Barrio San Pedro,1
+Santa Ana,Coatepeque,Barrio El Centro,1
+Santa Ana,El Congo,Barrio El Centro,1
+Sonsonate,Sonsonate,Barrio El Ángel,1
+Sonsonate,Sonsonate,Barrio Veracruz,1
+Sonsonate,Izalco,Barrio Asunción,1
+Sonsonate,Izalco,Barrio Dolores,1
+Sonsonate,Nahuizalco,Barrio El Centro,1
+Sonsonate,Acajutla,Barrio El Centro,1
+Sonsonate,Juayúa,Barrio El Centro,1
+Sonsonate,Armenia,Barrio El Centro,1
+Ahuachapán,Ahuachapán,Barrio El Calvario,1
+Ahuachapán,Ahuachapán,Barrio Santa Cruz,1
+Ahuachapán,Atiquizaya,Barrio El Centro,1
+Ahuachapán,Concepción de Ataco,Barrio El Centro,1
+Ahuachapán,Tacuba,Cantón El Rodeo,1
