@@ -52,7 +52,8 @@ public class CatalogValidatorTests
             f.Alergenos, f.Motivos,
             clima: f.Clima, consultorios: f.Consultorios, afinidades: f.Afinidades,
             nombres: f.Nombres, apellidos: f.Apellidos, programas: f.Programas,
-            direcciones: f.Direcciones, paneles: f.Paneles);
+            direcciones: f.Direcciones, paneles: f.Paneles,
+            personalLaboratorio: f.PersonalLaboratorio);
 
         return CatalogValidator.Validate(loader);
     }
@@ -81,6 +82,7 @@ public class CatalogValidatorTests
         public List<ProgramaEntry> Programas { get; set; } = [];
         public List<DireccionEntry> Direcciones { get; set; } = [];
         public List<PanelComponenteEntry> Paneles { get; set; } = [];
+        public List<PersonalLaboratorioEntry> PersonalLaboratorio { get; set; } = [];
     }
 
     // ── Caso base ─────────────────────────────────────────────────────────────
@@ -127,6 +129,59 @@ public class CatalogValidatorTests
     {
         // clima, consultorios, programas, direcciones, paneles y afinidades vacíos = features apagadas
         var (errores, _) = Validar();
+        Assert.Empty(errores);
+    }
+
+    // ── Laboratorio: dónde se procesa y cuánto tarda ──────────────────────────
+
+    [Fact]
+    public void BandaDeEntregaInvertida_EsError()
+    {
+        var (errores, _) = Validar(f =>
+        {
+            var l = Lab();
+            l.SeRealizaEnClinica = false;
+            l.DiasEntregaMin = 7;
+            l.DiasEntregaMax = 2;
+            f.Laboratorios = [l];
+        });
+
+        Assert.Contains(errores, e => e.Contains("dias_entrega_min") && e.Contains("dias_entrega_max"));
+    }
+
+    [Fact]
+    public void ExamenExternoQueEntregaElMismoDia_EsAdvertencia()
+    {
+        var (errores, avisos) = Validar(f =>
+        {
+            var l = Lab();
+            l.SeRealizaEnClinica = false;   // se manda fuera…
+            l.DiasEntregaMax = 0;           // …pero vuelve el mismo día: sospechoso
+            f.Laboratorios = [l];
+        });
+
+        Assert.Empty(errores);
+        Assert.Contains(avisos, a => a.Contains("externo"));
+    }
+
+    [Fact]
+    public void PersonalDeLaboratorioConRolDesconocido_EsError()
+    {
+        var (errores, _) = Validar(f => f.PersonalLaboratorio =
+            [new() { Identifier = "SIM-LAB-01", Nombre = "Ana Portillo", Rol = "enfermera" }]);
+
+        Assert.Contains(errores, e => e.Contains("personal_laboratorio.csv") && e.Contains("rol"));
+    }
+
+    [Fact]
+    public void PersonalDeLaboratorioValido_SinErrores()
+    {
+        var (errores, _) = Validar(f => f.PersonalLaboratorio =
+        [
+            new() { Identifier = "SIM-LAB-01", Nombre = "Ana Portillo",  Rol = "tecnico" },
+            new() { Identifier = "SIM-LAB-03", Nombre = "Silvia Menjívar", Rol = "responsable" }
+        ]);
+
         Assert.Empty(errores);
     }
 

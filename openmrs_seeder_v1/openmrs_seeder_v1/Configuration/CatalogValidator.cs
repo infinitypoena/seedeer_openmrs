@@ -43,6 +43,10 @@ public static class CatalogValidator
     private static readonly IReadOnlySet<string> Datatypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         { "numeric", "coded", "panel", "imagen" };
 
+    /// <summary>Roles del personal de laboratorio: el técnico toma la muestra, el responsable valida.</summary>
+    private static readonly IReadOnlySet<string> RolesLaboratorio = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        { "tecnico", "responsable" };
+
     public static (List<string> Errores, List<string> Advertencias) Validate(CatalogLoader c)
     {
         var errores = new List<string>();
@@ -72,6 +76,7 @@ public static class CatalogValidator
         ValidarDiagnosticos(c, errores);
         ValidarCruceCategorias(c, errores);
         ValidarLaboratorios(c, errores, avisos);
+        ValidarPersonalLaboratorio(c, errores, avisos);
         ValidarPaneles(c, errores);
         ValidarExamenes(c, errores);
         ValidarMedicamentos(c, errores);
@@ -275,7 +280,42 @@ public static class CatalogValidator
                 if (!c.Paneles.Any(p => p.PanelUuid == l.CielUuid))
                     avisos.Add($"{donde}: datatype=panel sin componentes en paneles.csv — la orden quedará sin resultado");
             }
+
+            // Dónde se procesa y cuánto tarda (ciclo de vida de la orden)
+            if (l.DiasEntregaMin < 0 || l.DiasEntregaMax < 0)
+                errores.Add($"{donde}: dias_entrega_min/max no pueden ser negativos");
+            if (l.DiasEntregaMin > l.DiasEntregaMax)
+                errores.Add($"{donde}: dias_entrega_min ({l.DiasEntregaMin}) > dias_entrega_max ({l.DiasEntregaMax})");
+            if (!l.SeRealizaEnClinica && l.DiasEntregaMax == 0)
+                avisos.Add($"{donde}: se refiere a un laboratorio externo pero entrega el mismo día " +
+                           $"(dias_entrega_max=0) — ¿seguro que no se hace en la clínica?");
+            if (l.SeRealizaEnClinica && l.DiasEntregaMax > 0)
+                avisos.Add($"{donde}: se procesa en la clínica pero tarda {l.DiasEntregaMax} día(s) en entregar");
         }
+    }
+
+    /// <summary>
+    /// Personal del laboratorio: catálogo opcional (vacío = el médico firma el resultado, comportamiento
+    /// histórico), pero si está, sus filas deben poder crearse como provider y tener un rol conocido.
+    /// </summary>
+    private static void ValidarPersonalLaboratorio(CatalogLoader c, List<string> errores, List<string> avisos)
+    {
+        if (c.PersonalLaboratorio.Count == 0) return;
+
+        for (var i = 0; i < c.PersonalLaboratorio.Count; i++)
+        {
+            var p = c.PersonalLaboratorio[i];
+            var donde = Fila("personal_laboratorio.csv", i, p.Nombre);
+
+            if (string.IsNullOrWhiteSpace(p.Identifier))
+                errores.Add($"{donde}: identifier vacío — no se podría asegurar el provider");
+            if (string.IsNullOrWhiteSpace(p.Nombre))
+                errores.Add($"{donde}: nombre vacío");
+            Enum_(p.Rol, RolesLaboratorio, donde, "rol", errores);
+        }
+
+        if (!c.PersonalLaboratorio.Any(p => !p.EsResponsable))
+            avisos.Add("personal_laboratorio.csv: no hay ningún 'tecnico' — el responsable hará también las tomas");
     }
 
     private static void ValidarPaneles(CatalogLoader c, List<string> errores)

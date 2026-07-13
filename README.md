@@ -5,7 +5,8 @@ Aplicación de consola en **C# .NET 10** que actúa como **simulador clínico** 
 Lo que genera (en español, epidemiológica y clínicamente coherente):
 
 - **Pacientes** con nombres y direcciones centroamericanos realistas, edad y género según distribución configurable.
-- **Visitas completas**: vitales coherentes con la enfermedad, consulta con diagnóstico (por edad/sexo/estación, con comorbilidades), órdenes de laboratorio **con resultado**, prescripciones, alergias y cierre de visita.
+- **Visitas completas**: vitales coherentes con la enfermedad, consulta con diagnóstico (por edad/sexo/estación, con comorbilidades), prescripciones, alergias y cierre de visita.
+- **Laboratorio con su ciclo real**: la orden se recoge, la muestra la **toma un técnico** (encuentro propio, en el laboratorio) y el resultado se valida — o la muestra se rechaza. Lo que la clínica no hace se **refiere a un laboratorio externo** y el resultado vuelve días después.
 - **Continuidad asistencial**: crónicos que vuelven al control de su enfermedad con su médico de cabecera, problem list, inscripción en programas (VIH, diabetes) y **citas reales en la agenda de O3** con no-shows.
 
 > **El sembrado va 100 % por la REST API** (`/ws/rest/v1`) — no se escribe SQL. La única excepción es la etapa 5/5 (*corrección de fechas de auditoría*), **desactivada por defecto**: existe porque OpenMRS sella `date_created` con el reloj real del servidor y por REST no hay forma de mandarlo. Ver [`correccion_fechas.md`](correccion_fechas.md).
@@ -36,7 +37,7 @@ Todos se lanzan con `--project openmrs_seeder_v1/openmrs_seeder_v1/openmrs_seede
 | `dotnet run -- clear` | **Anula** (void) todos los pacientes `SIM-` y **cancela** sus citas pendientes. Pide confirmación `s/N` |
 | `dotnet run -- fechas --dry-run` | Informa cuántas filas de auditoría corregiría, **sin escribir nada** |
 | `dotnet run -- fechas` | Retrofecha `date_created` de datos **ya sembrados** (la etapa 5/5 por separado) |
-| `dotnet test openmrs_seeder_v1/openmrs_seeder_v1.Tests/openmrs_seeder_v1.Tests.csproj` | Suite de tests (279) |
+| `dotnet test openmrs_seeder_v1/openmrs_seeder_v1.Tests/openmrs_seeder_v1.Tests.csproj` | Suite de tests (308) |
 
 **Exit codes**: `0` completado · `1` fallo del proceso · `2` OpenMRS inaccesible, argumento inválido o **catálogos inválidos** — en los tres casos **no se toca ningún dato**.
 
@@ -65,6 +66,7 @@ docker compose -f docker/docker-compose.yml run --rm -i seeder clear # limpieza
 |------------------------|----------|
 | [`querys/visita_detalle.sql`](querys/visita_detalle.sql) | Radiografía de una visita + detección de datos imposibles (vitales fuera de rango, paneles huérfanos) |
 | [`querys/coherencia_seguimiento.sql`](querys/coherencia_seguimiento.sql) | Audita el control: mismo médico, mismo diagnóstico, 0 citas vencidas sin resolver |
+| [`querys/laboratorio.sql`](querys/laboratorio.sql) | Audita el ciclo de la orden: reparto por estado, tiempos de entrega interno vs. externo, y que **todo** resultado cuelgue del encuentro del laboratorio |
 | [`querys/sp_fechas_auditoria.sql`](querys/sp_fechas_auditoria.sql) | Los stored procedures de la etapa 5/5 (también ejecutables a mano) |
 | [`querys/borrar_simulacion.sql`](querys/borrar_simulacion.sql) | Borrado **físico** de los datos `SIM-` (el `clear` solo los anula) |
 
@@ -72,7 +74,7 @@ docker compose -f docker/docker-compose.yml run --rm -i seeder clear # limpieza
 
 | Etapa | Qué hace |
 |:-----:|----------|
-| **1/5** Validación de catálogos | Carga los 15 CSV, informa de las filas de cada uno y **valida**: dominios, bandas, filas inseleccionables, cruce perfil ↔ diagnósticos. Con errores **aborta (exit 2) antes de tocar OpenMRS** |
+| **1/5** Validación de catálogos | Carga los 16 CSV, informa de las filas de cada uno y **valida**: dominios, bandas, filas inseleccionables, cruce perfil ↔ diagnósticos. Con errores **aborta (exit 2) antes de tocar OpenMRS** |
 | **2/5** Días a simular | Ventana, días con atención vs. cerrados, volumen previsto (nuevos/recurrentes) y desglose por día o por mes. Es el plan **exacto** que se va a ejecutar, no una estimación |
 | **3/5** Ejecución | **Pausa de 5 s** para abortar con Ctrl+C tras leer el informe; luego siembra, con progreso cada ~15 s |
 | **4/5** Resumen final | Visitas (nuevos vs. recurrentes), pacientes distintos y cuántos volvieron, visitas por semana, **top-5 diagnósticos**, y errores separados en *de proceso* y *de operación* (una obs rechazada no es lo mismo que una corrida caída) |
@@ -94,14 +96,15 @@ docker compose -f docker/docker-compose.yml run --rm -i seeder clear # limpieza
 | `ConsultaSeeder` | Encuentro de consulta: motivo, **diagnósticos** (primario + comorbilidades), exámenes en consultorio, nota de seguimiento |
 | `ConditionSeeder` | Problem list: cada diagnóstico crónico (HTA, diabetes, EPOC…) |
 | `ProgramEnrollmentSeeder` | Inscripción en programas de atención (VIH, diabetes) |
-| `LabOrderSeeder` | Órdenes de laboratorio **y su resultado**; los paneles (hemograma) como obs-group. Los resultados diferidos llegan en la visita siguiente |
+| `LabOrderSeeder` | Qué exámenes pide el médico y la orden en sí (nº de muestra + instrucción al laboratorio) |
+| `LabWorkflowSeeder` | El **ciclo de la orden**: la muestra se toma, el resultado se registra en un encuentro **del laboratorio** (firmado por el técnico, validado por la responsable) y la orden se cierra — o se rechaza. Lo que la clínica no hace se manda **fuera** y vuelve días después |
 | `PrescriptionSeeder` | Prescripciones con posología del catálogo |
 | `AppointmentSeeder` *(agendar)* | La **cita real** en la agenda de O3, con el médico reservado para ese día |
 | `VisitCloseSeeder` | Cierra la visita (1–4 h después de la llegada) |
 
 ### Servicios de decisión
 
-Aquí vive la inteligencia del simulador. El patrón que gobierna todo el proyecto: son **seams puros** (estáticos, con el RNG inyectado), lo que permite testear las reglas clínicas **sin red ni base de datos** — de ahí que los 279 tests corran en ~120 ms.
+Aquí vive la inteligencia del simulador. El patrón que gobierna todo el proyecto: son **seams puros** (estáticos, con el RNG inyectado), lo que permite testear las reglas clínicas **sin red ni base de datos** — de ahí que los 308 tests corran en ~120 ms.
 
 | Servicio | Decide |
 |----------|--------|
@@ -110,6 +113,7 @@ Aquí vive la inteligencia del simulador. El patrón que gobierna todo el proyec
 | `RecurrentSelector` · `RecurrenceScheduler` | Quién vuelve hoy (prioridad a quien tiene cita) y cuándo será elegible de nuevo (agudo 7–21 d, crónico 30–120 d) |
 | `SeguimientoPolicy` | Si se agenda control, con probabilidad condicionada al cuadro (crónico > grave > resto) |
 | `LabResultGenerator` | El valor del laboratorio: banda normal o anormal según la enfermedad; los componentes del panel, cada uno por su cuenta |
+| `LabWorkflow` · `LabStaffAssigner` | El proceso del laboratorio: si la muestra se rechaza, cuándo llega el resultado (aquí mismo o desde un laboratorio externo) y quién la toma y la valida |
 | `VitalsSeeder.ComputeVitals` | Los vitales: IMC acoplado a la talla, fiebre, taquicardia, SpO2 — con overrides por enfermedad |
 | `PatientProfileGenerator` | Demografía: nombre, edad, sexo, dirección, teléfono, estado civil |
 | `DailyScheduleGenerator` | Cuántos pacientes atiende cada día y a qué hora llegan |
@@ -122,7 +126,7 @@ Aquí vive la inteligencia del simulador. El patrón que gobierna todo el proyec
 El proceso **no arranca** con configuración o catálogos inválidos, y aborta **antes de escribir nada** (exit 2):
 
 - `SettingsValidator` — rangos y coherencia de `appsettings.json` (probabilidades en [0,1], bandas `Min ≤ Max`, fechas, volúmenes). Además avisa de las claves del JSON que el binding ignoraría **en silencio**.
-- `CatalogValidator` — los 15 CSV. `CatalogLoader` es deliberadamente mudo (un CSV ausente da lista vacía; un booleano mal escrito, `false`), así que una errata se manifestaba como *una feature apagada sin que nadie lo notara*. Ahora se caza al arrancar.
+- `CatalogValidator` — los 16 CSV. `CatalogLoader` es deliberadamente mudo (un CSV ausente da lista vacía; un booleano mal escrito, `false`), así que una errata se manifestaba como *una feature apagada sin que nadie lo notara*. Ahora se caza al arrancar.
 
 ## De dónde sale la coherencia clínica
 
@@ -147,8 +151,9 @@ Todo el contenido clínico vive en CSV editables (`openmrs_seeder_v1/openmrs_see
 | `epidemiology-profile.csv` | Peso de cada categoría por grupo de edad y género |
 | `diagnosticos.csv` | 875 diagnósticos CIEL (**uno por concepto**: los duplicados son un error que aborta el arranque) en 13 categorías, con peso por edad/sexo, `cronica`, `comun`, estación y pistas de vitales |
 | `medicamentos.csv` | ~30 fármacos del formulario, con posología y las categorías a las que aplican |
-| `laboratorios.csv` | 27 exámenes con sus **bandas de resultado** normal/anormal y qué las dispara |
+| `laboratorios.csv` | 27 exámenes con sus **bandas de resultado** normal/anormal, qué las dispara, y **si la clínica los hace o los manda fuera** (y cuánto tardan) |
 | `paneles.csv` | Componentes de los paneles (hemograma y perfil lipídico) — *opcional* |
+| `personal_laboratorio.csv` | Quién toma la muestra (técnicos) y quién valida el resultado (responsable) — *opcional* |
 | `examenes_clinicos.csv` | 10 exámenes hechos en consultorio (Glasgow, escala de dolor, FC fetal…) |
 | `alergenos.csv` | Alérgenos (fármaco / alimento / ambiente) |
 | `motivos_consulta.csv` | Frases de motivo de consulta por categoría |
@@ -171,8 +176,8 @@ openmrs_seeder_v1/
     Services/                 #   las decisiones (seams puros y testeables)
     Configuration/            #   settings + validación fail-fast
     Clients/                  #   OpenMrsRestClient
-    catalogs/                 #   los 15 CSV
-  openmrs_seeder_v1.Tests/    # 279 tests
+    catalogs/                 #   los 16 CSV
+  openmrs_seeder_v1.Tests/    # 308 tests
 querys/                       # QA sobre la BD + los stored procedures
 scripts/                      # backup y utilidades de mantenimiento
 docker/                       # ejecutar el seeder sin instalar .NET

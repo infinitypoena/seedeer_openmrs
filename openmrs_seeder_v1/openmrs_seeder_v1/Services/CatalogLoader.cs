@@ -19,6 +19,7 @@ public class CatalogLoader
     public IReadOnlyList<ProgramaEntry> Programas { get; private set; } = [];
     public IReadOnlyList<DireccionEntry> Direcciones { get; private set; } = [];
     public IReadOnlyList<PanelComponenteEntry> Paneles { get; private set; } = [];
+    public IReadOnlyList<PersonalLaboratorioEntry> PersonalLaboratorio { get; private set; } = [];
 
     /// <summary>Carga directa desde listas — usado en tests unitarios.</summary>
     public void LoadFromLists(
@@ -36,7 +37,8 @@ public class CatalogLoader
         IEnumerable<string>? apellidos = null,
         IEnumerable<Models.Catalogs.ProgramaEntry>? programas = null,
         IEnumerable<Models.Catalogs.DireccionEntry>? direcciones = null,
-        IEnumerable<Models.Catalogs.PanelComponenteEntry>? paneles = null)
+        IEnumerable<Models.Catalogs.PanelComponenteEntry>? paneles = null,
+        IEnumerable<Models.Catalogs.PersonalLaboratorioEntry>? personalLaboratorio = null)
     {
         EpidemiologyProfile = epidemiology.ToList().AsReadOnly();
         Diagnosticos        = diagnosticos.ToList().AsReadOnly();
@@ -53,6 +55,7 @@ public class CatalogLoader
         Programas           = (programas ?? []).ToList().AsReadOnly();
         Direcciones         = (direcciones ?? []).ToList().AsReadOnly();
         Paneles             = (paneles ?? []).ToList().AsReadOnly();
+        PersonalLaboratorio = (personalLaboratorio ?? []).ToList().AsReadOnly();
     }
 
     public void Load(string catalogsPath)
@@ -73,6 +76,7 @@ public class CatalogLoader
         Programas           = LoadCsv(Path.Combine(catalogsPath, "programas.csv"),               ParsePrograma);
         Direcciones         = LoadCsv(Path.Combine(catalogsPath, "direcciones.csv"),             ParseDireccion);
         Paneles             = LoadCsv(Path.Combine(catalogsPath, "paneles.csv"),                 ParsePanelComponente);
+        PersonalLaboratorio = LoadCsv(Path.Combine(catalogsPath, "personal_laboratorio.csv"),    ParsePersonalLaboratorio);
     }
 
     private static IReadOnlyList<T> LoadCsv<T>(string path, Func<Dictionary<string, string>, T?> parser)
@@ -116,6 +120,12 @@ public class CatalogLoader
 
     private static bool   B(Dictionary<string, string> row, string key) =>
         row.TryGetValue(key, out var v) && v.Equals("true", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Booleano con valor por defecto cuando la columna falta o está vacía (columnas nuevas retrocompatibles).</summary>
+    private static bool   B(Dictionary<string, string> row, string key, bool porDefecto) =>
+        row.TryGetValue(key, out var v) && !string.IsNullOrWhiteSpace(v)
+            ? v.Equals("true", StringComparison.OrdinalIgnoreCase)
+            : porDefecto;
 
     private static int    I(Dictionary<string, string> row, string key) =>
         row.TryGetValue(key, out var v) && int.TryParse(v, out var n) ? n : 0;
@@ -225,7 +235,11 @@ public class CatalogLoader
         ResNormalUuid       = S(row, "res_normal_uuid"),
         ResAnormalUuid      = S(row, "res_anormal_uuid"),
         ResTrigger          = Pipe(row, "res_trigger"),
-        ResTriggerDx        = Pipe(row, "res_trigger_dx")
+        ResTriggerDx        = Pipe(row, "res_trigger_dx"),
+        // Dónde se procesa y cuánto tarda (columnas nuevas; ausentes = en la clínica, mismo día)
+        SeRealizaEnClinica  = B(row, "se_realiza_en_clinica", porDefecto: true),
+        DiasEntregaMin      = I(row, "dias_entrega_min"),
+        DiasEntregaMax      = I(row, "dias_entrega_max")
     };
 
     /// <summary>Lista separada por '|' (vacío = lista vacía).</summary>
@@ -328,6 +342,19 @@ public class CatalogLoader
             ResMinAnormal  = D(row, "res_min_anormal"),
             ResMaxAnormal  = D(row, "res_max_anormal"),
             ResTrigger     = Pipe(row, "res_trigger")
+        };
+    }
+
+    private static PersonalLaboratorioEntry? ParsePersonalLaboratorio(Dictionary<string, string> row)
+    {
+        var identifier = S(row, "identifier");
+        if (string.IsNullOrWhiteSpace(identifier)) return null;
+        return new PersonalLaboratorioEntry
+        {
+            Identifier = identifier,
+            Nombre     = S(row, "nombre"),
+            Genero     = S(row, "genero").Equals("F", StringComparison.OrdinalIgnoreCase) ? "F" : "M",
+            Rol        = S(row, "rol").Trim().ToLowerInvariant()
         };
     }
 

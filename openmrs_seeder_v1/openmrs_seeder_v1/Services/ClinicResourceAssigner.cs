@@ -1,6 +1,4 @@
-using System.Text.Json;
 using Microsoft.Extensions.Logging;
-using OpenmrsSeeder.Clients;
 using OpenmrsSeeder.Configuration;
 using OpenmrsSeeder.Models.Simulation;
 
@@ -15,7 +13,7 @@ namespace OpenmrsSeeder.Services;
 /// </summary>
 public class ClinicResourceAssigner
 {
-    private readonly OpenMrsRestClient _client;
+    private readonly ProviderEnsurer _providers;
     private readonly OpenMrsSettings _settings;
     private readonly SimulationSettings _simSettings;
     private readonly CatalogLoader _catalogs;
@@ -31,13 +29,13 @@ public class ClinicResourceAssigner
     private double _runCabeceraProb;
 
     public ClinicResourceAssigner(
-        OpenMrsRestClient client,
+        ProviderEnsurer providers,
         OpenMrsSettings settings,
         SimulationSettings simSettings,
         CatalogLoader catalogs,
         ILogger<ClinicResourceAssigner> logger)
     {
-        _client      = client;
+        _providers   = providers;
         _settings    = settings;
         _simSettings = simSettings;
         _rng = new Random(simSettings.RandomSeed + 18);
@@ -64,7 +62,7 @@ public class ClinicResourceAssigner
             if (string.IsNullOrWhiteSpace(c.LocationUuid) || string.IsNullOrWhiteSpace(c.MedicoIdentifier))
                 continue;
 
-            var providerUuid = await EnsureMedicoAsync(c, ct);
+            var providerUuid = await _providers.EnsureAsync(c.MedicoIdentifier, c.MedicoNombre, c.MedicoGenero, ct);
             resueltos.Add((c, providerUuid));
         }
 
@@ -255,67 +253,4 @@ public class ClinicResourceAssigner
         return resueltos.Select(r => (r.Entry.LocationUuid, r.ProviderUuid!)).ToList();
     }
 
-    // ── Helpers privados ──────────────────────────────────────────────────────
-
-    /// <summary>UUID del provider con ese identificador; lo crea (person + provider) si no existe.</summary>
-    private async Task<string?> EnsureMedicoAsync(Models.Catalogs.ConsultorioEntry c, CancellationToken ct)
-    {
-        try
-        {
-            var existing = await FindProviderUuidAsync(c.MedicoIdentifier, ct);
-            if (existing is not null)
-            {
-                _logger.LogDebug("[Clinic] Médico {Id} ya existe ({Uuid})", c.MedicoIdentifier, existing);
-                return existing;
-            }
-
-            var (given, family) = SplitNombre(c.MedicoNombre, c.MedicoIdentifier);
-
-            var personJson = await _client.PostAsync("person", new
-            {
-                names  = new[] { new { givenName = given, familyName = family, preferred = true } },
-                gender = string.IsNullOrWhiteSpace(c.MedicoGenero) ? "M" : c.MedicoGenero
-            }, ct);
-            var personUuid = JsonSerializer.Deserialize<JsonElement>(personJson).GetProperty("uuid").GetString();
-
-            var providerJson = await _client.PostAsync("provider", new
-            {
-                person     = personUuid,
-                identifier = c.MedicoIdentifier
-            }, ct);
-            var providerUuid = JsonSerializer.Deserialize<JsonElement>(providerJson).GetProperty("uuid").GetString();
-
-            _logger.LogInformation("[Clinic] Médico creado {Nombre} ({Id}) → {Uuid}",
-                c.MedicoNombre, c.MedicoIdentifier, providerUuid);
-            return providerUuid;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError("[Clinic] Error asegurando médico {Id}: {Msg}", c.MedicoIdentifier, ex.Message);
-            return null;
-        }
-    }
-
-    private async Task<string?> FindProviderUuidAsync(string identifier, CancellationToken ct)
-    {
-        var json = await _client.GetAsync(
-            $"provider?q={Uri.EscapeDataString(identifier)}&v=custom:(uuid,identifier)", ct);
-        var doc = JsonSerializer.Deserialize<JsonElement>(json);
-        if (!doc.TryGetProperty("results", out var results)) return null;
-
-        foreach (var p in results.EnumerateArray())
-        {
-            if (p.TryGetProperty("identifier", out var idProp) &&
-                string.Equals(idProp.GetString(), identifier, StringComparison.OrdinalIgnoreCase))
-                return p.GetProperty("uuid").GetString();
-        }
-        return null;
-    }
-
-    private static (string Given, string Family) SplitNombre(string nombre, string fallback)
-    {
-        if (string.IsNullOrWhiteSpace(nombre)) return (fallback, "Médico");
-        var parts = nombre.Trim().Split(' ', 2);
-        return parts.Length == 2 ? (parts[0], parts[1]) : (parts[0], "Médico");
-    }
 }

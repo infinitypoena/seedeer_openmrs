@@ -19,6 +19,8 @@ public class SeedOrchestrator
     private readonly VitalsSeeder _vitalsSeeder;
     private readonly ConsultaSeeder _consultaSeeder;
     private readonly LabOrderSeeder _labOrderSeeder;
+    private readonly LabWorkflowSeeder _labWorkflow;
+    private readonly LabStaffAssigner _labStaff;
     private readonly PrescriptionSeeder _prescriptionSeeder;
     private readonly VisitCloseSeeder _visitCloseSeeder;
     private readonly ConditionSeeder _conditionSeeder;
@@ -43,6 +45,8 @@ public class SeedOrchestrator
         VitalsSeeder vitalsSeeder,
         ConsultaSeeder consultaSeeder,
         LabOrderSeeder labOrderSeeder,
+        LabWorkflowSeeder labWorkflow,
+        LabStaffAssigner labStaff,
         PrescriptionSeeder prescriptionSeeder,
         VisitCloseSeeder visitCloseSeeder,
         ConditionSeeder conditionSeeder,
@@ -64,6 +68,8 @@ public class SeedOrchestrator
         _vitalsSeeder       = vitalsSeeder;
         _consultaSeeder     = consultaSeeder;
         _labOrderSeeder     = labOrderSeeder;
+        _labWorkflow        = labWorkflow;
+        _labStaff           = labStaff;
         _prescriptionSeeder = prescriptionSeeder;
         _visitCloseSeeder   = visitCloseSeeder;
         _conditionSeeder    = conditionSeeder;
@@ -89,8 +95,10 @@ public class SeedOrchestrator
         // Seed fija: decide recurrentes/roster/espaciamiento — sin ella la reproducibilidad se rompe
         var rng              = new Random(_settings.RandomSeed + 10);
 
-        // Asegurar consultorios + médicos (idempotente) antes de repartir visitas
+        // Asegurar consultorios + médicos y el personal de laboratorio (idempotente, fail-fast) antes
+        // de repartir visitas: nada de encuentros firmados por un provider que no existe.
         await _clinicResources.InitializeAsync(ct);
+        await _labStaff.InitializeAsync(ct);
 
         // Factor inicial: esta corrida se inclina a común con esta probabilidad (varía entre corridas)
         var runCommonP = _epiSelector.DrawRunCommonProbability();
@@ -115,6 +123,10 @@ public class SeedOrchestrator
 
             // Roster del día: 2-3 médicos "abren consultorio" (clínica pequeña, no siempre están todos)
             _clinicResources.ActivarMedicosDelDia(day.Date);
+
+            // El laboratorio entrega hoy los resultados que tocaban (los que se procesan fuera tardan
+            // días). No hace falta que el paciente vuelva: la muestra se procesa sin él.
+            await _labWorkflow.ProcesarEntregasDelDiaAsync(_patientPool, day.Date, ct);
 
             var (estacion, tempC) = _climate.Resolve(day.Date);
 
@@ -277,9 +289,14 @@ public class SeedOrchestrator
             tracker.Update(runId, r => { r.Porcentaje = pct; r.DiasProcesados = diasProcesados; });
         }
 
-        // Cierre de agenda: las citas vencidas de pacientes que nunca volvieron pasan a Missed
         if (!ct.IsCancellationRequested)
         {
+            // Cierre del laboratorio: entregar los resultados cuya fecha cae dentro de la ventana pero
+            // después del último día con atención (si no, quedarían en curso sin motivo).
+            await _labWorkflow.ProcesarEntregasDelDiaAsync(
+                _patientPool, DateOnly.FromDateTime(_settings.EndDate), ct);
+
+            // Cierre de agenda: las citas vencidas de pacientes que nunca volvieron pasan a Missed
             await _appointmentSeeder.SweepMissedAsync(_patientPool, DateOnly.FromDateTime(_settings.EndDate), ct);
         }
 
@@ -433,8 +450,6 @@ public class SeedOrchestrator
         await _consultaSeeder.SeedAsync(patient, ct);
         await _conditionSeeder.SeedAsync(patient, ct);
         await _programSeeder.SeedAsync(patient, ct);
-        // "Ya llegó el resultado": entregar los labs que quedaron pendientes de visitas anteriores
-        await _labOrderSeeder.ProcesarPendientesAsync(patient, ct);
         await _labOrderSeeder.SeedAsync(patient, ct);
         await _prescriptionSeeder.SeedAsync(patient, ct);
         // Reservar el médico del control (uno de los que estarán de turno ese día, preferentemente el

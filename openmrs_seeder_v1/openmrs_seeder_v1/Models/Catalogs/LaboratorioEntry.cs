@@ -35,4 +35,15 @@ public class LaboratorioEntry
     public List<string> ResTrigger { get; set; } = [];
     /// <summary>UUIDs de diagnósticos específicos que hacen anormal el resultado (para codificados disease-specific, p.ej. dengue → NS1 Positivo).</summary>
     public List<string> ResTriggerDx { get; set; } = [];
+
+    // ── Dónde se procesa y cuánto tarda ───────────────────────────────────────
+    /// <summary>
+    /// La clínica tiene capacidad para hacer este examen: la muestra se toma y se procesa aquí mismo y el
+    /// resultado sale el mismo día. <c>false</c> = se refiere a un laboratorio externo (la clínica solo
+    /// recibe el resultado días después). Columna ausente → <c>true</c> (comportamiento histórico).
+    /// </summary>
+    public bool SeRealizaEnClinica { get; set; } = true;
+    /// <summary>Días hasta que el resultado está disponible (0 = mismo día). Banda inclusiva.</summary>
+    public int DiasEntregaMin { get; set; }
+    public int DiasEntregaMax { get; set; }
 }

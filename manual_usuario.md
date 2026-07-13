@@ -348,7 +348,16 @@ Claves importantes y cómo verificarlas:
 | `FollowUp` | 0.30 | Indicar seguimiento (cuadro leve) → obs "Return visit date" **+ cita en agenda** |
 | `FollowUpCronico` | 0.90 | Prob. de seguimiento cuando el cuadro incluye una condición crónica |
 | `FollowUpGrave` | 0.80 | Prob. de seguimiento cuando el cuadro (no crónico) es grave |
-| `LabResult` | 0.90 | Fracción de órdenes que reciben resultado el mismo día (incluye paneles obs-group) |
+
+**Laboratorio** (`Simulation.Laboratorio`) — el ciclo de la orden, lo que se ve en la cola de la app de laboratorio:
+
+| Parámetro | Def. | Efecto |
+|-----------|------|--------|
+| `ProbRechazo` | 0.04 | Muestras que el laboratorio rechaza (`DECLINED`: hemolizada, insuficiente, el paciente no acudió) |
+| `ProbResultadoLlega` | 0.95 | Muestras tomadas cuyo resultado acaba llegando; el resto se pierde y su orden se queda en curso |
+| `MinutosHastaTomaMin/Max` | 20 / 90 | Cuánto tarda el paciente en pasar de la consulta al laboratorio |
+
+**Cuándo** llega el resultado no es un parámetro: lo decide el catálogo. `laboratorios.csv` → `se_realiza_en_clinica` (mismo día, dentro de la visita) o `dias_entrega_min/max` si el examen se manda a un laboratorio externo. Quién toma la muestra y quién la valida sale de `personal_laboratorio.csv`.
 
 **Pesos por día de semana** (`WeekdayWeights`): Lun/Mar 1.20, Mié/Jue 1.00, Vie 0.90, Sáb 0.50, **Dom 0.00** (cerrado).
 

@@ -64,6 +64,14 @@ builder.Services.AddSingleton<ClimateResolver>();
 
 // Asignador de consultorio/médico (transient: hace REST por corrida, como los seeders)
 builder.Services.AddTransient<ClinicResourceAssigner>();
+builder.Services.AddTransient<ProviderEnsurer>();
+
+// El personal de laboratorio y el flujo de la orden son SINGLETON a propósito: los inyectan dos
+// consumidores (el orquestador y LabOrderSeeder), y guardan estado de la corrida (el pool de técnicos
+// que se asegura una sola vez, el correlativo del nº de muestra). Con transient, el orquestador
+// inicializaría el personal en una instancia y el seeder usaría otra vacía.
+builder.Services.AddSingleton<LabStaffAssigner>();
+builder.Services.AddSingleton<LabWorkflowSeeder>();
 
 // Seeders transient (dependen de HttpClient via DI)
 builder.Services.AddTransient<PatientSeeder>();
@@ -126,6 +134,7 @@ foreach (var (archivo, filas, opcional) in new (string, int, bool)[]
     ("apellidos.csv",                catalogLoader.Apellidos.Count,           false),
     ("direcciones.csv",              catalogLoader.Direcciones.Count,         true),
     ("consultorios.csv",             catalogLoader.Consultorios.Count,        true),
+    ("personal_laboratorio.csv",     catalogLoader.PersonalLaboratorio.Count, true),
     ("comorbilidad_afinidades.csv",  catalogLoader.Afinidades.Count,          true),
     ("programas.csv",                catalogLoader.Programas.Count,           true),
     ("clima.csv",                    catalogLoader.Clima.Count,               true)
@@ -440,7 +449,7 @@ void ReportarPlan(IReadOnlyList<DailySchedule> plan)
     var nuevos      = plan.Sum(d => d.NuevosPacientes);
     var recurrentes = plan.Sum(d => d.PacientesRecurrentes);
 
-    logger.LogInformation("══ Etapa 2/4 · Días a simular ══");
+    logger.LogInformation("══ Etapa 2/5 · Días a simular ══");
     logger.LogInformation(
         "Ventana: {Inicio:yyyy-MM-dd} → {Fin:yyyy-MM-dd} | {Dias} días naturales, {ConAtencion} con " +
         "atención ({Cerrados} cerrados por peso 0 en WeekdayWeights)",

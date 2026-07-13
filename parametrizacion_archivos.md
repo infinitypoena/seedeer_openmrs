@@ -117,7 +117,9 @@ Todo el comportamiento del simulador se controla desde aquí.
 | `Appointments.AsistenciaProb` | float (0-1) | Probabilidad de que un paciente con cita para hoy (±tolerancia) efectivamente asista; el resto son no-shows cuya cita, al vencer, pasa a `Missed` (def. 0.75). |
 | `Orders.LabVigenciaDias` | int (días) | Días que una orden de laboratorio sigue activa (`autoExpireDate`). Mientras esté vigente no se re-ordena el mismo test; pasado el plazo, un control crónico puede volver a pedirlo (def. 7). |
 | `Variedad.RepeticionDamping` | float (≥0) | Amortiguación anti-repetición: cada vez que un dx sale en la corrida su peso efectivo baja (`peso / (1 + damping × usos)`) → se explora la cola larga del catálogo (~950 dx). No altera el perfil por edad/sexo/clima ni los controles crónicos/agudos. `0` = apagado (def. 0.25). |
-| `ReferralProbabilities.LabResult` | float (0-1) | Fracción de órdenes de lab numéricas/codificadas y **paneles** (obs-group) que "vuelven" con resultado el mismo día. El resto queda pendiente (def. 0.90). Las imágenes ordenan pero no registran valor. |
+| `Laboratorio.ProbRechazo` | float (0-1) | Fracción de muestras que el laboratorio **rechaza** (`DECLINED`: hemolizada, insuficiente, el paciente no acudió). Def. 0.04 |
+| `Laboratorio.ProbResultadoLlega` | float (0-1) | Fracción de muestras tomadas cuyo resultado acaba llegando. El resto se pierde y su orden se queda en `IN_PROGRESS` (def. 0.95). ⚠️ Sustituye al viejo `ReferralProbabilities.LabResult`: **cuándo** llega el resultado ya no es una probabilidad, lo decide el catálogo (`se_realiza_en_clinica` / `dias_entrega_*`, §5) |
+| `Laboratorio.MinutosHastaTomaMin` / `Max` | int | Minutos entre la consulta y la toma de la muestra (el paciente pasa por el laboratorio). Def. 20–90 |
 | `MinMedicosPorDia` / `MaxMedicosPorDia` | int | Roster diario: cada día se activan aleatoriamente entre `Min` y `Max` médicos del pool de `consultorios.csv` (def. 2/3). Pool ≤ Min = todos disponibles. |
 | `Allergy.BaseProbabilityMin` / `BaseProbabilityMax` | float (0-1) | Banda de prevalencia de alergias: cada corrida sortea su valor en `[min,max]` (def. 0.15–0.25, fracción clínicamente documentada del ~25-30% poblacional) → el % de pacientes nuevos alérgicos varía entre corridas. |
 | `Allergy.SecondAllergyProbability` | float (0-1) | Dado que el paciente ya tiene 1 alergia, probabilidad de sumar una 2ª (decaída condicional). |
@@ -317,10 +319,12 @@ ciel_uuid,nombre_es,aplica_respiratorio,...,aplica_trauma,datatype,res_min,res_m
 | `res_normal_uuid` / `res_anormal_uuid` | UUID de la respuesta normal/anormal para tests **codificados** (p.ej. Negativo/Positivo) |
 | `res_trigger` | Categorías (`\|`-separadas) que hacen anormal el resultado — típico de numéricos (p.ej. `diabetes\|endocrino`) |
 | `res_trigger_dx` | UUIDs de diagnósticos específicos que disparan el anormal — típico de codificados disease-specific (p.ej. dengue → NS1 Positivo) |
+| `se_realiza_en_clinica` | `true` = la clínica toma y procesa el examen (resultado **el mismo día**, dentro de la visita) · `false` = se **refiere a un laboratorio externo** y el resultado vuelve días después. Columna ausente = `true` (retrocompatible) |
+| `dias_entrega_min` / `dias_entrega_max` | Días hasta que el resultado está disponible (banda inclusiva; `0` = mismo día). Interno `0-0`; externo p.ej. `2-5` |
 
 Con disparo presente, el resultado es anormal con prob. `LabResultGenerator.ProbAnormalSiTrigger` (0.80); si no, normal. Las **imágenes** quedan solo como orden; los **paneles** (`datatype=panel`) buscan sus componentes en `paneles.csv` (§5b) — si el panel no tiene filas ahí, la orden queda sola.
 
-No todo resultado llega el mismo día: `ReferralProbabilities.LabResult` (def. 0.90) es la fracción que "vuelve" con la visita; el resto se genera igual (con el contexto clínico de esa visita) pero queda **pendiente** y se registra en la **siguiente visita** del paciente, ligado a la orden original. Si el paciente no vuelve, la orden queda sin resultado para siempre (realista).
+**Dónde se procesa cada examen** decide todo el ciclo posterior (ver §5c). Clasificación actual: **en la clínica** hemograma, glucemia, orina, creatinina, BUN, AST, ALT, bilirrubina, ácido úrico, PCR y las pruebas rápidas (NS1 dengue, embarazo, VDRL); **externos** perfil lipídico, HbA1c, TSH, T4, potasio, amilasa, urocultivo, VIH ELISA y las 6 imágenes (la clínica no tiene radiología). Mover la línea = editar la columna, nada más.
 
 ---
 
@@ -344,6 +348,44 @@ panel_uuid,componente_uuid,nombre,res_min,res_max,res_min_anormal,res_max_anorma
 | `res_trigger` | Categorías (`\|`-separadas) que disparan la banda anormal de **este** componente |
 
 Cada componente sortea su banda **de forma independiente** (`LabResultGenerator.GenerarComponentes`, misma prob. 0.80): un paciente infeccioso (dengue) sale con plaquetas bajas y leucocitos alterados pero hemoglobina normal; uno digestivo (sangrado) con anemia. Misma regla de precisión que los numéricos simples (límites enteros → valor entero). ⚠️ datatype=panel **solo vale si el concepto es de verdad un LabSet con componentes**: el perfil lipídico apuntaba a *colesterol total* (un solo analito) y orina/urocultivo/VIH tampoco eran paneles — los cuatro se ordenaban y **nunca registraban resultado**. Corregido: hoy los paneles son el **hemograma** 1019… y el **perfil lipídico** 1010… (colesterol total, HDL, LDL, triglicéridos, VLDL); los otros tres pasaron a coded. Un panel sin filas aquí = orden sola, y el validador lo avisa.
+
+---
+
+## 5c. catalogs/personal_laboratorio.csv — Quién trabaja en el laboratorio
+
+**Opcional.** Sin este catálogo, el resultado lo firma el médico de la consulta (comportamiento histórico). Con él, el laboratorio es un servicio con gente propia: el **técnico** toma la muestra y registra el resultado, y el **responsable** lo valida (es quien cierra la orden en `COMPLETED`).
+
+```csv
+identifier,nombre,genero,rol
+SIM-LAB-01,Ana Beatriz Portillo,F,tecnico
+SIM-LAB-02,Mario Alberto Cruz,M,tecnico
+SIM-LAB-03,Silvia Regina Menjivar,F,responsable
+```
+
+| Columna | Descripción |
+|---------|-------------|
+| `identifier` | Identificador del provider. Prefijo `SIM-LAB-*` — son **datos de referencia**: se crean una vez (idempotente), se reutilizan entre corridas y el subcomando `clear` **no** los anula (igual que los médicos `SIM-MED-*`) |
+| `nombre` | Nombre completo (se parte en nombre + apellidos al crear la `person`) |
+| `genero` | `M` \| `F` |
+| `rol` | `tecnico` (toma la muestra y registra el resultado) \| `responsable` (lo valida). Sin responsable, valida el propio técnico |
+
+**Fail-fast**: si alguien del catálogo no se puede crear como provider, la corrida **aborta antes de sembrar** — nunca quedan encuentros de laboratorio firmados por un provider inexistente.
+
+### El ciclo de vida de la orden
+
+Esto es lo que la app de laboratorio de O3 muestra en su cola, y sale de `Order.fulfillerStatus`:
+
+| Paso | `fulfillerStatus` | Qué pasa |
+|------|-------------------|----------|
+| El médico pide el examen | *(sin estado)* | La orden lleva `accessionNumber` (nº de muestra) y `commentToFulfiller` (procesar aquí / referir fuera) |
+| El laboratorio la recoge | `IN_PROGRESS` | "Muestra tomada por \<técnico\>" (en una **imagen** no hay muestra: "Paciente referido al centro de imágenes") |
+| Sale el resultado | `COMPLETED` | Las obs cuelgan de un **encuentro propio** (tipo *Lab Results*, ubicación *Laboratorio*, firmado por el técnico), validado por el responsable |
+| La muestra no sirve | `DECLINED` | Motivo: hemolizada / insuficiente / mal identificada / el paciente no acudió |
+
+**Interno** (`se_realiza_en_clinica=true`): el resultado sale el mismo día y su encuentro va **dentro de la visita**.
+**Externo**: el valor se genera con el contexto clínico de la visita que lo ordenó, pero se registra **el día que llega** (`dias_entrega_*`), en un encuentro **sin visita** — el paciente no está delante: la muestra se procesa fuera. ⚠️ Esto ya **no** depende de que el paciente vuelva a consulta (antes, un resultado diferido solo se posteaba si había otra visita).
+
+QA en BD: `querys/laboratorio.sql`.
 
 ---
 
@@ -584,14 +626,19 @@ examenes_clinicos.csv
         → filtrar por [aplica_CATEGORIA = true]
         → elegir 1 al azar → POST /obs en encounter ADULTINITIAL
 
-PASO 5 — lab externo (si aplica):
+PASO 5 — laboratorio (si aplica):
 laboratorios.csv
   └── rand < LabOrder (0.40) o requiere_lab
         → filtrar por [aplica_CATEGORIA = true]
-        → elegir 1-2 al azar → POST /order testorder
-        → resultado (numeric/coded, o panel vía paneles.csv como obs-group):
-            rand < LabResult (0.90) → POST /obs ligada a la orden, mismo día
-            si no → queda pendiente y se entrega en la SIGUIENTE visita del paciente
+        → elegir 1-2 al azar → POST /order testorder (+ accessionNumber, + instrucción al laboratorio)
+        → ciclo de la orden (LabWorkflowSeeder → fulfillerStatus):
+            rand < ProbRechazo (0.04) → DECLINED con motivo, sin resultado
+            si no → IN_PROGRESS ("muestra tomada por <técnico>")
+                 → rand > ProbResultadoLlega (0.95) → el resultado se pierde, queda IN_PROGRESS
+                 → se_realiza_en_clinica → encuentro "Lab Results" DENTRO de la visita (mismo día)
+                                            + POST /obs ligada a la orden → COMPLETED
+                 → externo → el valor espera a dias_entrega_min..max y lo registra el BARRIDO DIARIO,
+                             en un encuentro "Lab Results" SIN visita → COMPLETED
 
 PASO 6 — prescripción (si aplica):
 medicamentos.csv
@@ -679,7 +726,9 @@ Esto permite:
 | Cuántas alergias por paciente alérgico | `appsettings.json` → `Allergy.SecondAllergyProbability` / `ThirdAllergyProbability` / `MaxAllergies` |
 | Qué alérgenos pueden aparecer | `alergenos.csv` |
 | Qué vital dispara una enfermedad concreta | `diagnosticos.csv` → `vital_fiebre` / `vital_imc` / `vital_pa` / `vital_fc` / `vital_spo2` |
-| % de resultados de lab que llegan el mismo día (el resto se difiere) | `appsettings.json` → `ReferralProbabilities.LabResult` |
+| Qué exámenes hace la clínica y cuáles se mandan fuera (y cuánto tardan) | `catalogs/laboratorios.csv` → `se_realiza_en_clinica`, `dias_entrega_min/max` |
+| % de muestras rechazadas / de resultados que se pierden | `appsettings.json` → `Laboratorio.ProbRechazo`, `Laboratorio.ProbResultadoLlega` |
+| Quién toma la muestra y quién valida el resultado | `catalogs/personal_laboratorio.csv` |
 | Que el paciente lleve teléfono / estado civil | `appsettings.json` → `Defaults.TelephoneAttributeTypeUuid` / `CivilStatusAttributeTypeUuid` (vacío = off) |
 | UUIDs de OpenMRS (location, visita, encuentro) | `appsettings.json` → `OpenMRS.Defaults` |
 | Reproducibilidad | `appsettings.json` → `RandomSeed` |

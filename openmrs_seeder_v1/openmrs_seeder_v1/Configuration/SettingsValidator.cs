@@ -58,7 +58,14 @@ public static class SettingsValidator
         Prob(rp.FollowUp, "ReferralProbabilities.FollowUp");
         Prob(rp.FollowUpCronico, "ReferralProbabilities.FollowUpCronico");
         Prob(rp.FollowUpGrave, "ReferralProbabilities.FollowUpGrave");
-        Prob(rp.LabResult, "ReferralProbabilities.LabResult");
+
+        // Ciclo de vida de la orden de laboratorio
+        var lb = sim.Laboratorio;
+        Prob(lb.ProbRechazo, "Laboratorio.ProbRechazo");
+        Prob(lb.ProbResultadoLlega, "Laboratorio.ProbResultadoLlega");
+        NoNegativo(lb.MinutosHastaTomaMin, "Laboratorio.MinutosHastaTomaMin");
+        Banda(lb.MinutosHastaTomaMin, lb.MinutosHastaTomaMax,
+            "Laboratorio.MinutosHastaTomaMin", "Laboratorio.MinutosHastaTomaMax");
 
         // Bandas sorteadas por corrida
         Prob(sim.CommonProbMin, "CommonProbMin");

@@ -6,17 +6,25 @@ namespace OpenmrsSeeder.Models.Simulation;
 public readonly record struct CitaPendiente(string Uuid, DateTime Fecha);
 
 /// <summary>
-/// Resultado de laboratorio que "aún no llegó": la orden existe pero el valor se registrará en la
-/// siguiente visita del paciente (retraso realista). Numérico/codificado excluyentes; los paneles
-/// llevan la lista de componentes (obs-group). Se genera al ordenar (con el contexto clínico de esa
-/// visita) y se postea al volver.
+/// Resultado de laboratorio que "aún no llegó": la orden existe pero el examen se procesa fuera de la
+/// clínica y su valor solo estará disponible en <see cref="FechaEntrega"/>. Numérico/codificado
+/// excluyentes; los paneles llevan la lista de componentes (obs-group). El valor se genera al ordenar
+/// (con el contexto clínico de esa visita) y lo registra el barrido diario del laboratorio el día que
+/// llega — sin depender de que el paciente vuelva.
+/// <para><see cref="SinValor"/> = estudio que no registra obs (imagen): solo se cierra la orden.</para>
 /// </summary>
 public sealed record ResultadoPendiente(
     string OrderUuid,
     string ConceptUuid,
     double? Numerico,
     string? CodedUuid,
-    List<(string ConceptUuid, double Valor)>? Componentes);
+    List<(string ConceptUuid, double Valor)>? Componentes,
+    DateOnly FechaEntrega,
+    bool EsExterno)
+{
+    public bool SinValor =>
+        Numerico is null && string.IsNullOrEmpty(CodedUuid) && (Componentes is null || Componentes.Count == 0);
+}
 
 public class SimulatedPatient
 {
@@ -111,6 +119,13 @@ public class SimulatedPatient
     public List<CitaPendiente> CitasPendientes { get; set; } = [];
     /// <summary>Resultados de laboratorio pendientes de llegar (compartida por referencia, como CitasPendientes).</summary>
     public List<ResultadoPendiente> ResultadosPendientes { get; set; } = [];
+    /// <summary>
+    /// Encuentro más tardío creado dentro de ESTA visita (hoy, el de la toma de muestra en el
+    /// laboratorio, que ocurre después de la consulta). <see cref="Seeders.VisitCloseSeeder"/> no puede
+    /// cerrar la visita antes de él: OpenMRS rechaza una visita cuyo <c>stopDatetime</c> deje fuera a
+    /// alguno de sus encuentros. <c>null</c> = solo hubo encuentros al inicio de la visita.
+    /// </summary>
+    public DateTime? UltimoEncuentroDatetime { get; set; }
     /// <summary>
     /// Diagnósticos crónicos que arrastra el paciente (los <c>EsCronica</c> ya asignados en visitas previas).
     /// Las visitas recurrentes vuelven a uno de estos como motivo de control con alta probabilidad.

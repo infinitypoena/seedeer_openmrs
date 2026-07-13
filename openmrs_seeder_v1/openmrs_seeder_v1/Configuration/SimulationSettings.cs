@@ -61,6 +61,30 @@ public class SimulationSettings
     public AppointmentsSettings Appointments { get; set; } = new();
     public VariedadSettings Variedad { get; set; } = new();
     public OrdersSettings Orders { get; set; } = new();
+    public LaboratorioSettings Laboratorio { get; set; } = new();
+}
+
+/// <summary>
+/// Ciclo de vida de la orden de laboratorio (<c>Order.fulfillerStatus</c>): cuándo se toma la muestra,
+/// cuándo se rechaza y cuándo llega el resultado. Es lo que llena la cola de la app de laboratorio de O3.
+/// Qué examen se hace en la clínica y cuánto tarda cada uno sale del catálogo (<c>laboratorios.csv</c>:
+/// <c>se_realiza_en_clinica</c>, <c>dias_entrega_min/max</c>), no de aquí.
+/// </summary>
+public class LaboratorioSettings
+{
+    /// <summary>
+    /// Fracción de muestras que el laboratorio rechaza (hemolizada, insuficiente, el paciente no acudió
+    /// a la toma): la orden queda en <c>DECLINED</c> con el motivo y sin resultado. Def. 0.04.
+    /// </summary>
+    public double ProbRechazo { get; set; } = 0.04;
+    /// <summary>
+    /// Fracción de muestras tomadas cuyo resultado acaba llegando. El resto se pierde y su orden se queda
+    /// en curso (<c>IN_PROGRESS</c>) para siempre, como en una clínica real. Def. 0.95.
+    /// </summary>
+    public double ProbResultadoLlega { get; set; } = 0.95;
+    /// <summary>Minutos entre la consulta y la toma de la muestra (el paciente pasa por el laboratorio).</summary>
+    public int MinutosHastaTomaMin { get; set; } = 20;
+    public int MinutosHastaTomaMax { get; set; } = 90;
 }
 
 /// <summary>Parámetros de las órdenes clínicas (labs y prescripciones).</summary>
@@ -231,13 +255,9 @@ public class ReferralProbabilitiesSettings
     public double FollowUpCronico { get; set; } = 0.90;
     /// <summary>Prob. de agendar control cuando el cuadro (no crónico) es grave. Def. 0,80.</summary>
     public double FollowUpGrave { get; set; } = 0.80;
-    /// <summary>
-    /// Fracción de órdenes de laboratorio que "vuelven" con un resultado el mismo día (obs ligada a
-    /// la orden). El resto queda pendiente (sin resultado), como en una clínica real. Def. 0.90.
-    /// Aplica a tests numéricos/codificados y a paneles (registran obs-group con sus componentes);
-    /// las imágenes sí ordenan pero no registran valor.
-    /// </summary>
-    public double LabResult { get; set; } = 0.90;
+    // El antiguo LabResult (fracción de resultados que "volvían" el mismo día) lo sustituye
+    // Simulation.Laboratorio: ahora el "cuándo" lo decide el catálogo (se hace en la clínica → hoy;
+    // externo → dias_entrega_*) y el "si llega" es Laboratorio.ProbResultadoLlega.
 }
 
 public class WeekdayWeightsSettings

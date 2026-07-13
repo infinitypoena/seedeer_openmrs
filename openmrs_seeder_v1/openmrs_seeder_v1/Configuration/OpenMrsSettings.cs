@@ -79,4 +79,12 @@ public class DefaultsSettings
     /// un answer del concepto Estado civil 1054). Vacío = no se registra estado civil.
     /// </summary>
     public string CivilStatusAttributeTypeUuid { get; set; } = "";
+    /// <summary>
+    /// UUID del tipo de encuentro "Lab Results": el acto del laboratorio (toma de muestra + resultado),
+    /// firmado por el técnico y no por el médico de la consulta. Vacío = no se crean encuentros de
+    /// laboratorio (los resultados no se registran).
+    /// </summary>
+    public string LabResultsEncounterTypeUuid { get; set; } = "";
+    /// <summary>UUID de la ubicación "Laboratorio". Vacío = cae al consultorio de la visita.</summary>
+    public string LabLocationUuid { get; set; } = "";
 }
