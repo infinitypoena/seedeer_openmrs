@@ -160,6 +160,25 @@ Todo el comportamiento del simulador se controla desde aquí.
 | `TelephoneAttributeTypeUuid` | Person attribute "Telephone Number" (formato String). **Vacío = paciente sin teléfono** | `GET /ws/rest/v1/personattributetype` |
 | `CivilStatusAttributeTypeUuid` | Person attribute "Civil Status" (formato **Concept** → el valor enviado es el UUID de una *answer* del concepto `1054`). **Vacío = paciente sin estado civil** | `GET /ws/rest/v1/personattributetype`; las answers, con `GET /concept/1054…?v=full` (⚠️ `?q=` con rep. personalizada de `answers` da NPE en esta instancia) |
 
+### Referencia de parámetros — sección OpenMRS.Database (etapa 5/5, fechas de auditoría)
+
+Es la **única parte del simulador que habla directamente con MariaDB**, y está **desactivada por defecto**:
+con `CorregirFechas: false` (o `ConnectionString` vacío) el proyecto sigue siendo REST puro. Existe porque
+OpenMRS sella `date_created` con el reloj real del servidor y por REST no hay forma de mandarlo, así que sin
+esta etapa todas las filas de una corrida de años quedan creadas el mismo día. Detalle completo en
+**`correccion_fechas.md`**.
+
+| Parámetro | Descripción | Valor típico |
+|-----------|-------------|--------------|
+| `CorregirFechas` | Interruptor. `true` = se ejecuta la etapa 5/5 al terminar de sembrar | `false` (por defecto) |
+| `ConnectionString` | Cadena de conexión a MariaDB. **Vacía = feature apagada** aunque `CorregirFechas` sea `true`. Requiere el puerto 3306 expuesto al host | `Server=localhost;Port=3306;Database=openmrs;User Id=openmrs;Password=…;` |
+| `PrefijoPaciente` | Prefijo del identificador de los pacientes simulados. **Acota todo lo que el proceso puede tocar**: nada fuera de ese conjunto se modifica | `SIM-` |
+| `TamanoLote` | Filas por lote de `UPDATE` (transacciones cortas: ni undo log enorme ni bloqueos largos) | `20000` |
+| `PedirConfirmacion` | Preguntar `s/N` por consola antes de escribir. `false` para corridas desatendidas | `true` |
+
+⚠️ Tras aplicar hay que **reiniciar el backend** (`docker compose restart backend`) o Hibernate seguirá
+sirviendo las fechas viejas desde su caché.
+
 ---
 
 ## 2. catalogs/epidemiology-profile.csv — Pesos por categoría/edad/género

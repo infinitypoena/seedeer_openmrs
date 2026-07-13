@@ -59,6 +59,40 @@ public class SettingsValidatorTests
     }
 
     [Fact]
+    public void Validate_CorregirFechasSinCadenaDeConexion_ReportaViolacion()
+    {
+        // Activar la corrección sin conexión dejaría la etapa 5/5 muerta en silencio
+        var omrs = OmrsValido();
+        omrs.Database.CorregirFechas = true;
+
+        var violaciones = SettingsValidator.Validate(SimValida(), omrs);
+
+        var v = Assert.Single(violaciones);
+        Assert.Contains("ConnectionString", v);
+    }
+
+    [Fact]
+    public void Validate_PrefijoPacienteVacio_ReportaViolacion()
+    {
+        // El prefijo es lo que acota qué filas puede tocar el proceso: vacío = alcance ilimitado
+        var omrs = OmrsValido();
+        omrs.Database.PrefijoPaciente = "";
+
+        var violaciones = SettingsValidator.Validate(SimValida(), omrs);
+
+        var v = Assert.Single(violaciones);
+        Assert.Contains("PrefijoPaciente", v);
+    }
+
+    [Fact]
+    public void Validate_CorregirFechasDesactivado_NoExigeCadenaDeConexion()
+    {
+        var omrs = OmrsValido();   // CorregirFechas = false por defecto, ConnectionString vacío
+
+        Assert.Empty(SettingsValidator.Validate(SimValida(), omrs));
+    }
+
+    [Fact]
     public void Validate_VariasViolaciones_ReportaTodasSinCortocircuito()
     {
         var sim = SimValida();

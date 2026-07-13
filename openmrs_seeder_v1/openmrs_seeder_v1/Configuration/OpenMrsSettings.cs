@@ -4,6 +4,30 @@ public class OpenMrsSettings
 {
     public RestApiSettings RestApi { get; set; } = new();
     public DefaultsSettings Defaults { get; set; } = new();
+    public DatabaseSettings Database { get; set; } = new();
+}
+
+/// <summary>
+/// Acceso directo a MariaDB. El simulador siembra SOLO por REST; esta es la única excepción, y existe
+/// porque OpenMRS sella cada fila con el reloj real del servidor: las fechas de negocio (visita, obs,
+/// orden…) son las simuladas, pero las de auditoría (date_created) quedan todas el día de la corrida.
+/// <see cref="OpenmrsSeeder.Services.AuditDateFixer"/> las retrofecha. Desactivado por defecto.
+/// </summary>
+public class DatabaseSettings
+{
+    /// <summary>Interruptor de la feature: false = no se toca la BD (el simulador sigue siendo REST puro).</summary>
+    public bool CorregirFechas { get; set; }
+    /// <summary>Cadena de conexión a MariaDB. Vacía = feature desactivada aunque CorregirFechas sea true.</summary>
+    public string ConnectionString { get; set; } = "";
+    /// <summary>Prefijo del identificador de los pacientes simulados: acota TODO lo que el proceso puede tocar.</summary>
+    public string PrefijoPaciente { get; set; } = "SIM-";
+    /// <summary>Filas por lote de UPDATE (transacciones cortas: ni undo log enorme ni bloqueos largos).</summary>
+    public int TamanoLote { get; set; } = 20000;
+    /// <summary>Pedir confirmación por consola antes de escribir. false = corrida desatendida.</summary>
+    public bool PedirConfirmacion { get; set; } = true;
+
+    /// <summary>La feature está operativa (activada Y con cadena de conexión).</summary>
+    public bool Activo => CorregirFechas && !string.IsNullOrWhiteSpace(ConnectionString);
 }
 
 public class RestApiSettings

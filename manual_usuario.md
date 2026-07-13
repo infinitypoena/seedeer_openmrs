@@ -471,6 +471,15 @@ dotnet run --project openmrs_seeder_v1/openmrs_seeder_v1/openmrs_seeder_v1.cspro
 
 Cuenta los pacientes `SIM-`, **pide confirmación** (`¿Continuar? (s/N)`) y solo entonces anula (void, borrado lógico) cada paciente y sus visitas. Es **lento a propósito** (rate limiting de 200 ms/paciente para no saturar OpenMRS). Responder `N` (o Enter) aborta sin tocar nada. Ver §11 para qué se limpia y qué no.
 
+### 7.3 Corregir las fechas de auditoría de datos ya sembrados
+
+```bash
+dotnet run --project openmrs_seeder_v1/openmrs_seeder_v1/openmrs_seeder_v1.csproj -- fechas --dry-run
+dotnet run --project openmrs_seeder_v1/openmrs_seeder_v1/openmrs_seeder_v1.csproj -- fechas
+```
+
+Retrofecha el `date_created` que OpenMRS selló con la fecha de la corrida. Es la **etapa 5/5** suelta, para aplicarla sobre datos sembrados anteriormente. Requiere activar `OpenMRS:Database:CorregirFechas`. Ver §10.9.
+
 ---
 
 ## 8. Catálogos CSV — qué son y cómo extenderlos
@@ -651,6 +660,27 @@ Ojo: **dos corridas distintas con la misma seed** generan los mismos nombres →
 
 La latencia típica en instancia local es 80–150 ms/request. La corrida es secuencial a propósito (una clínica atiende de a un paciente; además evita condiciones de carrera en OpenMRS).
 
+### 10.9 Fechas de auditoría (`date_created`) — la etapa 5/5
+
+Hay dos clases de fecha en cada fila de OpenMRS, y solo una la controla el simulador:
+
+- **Fechas de negocio** — cuándo ocurrió el hecho clínico (inicio de la visita, hora del encuentro, fecha de la obs, activación de la orden…). El simulador **las manda explícitamente** y son correctas.
+- **Fechas de auditoría** — cuándo se insertó la fila (`date_created`, `date_changed`). **Por REST no se pueden mandar**: OpenMRS las sella con el reloj real del servidor. Sin corregirlas, una corrida de tres años deja **todas** sus filas creadas el día en que se ejecutó el sembrado — y cualquier análisis que ingiera "por fecha de inserción" ve años de historia clínica ocurriendo en una tarde.
+
+La **etapa 5/5** las retrofecha, derivándolas de la fecha de negocio de la propia fila o de la de su padre (un paciente se registra 5–20 min antes de su primera visita; una cita se crea en la consulta que la agendó; etc.).
+
+```bash
+# se ejecuta sola al final de dotnet run, si OpenMRS:Database:CorregirFechas = true
+dotnet run -- fechas --dry-run   # informa cuántas filas cambiaría, sin escribir nada
+dotnet run -- fechas             # aplica (pide confirmación)
+```
+
+Es **idempotente** (re-ejecutarlo no hace daño), **acotado** a los pacientes `SIM-` y **reversible**. Está **desactivado por defecto**: sin activarlo, el simulador nunca toca la base de datos directamente.
+
+⚠️ Después de aplicar, **reiniciar el backend** (`docker compose restart backend`): Hibernate cachea las entidades y seguiría mostrando las fechas viejas.
+
+> Detalle completo (tabla de reglas de las 20 tablas, verificación, reversión): **`correccion_fechas.md`**.
+
 ---
 
 ## 11. Limpieza e idempotencia
@@ -681,7 +711,7 @@ La latencia típica en instancia local es 80–150 ms/request. La corrida es sec
 
 ## 12. Acceso directo a MariaDB
 
-Útil solo para **leer** (extraer UUIDs para catálogos, verificar datos generados). La escritura siempre va por REST.
+Útil sobre todo para **leer** (extraer UUIDs para catálogos, verificar datos generados). El **sembrado** siempre va por REST; la única escritura directa del proyecto es la corrección de fechas de auditoría (ver 10.9), que además está desactivada por defecto.
 
 **Si OpenMRS corre en Docker** con el puerto 3306 expuesto:
 

@@ -136,6 +136,15 @@ public static class SettingsValidator
         if (string.IsNullOrWhiteSpace(omrs.RestApi.BaseUrl))
             violaciones.Add("OpenMRS.RestApi.BaseUrl no puede estar vacío");
 
+        // Corrección de fechas de auditoría (acceso directo a MariaDB)
+        var db = omrs.Database;
+        if (db.CorregirFechas && string.IsNullOrWhiteSpace(db.ConnectionString))
+            violaciones.Add("OpenMRS.Database.ConnectionString no puede estar vacío si CorregirFechas es true");
+        if (db.TamanoLote < 1)
+            violaciones.Add($"OpenMRS.Database.TamanoLote debe ser al menos 1 (valor: {db.TamanoLote})");
+        if (string.IsNullOrWhiteSpace(db.PrefijoPaciente))
+            violaciones.Add("OpenMRS.Database.PrefijoPaciente no puede estar vacío (acota qué filas puede tocar el proceso)");
+
         return violaciones;
     }
 

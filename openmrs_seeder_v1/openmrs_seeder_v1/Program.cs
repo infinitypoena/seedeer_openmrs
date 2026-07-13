@@ -14,6 +14,8 @@ const int PausaPreviaSegundos = 5;
 
 // Simulador clínico OpenMRS — ejecución batch: `dotnet run` corre la simulación completa según
 // appsettings.json y termina. `dotnet run -- clear` anula (void) todos los datos SIM- previos.
+// `dotnet run -- fechas [--dry-run]` corrige las fechas de auditoría (date_created) de los datos ya
+// sembrados; es también la etapa 5/5 de una corrida normal si OpenMRS:Database:CorregirFechas = true.
 // Exit codes: 0 = corrida completada · 1 = fallo del proceso · 2 = OpenMRS inaccesible / uso inválido /
 // catálogos inválidos (en los tres casos no se toca ningún dato).
 
@@ -78,6 +80,9 @@ builder.Services.AddTransient<AppointmentSeeder>();
 builder.Services.AddTransient<SeedOrchestrator>();
 builder.Services.AddTransient<DataCleaner>();
 
+// Única vía no-REST: retrofecha las fechas de auditoría que OpenMRS sella con su propio reloj
+builder.Services.AddTransient<AuditDateFixer>();
+
 // HttpClient para OpenMRS REST API con BasicAuth
 builder.Services.AddHttpClient<OpenMrsRestClient>(client =>
 {
@@ -99,14 +104,14 @@ var clavesDesconocidas = SettingsValidator
 foreach (var clave in clavesDesconocidas)
     logger.LogWarning("Clave de configuración desconocida (ignorada por el binding): {Clave}", clave);
 
-// ══ Etapa 1/3 · Catálogos ═══════════════════════════════════════════════════════════════════════
+// ══ Etapa 1/5 · Catálogos ═══════════════════════════════════════════════════════════════════════
 // Fail-fast: el loader es mudo (CSV ausente → lista vacía, booleano mal escrito → false), así que una
 // errata se manifestaría como una feature apagada en silencio o como comportamiento raro a mitad de la
 // corrida. Se carga, se informa de lo cargado y se valida ANTES de tocar OpenMRS.
 var catalogLoader = host.Services.GetRequiredService<CatalogLoader>();
 catalogLoader.Load(Path.Combine(AppContext.BaseDirectory, "catalogs"));
 
-logger.LogInformation("══ Etapa 1/4 · Validación de catálogos ══");
+logger.LogInformation("══ Etapa 1/5 · Validación de catálogos ══");
 foreach (var (archivo, filas, opcional) in new (string, int, bool)[]
 {
     ("epidemiology-profile.csv",     catalogLoader.EpidemiologyProfile.Count, false),
@@ -176,8 +181,14 @@ switch (modo)
         return await EjecutarSimulacionAsync();
     case "clear":
         return await EjecutarLimpiezaAsync();
+    case "fechas":
+        var codigo = await CorregirFechasAsync(
+            soloDryRun: args.Any(a => a.Equals("--dry-run", StringComparison.OrdinalIgnoreCase)),
+            automatico: false);
+        EsperarTecla();
+        return codigo;
     default:
-        logger.LogError("Argumento no reconocido: '{Modo}'. Uso: dotnet run [-- run|clear]", modo);
+        logger.LogError("Argumento no reconocido: '{Modo}'. Uso: dotnet run [-- run|clear|fechas [--dry-run]]", modo);
         return 2;
 }
 
@@ -186,15 +197,15 @@ async Task<int> EjecutarSimulacionAsync()
     var tracker      = host.Services.GetRequiredService<SeedProgressTracker>();
     var orchestrator = host.Services.GetRequiredService<SeedOrchestrator>();
 
-    // ══ Etapa 2/4 · Días a simular ═══════════════════════════════════════════════════════════════
+    // ══ Etapa 2/5 · Días a simular ═══════════════════════════════════════════════════════════════
     // El plan se genera aquí una sola vez y el orquestador reusa ESTE mismo (PlanificarDias lo cachea):
     // el informe describe la corrida que realmente se va a ejecutar, no una tirada distinta.
     var plan = orchestrator.PlanificarDias();
     ReportarPlan(plan);
 
-    // ══ Etapa 3/4 · Ejecución ════════════════════════════════════════════════════════════════════
+    // ══ Etapa 3/5 · Ejecución ════════════════════════════════════════════════════════════════════
     // Margen para abortar (Ctrl+C) tras leer el informe: a partir de aquí se escribe en OpenMRS.
-    logger.LogInformation("══ Etapa 3/4 · Ejecución — comenzando en {S} s (Ctrl+C para abortar) ══",
+    logger.LogInformation("══ Etapa 3/5 · Ejecución — comenzando en {S} s (Ctrl+C para abortar) ══",
         PausaPreviaSegundos);
     try
     {
@@ -259,11 +270,11 @@ async Task<int> EjecutarSimulacionAsync()
         await reporter;
     }
 
-    // ══ Etapa 4/4 · Resumen final ════════════════════════════════════════════════════════════════
+    // ══ Etapa 4/5 · Resumen final ════════════════════════════════════════════════════════════════
     var run   = tracker.GetRun(runId)!;
     var stats = host.Services.GetRequiredService<RunStats>();
 
-    logger.LogInformation("══ Etapa 4/4 · Resumen final ══");
+    logger.LogInformation("══ Etapa 4/5 · Resumen final ══");
     logger.LogInformation(
         "Etapa '{Etapa}' | {Dias}/{Total} días simulados | ventana {Inicio:yyyy-MM-dd} → {Fin:yyyy-MM-dd} | " +
         "duración {Duracion:hh\\:mm\\:ss}",
@@ -310,8 +321,89 @@ async Task<int> EjecutarSimulacionAsync()
             logger.LogWarning("  {Mensaje}", mensaje);
     }
 
+    // ══ Etapa 5/5 · Fechas de auditoría ══════════════════════════════════════════════════════════
+    var codigoFechas = await CorregirFechasAsync(soloDryRun: false, automatico: true);
+
     EsperarTecla();
-    return run.Etapa == "error" ? 1 : 0;
+    return run.Etapa == "error" ? 1 : codigoFechas;
+}
+
+/// <summary>
+/// Etapa 5/5 · Retrofecha las fechas de auditoría (date_created y compañía) de los datos SIM-.
+///
+/// El seeder escribe solo por REST y OpenMRS sella cada fila con SU reloj: las fechas de negocio (visita,
+/// obs, orden) son las simuladas, pero las de auditoría quedan todas el día de la corrida. Este paso las
+/// deriva de la fecha de negocio, es idempotente y solo toca a los pacientes del prefijo configurado.
+/// Toda la lógica SQL vive en los stored procedures de querys/sp_fechas_auditoria.sql.
+///
+/// Es la única parte del simulador que habla con MariaDB, y está desactivada por defecto: sin
+/// OpenMRS:Database:CorregirFechas = true (y una cadena de conexión) el proyecto sigue siendo REST puro.
+/// </summary>
+async Task<int> CorregirFechasAsync(bool soloDryRun, bool automatico)
+{
+    var db = omrsSettings.Database;
+
+    if (automatico)
+        logger.LogInformation("══ Etapa 5/5 · Fechas de auditoría ══");
+
+    if (!db.Activo)
+    {
+        var motivo = db.CorregirFechas
+            ? "OpenMRS:Database:ConnectionString está vacío"
+            : "OpenMRS:Database:CorregirFechas = false";
+        if (!automatico)
+        {
+            logger.LogError("La corrección de fechas está desactivada ({Motivo}). Actívala en appsettings.json.", motivo);
+            return 2;
+        }
+        logger.LogInformation(
+            "Desactivada ({Motivo}) — las fechas de auditoría se quedan con la fecha de esta corrida.", motivo);
+        return 0;
+    }
+
+    if (cts.IsCancellationRequested)
+    {
+        logger.LogWarning("Corrida cancelada: no se tocan las fechas. Ejecuta `dotnet run -- fechas` cuando quieras.");
+        return 0;
+    }
+
+    try
+    {
+        await host.Services.GetRequiredService<AuditDateFixer>()
+            .EjecutarAsync(soloDryRun, ConfirmarCorreccionFechas, cts.Token);
+        return 0;
+    }
+    catch (OperationCanceledException)
+    {
+        logger.LogWarning("Corrección cancelada. El proceso es idempotente: re-ejecútalo con `dotnet run -- fechas`.");
+        return 0;
+    }
+    catch (Exception ex)
+    {
+        logger.LogError("No se pudieron corregir las fechas de auditoría: {Mensaje}", ex.Message);
+        return 1;
+    }
+}
+
+/// <summary>Confirmación previa a escribir (la misma fricción que `clear`). false = no aplicar.</summary>
+bool ConfirmarCorreccionFechas(long filas)
+{
+    var db = omrsSettings.Database;
+    if (!db.PedirConfirmacion) return true;
+
+    if (Console.IsInputRedirected)
+    {
+        logger.LogWarning(
+            "Entrada no interactiva: no se puede confirmar. Pon OpenMRS:Database:PedirConfirmacion = false " +
+            "para aplicar sin preguntar.");
+        return false;
+    }
+
+    logger.LogWarning("Conviene tener un backup reciente antes de continuar (scripts/backup_openmrs.ps1).");
+    Console.Write($"Se corregirán las fechas de auditoría de {filas} filas de pacientes " +
+                  $"{db.PrefijoPaciente}*. ¿Continuar? (s/N): ");
+    var respuesta = Console.ReadLine()?.Trim().ToLowerInvariant();
+    return respuesta is "s" or "si" or "sí";
 }
 
 /// <summary>

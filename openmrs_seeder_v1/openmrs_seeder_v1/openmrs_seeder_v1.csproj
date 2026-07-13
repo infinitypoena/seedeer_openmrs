@@ -13,10 +13,17 @@
     <PackageReference Include="Bogus" Version="35.*" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.*" />
     <PackageReference Include="Microsoft.Extensions.Http" Version="10.*" />
+    <!-- Única vía no-REST del simulador: la corrección de fechas de auditoría (AuditDateFixer) -->
+    <PackageReference Include="MySqlConnector" Version="2.*" />
   </ItemGroup>
 
   <ItemGroup>
     <Content Include="catalogs\**\*.csv">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <!-- Los stored procedures de la corrección de fechas: el .sql vive en querys/ (versionado, también
+         ejecutable a mano con el cliente de MariaDB) y se copia al output para que AuditDateFixer lo instale -->
+    <Content Include="..\..\querys\sp_fechas_auditoria.sql" Link="sql\sp_fechas_auditoria.sql">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <!-- El SDK de consola (a diferencia del Web) no copia appsettings al output por sí solo -->
