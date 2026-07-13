@@ -141,27 +141,46 @@ public class LabOrderSeeder
                 entregados, patient.Identifier);
     }
 
+    /// <summary>
+    /// Payload del resultado de un panel: obs padre (concepto del panel, ligada a la orden) + una obs hija
+    /// por componente, en <c>groupMembers</c>.
+    ///
+    /// ⚠️ Cada hijo lleva su propio <c>encounter</c>: la REST API **no** propaga el del padre a los miembros
+    /// del grupo. Sin él, los componentes nacen con <c>encounter_id</c> NULL y desaparecen de toda consulta
+    /// por encuentro (el informe de la visita, cualquier ETL o export FHIR con contexto de visita), aunque el
+    /// panel se siga viendo bien en la UI colgando de su padre.
+    ///
+    /// Los hijos NO llevan <c>order</c>: el resultado de la orden es el grupo, no cada miembro.
+    ///
+    /// Seam puro para poder afirmar sobre el JSON que de verdad va por el cable (`LabOrderSeederTests`).
+    /// </summary>
+    public static object ConstruirPanelPayload(
+        string panelUuid, string personUuid, string encounterUuid, string orderUuid,
+        IEnumerable<(string ConceptUuid, double Valor)> componentes, string obsDatetime) => new
+    {
+        concept     = panelUuid,
+        person      = personUuid,
+        encounter   = encounterUuid,
+        order       = orderUuid,
+        obsDatetime,
+        groupMembers = componentes.Select(c => new
+        {
+            concept     = c.ConceptUuid,
+            person      = personUuid,
+            encounter   = encounterUuid,
+            obsDatetime,
+            value       = c.Valor
+        }).ToArray()
+    };
+
     /// <summary>Registra el resultado de un panel como obs-group ligado a la orden (padre + un hijo por componente).</summary>
     private async Task<bool> PostPanelObsAsync(
         SimulatedPatient patient, string panelUuid, string orderUuid,
         List<(string ConceptUuid, double Valor)> componentes, DateTime fecha, CancellationToken ct)
     {
-        var obsDatetime = VisitSeeder.FormatDatetime(fecha);
-        var payload = new
-        {
-            concept     = panelUuid,
-            person      = patient.OpenMrsUuid,
-            encounter   = patient.ConsultaEncounterUuid,
-            order       = orderUuid,
-            obsDatetime,
-            groupMembers = componentes.Select(c => new
-            {
-                concept     = c.ConceptUuid,
-                person      = patient.OpenMrsUuid,
-                obsDatetime,
-                value       = c.Valor
-            }).ToArray()
-        };
+        var payload = ConstruirPanelPayload(
+            panelUuid, patient.OpenMrsUuid!, patient.ConsultaEncounterUuid!, orderUuid,
+            componentes, VisitSeeder.FormatDatetime(fecha));
 
         try
         {

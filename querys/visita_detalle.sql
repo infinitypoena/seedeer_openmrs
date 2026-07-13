@@ -272,3 +272,21 @@ WHERE o.voided = 0
     OR c.uuid LIKE '5242AAAA%' OR c.uuid LIKE '5092AAAA%')
 GROUP BY c.concept_id, c.uuid
 ORDER BY vital;
+
+-- 5c) Componentes de panel huérfanos del encuentro (DEBE SER 0).
+--     El resultado de un panel (hemograma) va como obs-group: padre = concepto del panel, hijos = cada
+--     componente. La REST API NO propaga el `encounter` del padre a los `groupMembers`, así que si el seeder
+--     no lo manda en cada hijo, los componentes nacen con encounter_id NULL: el panel se sigue viendo en la
+--     UI colgando de su padre, pero DESAPARECE de todo lo que consulta por encuentro — incluidas las
+--     secciones 2b y 1 de esta misma query. Corregido en LabOrderSeeder.ConstruirPanelPayload; los datos
+--     sembrados ANTES del arreglo siguen mostrando el conteo antiguo (se sanean re-sembrando).
+SELECT
+    COUNT(*)                                            AS obs_panel_sin_encuentro,
+    COUNT(DISTINCT o.obs_group_id)                      AS paneles_afectados,
+    MIN(o.obs_datetime)                                 AS desde,
+    MAX(o.obs_datetime)                                 AS hasta
+FROM obs o
+JOIN patient_identifier pi ON pi.patient_id = o.person_id AND pi.identifier LIKE 'SIM-%'
+WHERE o.voided = 0
+  AND o.obs_group_id IS NOT NULL
+  AND o.encounter_id IS NULL;
