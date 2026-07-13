@@ -92,6 +92,36 @@ public class CatalogValidatorTests
         Assert.Empty(errores);
     }
 
+    // ── UUID repetido ─────────────────────────────────────────────────────────
+
+    [Fact]
+    public void DiagnosticoConUuidRepetido_EsError()
+    {
+        // El caso real: 67 conceptos repetidos, y las copias se contradecían (el mismo dx era `leve` en una
+        // fila y `grave` en otra). La enfermedad pesa el doble en el sorteo y el cuadro clínico que genera
+        // depende de qué fila salga — sin que OpenMRS proteste nunca.
+        var (errores, _) = Validar(f =>
+        {
+            var otra = Dx();
+            otra.NombreEs  = "Gripe estacional";   // otro nombre…
+            otra.Severidad = "grave";              // …y otra severidad, sobre el MISMO concepto
+            f.Diagnosticos = [Dx(), otra];
+        });
+
+        var e = Assert.Single(errores);
+        Assert.Contains("dx-uuid", e);
+        Assert.Contains("repetido", e);
+        Assert.Contains("Gripe estacional", e);   // identifica las filas implicadas
+    }
+
+    [Fact]
+    public void LaboratorioConUuidRepetido_EsError()
+    {
+        var (errores, _) = Validar(f => f.Laboratorios = [Lab(), Lab()]);
+
+        Assert.Contains(errores, e => e.Contains("laboratorios.csv") && e.Contains("repetido"));
+    }
+
     [Fact]
     public void OpcionalesVacios_NoSonError()
     {

@@ -59,6 +59,7 @@ docker compose -f docker/docker-compose.yml run --rm -i seeder clear # limpieza
 | [`scripts/backup_openmrs.ps1`](scripts/backup_openmrs.ps1) | Respaldo de la BD (dump + gzip + retención). **Correr antes de la etapa de fechas** |
 | [`scripts/agregar_nombres_es.ps1`](scripts/agregar_nombres_es.ps1) | Añade el nombre en español a los conceptos CIEL que no lo traen (idempotente) |
 | [`scripts/ajustar_diagnosticos.ps1`](scripts/ajustar_diagnosticos.ps1) | Normaliza las columnas por reglas de `diagnosticos.csv` (`vital_*`, `cronica`, `sexo`…) |
+| [`scripts/verificar_uuids.ps1`](scripts/verificar_uuids.ps1) | **Contrasta cada UUID de los catálogos contra la instancia**: que exista, no esté retirado, sea de la clase esperada (un diagnóstico debe ser `Diagnosis`, no la vacuna) y su datatype admita resultado. Correr tras tocar cualquier catálogo |
 
 | Query (QA sobre la BD) | Para qué |
 |------------------------|----------|
@@ -144,10 +145,10 @@ Todo el contenido clínico vive en CSV editables (`openmrs_seeder_v1/openmrs_see
 | Catálogo | Contenido |
 |----------|-----------|
 | `epidemiology-profile.csv` | Peso de cada categoría por grupo de edad y género |
-| `diagnosticos.csv` | ~950 diagnósticos CIEL en 13 categorías, con peso por edad/sexo, `cronica`, `comun`, estación y pistas de vitales |
+| `diagnosticos.csv` | 875 diagnósticos CIEL (**uno por concepto**: los duplicados son un error que aborta el arranque) en 13 categorías, con peso por edad/sexo, `cronica`, `comun`, estación y pistas de vitales |
 | `medicamentos.csv` | ~30 fármacos del formulario, con posología y las categorías a las que aplican |
 | `laboratorios.csv` | 27 exámenes con sus **bandas de resultado** normal/anormal y qué las dispara |
-| `paneles.csv` | Componentes de los paneles (hoy el hemograma) — *opcional* |
+| `paneles.csv` | Componentes de los paneles (hemograma y perfil lipídico) — *opcional* |
 | `examenes_clinicos.csv` | 10 exámenes hechos en consultorio (Glasgow, escala de dolor, FC fetal…) |
 | `alergenos.csv` | Alérgenos (fármaco / alimento / ambiente) |
 | `motivos_consulta.csv` | Frases de motivo de consulta por categoría |

@@ -67,6 +67,7 @@ public static class CatalogValidator
         Obligatorio(c.Nombres.Count,             "nombres.csv");
         Obligatorio(c.Apellidos.Count,           "apellidos.csv");
 
+        ValidarSinDuplicados(c, errores);
         ValidarEpidemiologia(c, errores);
         ValidarDiagnosticos(c, errores);
         ValidarCruceCategorias(c, errores);
@@ -82,6 +83,38 @@ public static class CatalogValidator
         ValidarNombresYDirecciones(c, errores);
 
         return (errores, avisos);
+    }
+
+    /// <summary>
+    /// Un mismo UUID no puede aparecer en dos filas del mismo catálogo.
+    ///
+    /// Parece cosmético y no lo es: en `diagnosticos.csv` había 67 conceptos repetidos (948 filas para 874
+    /// enfermedades), y las copias **se contradecían** — el mismo trastorno bipolar era `leve` en una fila y
+    /// `grave` en otra, el mismo esguince era `osteomuscular` y `trauma`. Efecto: la enfermedad pesa el doble
+    /// en el sorteo y genera un cuadro clínico distinto según qué fila salga (la severidad gobierna vitales y
+    /// urgencia; `cronica`, la lista de problemas). Nada de esto produce un error en OpenMRS: se manifiesta
+    /// como datos incoherentes meses después.
+    /// </summary>
+    private static void ValidarSinDuplicados(CatalogLoader c, List<string> errores)
+    {
+        void SinRepetir<T>(IEnumerable<T> filas, Func<T, string> uuid, Func<T, string> nombre, string archivo)
+        {
+            foreach (var grupo in filas
+                .Select((fila, indice) => (fila, indice))
+                .Where(x => !string.IsNullOrWhiteSpace(uuid(x.fila)))
+                .GroupBy(x => uuid(x.fila), StringComparer.OrdinalIgnoreCase)
+                .Where(g => g.Count() > 1))
+            {
+                var donde = string.Join(", ", grupo.Select(x => $"fila {x.indice + 2} ({nombre(x.fila)})"));
+                errores.Add($"{archivo}: el UUID {grupo.Key} está repetido en {grupo.Count()} filas — {donde}");
+            }
+        }
+
+        SinRepetir(c.Diagnosticos,  d => d.CielUuid,    d => d.NombreEs,       "diagnosticos.csv");
+        SinRepetir(c.Laboratorios,  l => l.CielUuid,    l => l.NombreEs,       "laboratorios.csv");
+        SinRepetir(c.Medicamentos,  m => m.ConceptUuid, m => m.NombreGenerico, "medicamentos.csv");
+        SinRepetir(c.Alergenos,     a => a.ConceptUuid, a => a.NombreEs,       "alergenos.csv");
+        SinRepetir(c.ExamenesClinicos, e => e.CielUuid, e => e.NombreEs,       "examenes_clinicos.csv");
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

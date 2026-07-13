@@ -343,7 +343,7 @@ panel_uuid,componente_uuid,nombre,res_min,res_max,res_min_anormal,res_max_anorma
 | `res_min_anormal` / `res_max_anormal` | Banda **anormal** cuando se dispara el trigger |
 | `res_trigger` | Categorías (`\|`-separadas) que disparan la banda anormal de **este** componente |
 
-Cada componente sortea su banda **de forma independiente** (`LabResultGenerator.GenerarComponentes`, misma prob. 0.80): un paciente infeccioso (dengue) sale con plaquetas bajas y leucocitos alterados pero hemoglobina normal; uno digestivo (sangrado) con anemia. Misma regla de precisión que los numéricos simples (límites enteros → valor entero). Panel sin filas = orden sola (hoy: lipídico, orina, urocultivo, VIH).
+Cada componente sortea su banda **de forma independiente** (`LabResultGenerator.GenerarComponentes`, misma prob. 0.80): un paciente infeccioso (dengue) sale con plaquetas bajas y leucocitos alterados pero hemoglobina normal; uno digestivo (sangrado) con anemia. Misma regla de precisión que los numéricos simples (límites enteros → valor entero). ⚠️ datatype=panel **solo vale si el concepto es de verdad un LabSet con componentes**: el perfil lipídico apuntaba a *colesterol total* (un solo analito) y orina/urocultivo/VIH tampoco eran paneles — los cuatro se ordenaban y **nunca registraban resultado**. Corregido: hoy los paneles son el **hemograma** 1019… y el **perfil lipídico** 1010… (colesterol total, HDL, LDL, triglicéridos, VLDL); los otros tres pasaron a coded. Un panel sin filas aquí = orden sola, y el validador lo avisa.
 
 ---
 
