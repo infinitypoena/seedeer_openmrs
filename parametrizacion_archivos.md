@@ -36,8 +36,7 @@ Todo el comportamiento del simulador se controla desde aquí.
   "Simulation": {
     "StartDate": "2023-01-01",
     "EndDate": "2024-12-31",
-    "PacientesPorDiaMedio": 40,
-    "PorcentajeRecurrentes": 30,
+    "PacientesPorDiaMedio": 6,
     "Locale": "es",
     "RandomSeed": 42,
     "HorarioAtencion": {
@@ -88,13 +87,14 @@ Todo el comportamiento del simulador se controla desde aquí.
 | Parámetro | Tipo | Descripción |
 |-----------|------|-------------|
 | `StartDate` / `EndDate` | date | Rango temporal de la simulación. |
-| `PacientesPorDiaMedio` | int | Promedio de pacientes por día hábil. Se aplica variación σ ≈ 20% con distribución normal (Box-Muller). |
-| `PorcentajeRecurrentes` | int (0-100) | % de visitas de pacientes ya existentes (controles, crónicos). |
+| `PacientesPorDiaMedio` | int | **Altas** (pacientes nuevos) por día hábil con las que ARRANCA la clínica. El día 0 el pool está vacío, así que son todas las visitas de ese día. ⚠️ **No** es el volumen de la clínica madura: el panel devuelve a cada paciente ~3,3 veces (ver §14). |
+| ~~`PorcentajeRecurrentes`~~ | — | **ELIMINADO.** Forzaba un cupo fijo de recurrentes y estranguló la agenda: media agenda perdida, el 65 % de los crónicos sin volver jamás a un control. La fracción de recurrentes **emerge** del panel. Ver §14 y `leyes_simulacion.md`. |
 | `SeguimientoCronicoProb` | float (0-1) | Continuidad longitudinal: prob. (def. 0.70) de que una visita recurrente de un paciente con condición crónica conocida sea un **control de esa misma condición** en vez de un motivo agudo nuevo. Solo aplica si el paciente arrastra ≥1 dx crónico. |
 | `SeguimientoAgudoProb` | float (0-1) | Espejo agudo: prob. (def. 0.70) de que un recurrente NO crónico que vuelve dentro de la ventana de su episodio agudo regrese por el **mismo dx** (control/mejoría) en vez de una enfermedad aleatoria. El control cierra el episodio. |
 | `VentanaSeguimientoAgudoDias` | int (días) | Vigencia del episodio agudo desde su última visita (def. 30). Fuera de la ventana el retorno vuelve a ser un motivo nuevo. |
 | `Recurrence.MinDiasAgudo` / `MaxDiasAgudo` | int (días) | Intervalo mínimo/máximo para que un paciente **no crónico** vuelva (seguimiento agudo, def. 7–21). Evita retornos día-a-día. |
-| `Recurrence.MinDiasCronico` / `MaxDiasCronico` | int (días) | Intervalo del **control crónico** (def. 30–120). En ventanas cortas la proporción real de recurrentes puede quedar algo bajo `PorcentajeRecurrentes`. |
+| `Recurrence.MinDiasCronico` / `MaxDiasCronico` | int (días) | Intervalo del **control crónico** (def. 30–120). |
+| **`Recurrence.VisitasEspontaneasPorPacienteAno`** | float | **Veces al año que un paciente del panel vuelve POR SU CUENTA**, sin que nadie le haya citado (le pasa algo nuevo meses después). Def. **0.5**. Es la segunda vía de retorno, junto a la cita, y la que hace que el padrón de pacientes **se use**. Solo aplica a los **activos** (última visita dentro de `Crecimiento.VentanaActividadDias`) que ya cumplieron su intervalo mínimo; el insatisfecho no vuelve solo. **Es el mando que fija cuánta consulta genera el panel por sí mismo**, y con él la fracción de recurrentes en régimen: subirlo hace la clínica más "de barrio" (más controles, menos captación); 0 = solo se vuelve si hay cita. |
 | `Locale` | string | Locale de Bogus (solo fallback de nombres si faltan `nombres.csv`/`apellidos.csv`). `"es"` = español. |
 | `UtcOffset` | string | Offset UTC de TODAS las fechas enviadas a OpenMRS (`"±HH:mm"`, p.ej. `"-06:00"` El Salvador). Debe coincidir con la `TZ` del backend para que las horas se lean como hora local en la UI. Vacío = UTC (histórico). ⚠️ Cambiarlo desalinea los datos ya insertados con el offset anterior — aplicar antes de regenerar. |
 | `RandomSeed` | int | Semilla para reproducibilidad. Mismo seed = misma simulación. |
@@ -263,8 +263,44 @@ ciel_uuid,nombre_es,categoria,severidad,aplica_0_14,aplica_15_29,aplica_30_44,ap
 | `vital_fc` *(opcional)* | `alta` → taquicardia 100-130 (hipertiroidismo, anemia, hipovolemia/hemorragia) o `baja` → bradicardia 42-58 (hipotiroidismo, bloqueos AV). **Gana incluso sobre la taquicardia febril.** Vacío = neutro |
 | `vital_spo2` *(opcional)* | `baja` → SpO2 88-94 fuera de respiratorio (insuficiencia cardíaca, TEP). ⚠️ La anemia NO va aquí (satura normal). Vacío = neutro |
 | `sexo` *(opcional)* | `M` o `F` → el dx **solo** aparece en ese sexo (exclusión dura: embarazo/eclampsia = F, próstata/testículo = M). Vacío = ambos. Se puebla con `scripts/ajustar_diagnosticos.ps1` (reglas por palabra clave) |
+| **`ambito`** | Qué puede hacer la clínica con el cuadro: **`clinica`** (o vacío) = lo trata ella misma · **`referencia`** = lo detecta, lo estabiliza y lo **manda al hospital** (ver abajo) |
 
-> **Fuente**: Query SQL sobre `concept` + `concept_name` en la DB OpenMRS. Las columnas `aplica_*`, `peso_*`, `requiere_*` y `vital_*` se agregan manualmente. Las columnas `vital_*` son **opcionales** (el loader tolera su ausencia → comportamiento neutro gobernado por la categoría). Ver queries en `fases_implementacion.md` Fase 2.
+> **Fuente**: catálogo curado a mano sobre conceptos CIEL de la instancia. Las columnas `vital_*` y `ambito` son **opcionales** (el loader tolera su ausencia → neutro / `clinica`).
+
+### La columna `ambito` — la clínica es de PRIMER NIVEL
+
+Una consulta externa no opera un abdomen agudo ni maneja un infarto: **lo detecta, lo estabiliza y lo
+refiere**. Los diagnósticos con `ambito=referencia` (64 filas: apendicitis, IAM, sepsis, eclampsia,
+politraumatismo, cetoacidosis…) hacen que la consulta registre la referencia al hospital, con cuatro obs:
+
+| Se registra | Valor |
+|---|---|
+| Remisiones solicitadas | Hospital |
+| ¿Paciente referido a hospital? | Sí |
+| Prioridad de referencia | **Emergencia** si el cuadro es grave, **Urgente** si no |
+| Motivo de la referencia | texto con los diagnósticos que lo justifican |
+
+Y el episodio se vuelve coherente: **no se prescribe** (el tratamiento definitivo lo pauta el hospital), los
+laboratorios salen en **`STAT`** (son de estabilización) y se agenda un **control post-alta a 15-30 días**
+(`Recurrence.MinDiasPostReferencia`/`Max`), para cuando le den de alta. El paciente **vuelve**, y se ve la
+continuidad completa.
+
+> ⚠️ **`severidad=grave` NO significa referir.** Es el matiz que decide si esto sale bien clínicamente:
+> el VIH, la tuberculosis (el DOTS es de primer nivel), el pie diabético o el trastorno bipolar son
+> graves y **los maneja el primer nivel** — de hecho ya tienen sus programas de atención
+> (`programas.csv`). Referirlos sería un error. La severidad solo decide **la prisa** del traslado.
+> Por eso `ambito` **se cura a mano**, no por regla automática, y el validador **avisa** si una fila es
+> `referencia` y `cronica` a la vez.
+
+### Los dos scripts del catálogo tienen contratos OPUESTOS
+
+| Script | Qué hace | ⚠️ |
+|---|---|---|
+| `scripts/ajustar_diagnosticos.ps1` | Normaliza `vital_*`, `cronica`, `severidad`, `sexo` por reglas de palabra clave | **Solo añade / eleva. Nunca pisa** un valor ya puesto a mano |
+| `scripts/limpiar_diagnosticos.ps1` | La poda de 875 → 394 filas: borra la cosecha cruda de CIEL y lo no endémico, corrige categorías, marca `ambito` | **BORRA filas y SOBRESCRIBE** valores. Haz commit antes |
+
+Ambos son **idempotentes** (aplicarlos dos veces da el mismo resultado). El de limpieza imprime al terminar
+el conteo por categoría: **ninguna puede quedar en 0** o el validador aborta el arranque.
 
 ---
 
@@ -702,13 +738,218 @@ Esto permite:
 
 ---
 
+## 14. Crecimiento de la clínica — difusión de Bass
+
+La clínica **crece**: los pacientes que quedan contentos vuelven y **traen gente nueva**. La captación de
+pacientes nuevos por día la gobierna el modelo de **difusión de Bass** (1969), el estándar de la
+literatura para adopción por boca a boca:
+
+> ⚠️ **Bass gobierna LAS ALTAS y nada más.** Los pacientes que vuelven no salen de aquí: salen del
+> **panel** (quién tiene cita hoy, quién vuelve por su cuenta — §14b). El volumen del día es una **suma**.
+
+```
+λ(d) = [ p + q · S(d)/M ] · ( M − A(d) )          ALTAS (pacientes nuevos) al día
+
+altas(d)    = Poisson( λ(d) × peso del día de la semana )
+retornos(d) = citas de control de hoy (a las que se acude)
+            + pacientes activos que vuelven por su cuenta        ← la demanda del PANEL
+visitas(d)  = altas(d) + retornos(d)                             ← una SUMA, no un cociente
+
+si visitas(d) > aforo(d):  se recortan LAS ALTAS
+   (una consulta llena deja de captar gente nueva; jamás le da plantón a quien tenía cita)
+```
+
+| Símbolo | Qué es | De dónde sale |
+|---------|--------|---------------|
+| `M` | Población del área de influencia de la clínica | `Crecimiento.PoblacionCaptacion` |
+| `A(d)` | **Clientela actual**: pacientes que han venido dentro de `VentanaActividadDias` | Se mide del pool |
+| `S(d)` | Recurrentes **activos y satisfechos** — los que hablan bien de la clínica | Se mide del pool |
+| `p` | Coeficiente de **innovación** (llegan solos) | **Derivado** de `PacientesPorDiaMedio` |
+| `q` | Coeficiente de **imitación** (boca a boca) | **Derivado** de `PacientesPorDiaObjetivo` |
+| `aforo(d)` | Lo que cabe hoy en la consulta | `PacientesPorDiaObjetivo` × peso del día / peso medio |
+
+### ⚠️ El error que había aquí, y lo que costó
+
+El volumen del día se derivaba de las altas —`total = altas / (1 − PorcentajeRecurrentes/100)`— y los
+recurrentes eran el **residuo**: un cupo fijo del 30 %. La demanda real del panel no entraba en la
+ecuación. Como la clínica agenda control en ~2 de cada 3 visitas, llegaban ~20 citas al día a competir por
+14 huecos, y el sobrante **vencía sin que nadie lo atendiera**. Medido en una corrida de 3,5 años:
+
+- **14.025 citas `Missed`** contra 14.115 `Completed` — media agenda a la basura.
+- El **65 % de los crónicos** (7.686 personas con HTA, DM2, VIH, EPOC) **no volvió jamás a un control**.
+- El **79 % de los pacientes** vino una sola vez. Media: **1,45 visitas por paciente**.
+- El mix de recurrentes, **clavado en el 31 %** el primer mes y el último.
+
+`PorcentajeRecurrentes` **ya no existe**. La fracción de recurrentes **emerge** del panel y crece con él
+(4 % el primer mes → ~60 % en el tercer año). Lo vigilan las **leyes de la simulación**
+(`leyes_simulacion.md`), que se ejecutan en cada corrida y devuelven **exit code 3** si se rompen.
+
+## Los tres mandos de la curva
+
+**Tú no tocas `p` ni `q`.** Son coeficientes con los que nadie puede apuntar a ojo. Lo que configuras son
+los tres números que sí significan algo:
+
+| Mando | Parámetro | Qué hace |
+|-------|-----------|----------|
+| **Dónde arranca** | `PacientesPorDiaMedio` | **Altas**/día del primer día (el pool está vacío: no hay a quién controlar). De aquí sale `p`. |
+| **Dónde acaba** | `Crecimiento.PacientesPorDiaObjetivo` | **Visitas totales**/día (altas + controles) en las que se estabiliza. Es **también el aforo** de la consulta. De aquí sale `q`. |
+| **Cuánto tarda** | `Crecimiento.VentanaActividadDias` | Cuánto tiempo un paciente sigue siendo cliente (y recomendando la clínica). Estira o comprime la rampa. |
+
+Con los valores por defecto (arranca en 6 altas/día, apunta a 25 visitas/día, ventana de 365 días) la
+curva sale así — y fíjate en la **columna del mix**, que es la que dice si el panel está madurando:
+
+```
+              visitas/día              % recurrentes
+  ene 2023   6,2   ██████                   4 %     ← recién abierta: casi todo son altas
+  jun 2023  13,0   █████████████           47 %
+  dic 2023  17,9   ██████████████████      56 %
+  jun 2024  21,5   █████████████████████   57 %
+  dic 2024  23,8   ███████████████████████ 59 %
+  dic 2025  25,2   █████████████████████████ 60 %   ← meseta: la clínica vive de su panel
+```
+
+> **El suelo NO es `PacientesPorDiaMedio`.** Cada paciente captado vuelve ~3,3 veces, así que 6 altas/día
+> ya producen ~14 visitas/día **sin nada de boca a boca**. Si pones un objetivo por debajo de ese suelo, la
+> clínica no necesita crecer y el simulador te lo dice en la etapa 2/5.
+
+Arranque lento (el primer trimestre apenas se mueve: aún no hay a quién oírle hablar bien de la clínica),
+rampa sostenida durante los años 1 y 2, y estabilidad al final.
+
+> ⚠️ **Por qué `q` no es un mando.** Antes lo era (`RecurrentesPorPacienteExtra`) y era **inservible**. El
+> crecimiento es un lazo de realimentación positiva cuyo punto fijo vale `1/(1 − ganancia)`, y eso
+> **explota** cuando la ganancia se acerca a 1. Medido, arrancando en 6 pacientes/día:
+>
+> | Boca a boca | Resultado a 3 años |
+> |---|---|
+> | 1 por cada 25 satisfechos | crece a 9,6/día y pasa **dos años en una línea plana** |
+> | 1 por cada 12 | crece a 25/día — la curva que se busca |
+> | 1 por cada 8 | **se estrella contra el techo duro en 12 meses** |
+>
+> Un factor 3 en el pomo separa "no crece" de "se dispara". Por eso ahora se apunta al **destino** y el
+> simulador calcula el boca a boca que lo produce (por bisección, al arrancar). Lo verás en el informe de
+> la etapa 2/5: *"boca a boca derivado del objetivo: 1 paciente nuevo por cada 12,6 recurrentes
+> satisfechos"*.
+
+### Los frenos (guardarraíles, no mecanismo principal)
+
+**`(M − A(d))` — el techo de mercado.** El barrio tiene población finita: cuanta más gente ya sea paciente
+de la clínica, menos queda por captar. ⚠️ **`A(d)` es la clientela ACTIVA, no el histórico**: quien lleva
+más de `VentanaActividadDias` sin pisar la clínica ha vuelto al mercado. Es lo que permite que el sistema
+alcance un **equilibrio** (altas = bajas) en vez de agotar el área y quedarse sin pacientes.
+
+> A volúmenes de clínica real este freno **apenas actúa** (la clientela ronda el 5-10 % del área). Quien
+> fija la meseta es el objetivo. `PoblacionCaptacion` y `PacientesPorDiaMax` están para que una
+> configuración disparatada no reviente, no para gobernar la curva.
+
+### Referencia de parámetros — sección `Crecimiento`
+
+| Parámetro | Descripción |
+|-----------|-------------|
+| `Enabled` | `false` = el volumen diario vuelve a ser fijo (`PacientesPorDiaMedio`), como antes de esta feature. |
+| **`PacientesPorDiaObjetivo`** | **Dónde se estabiliza la clínica.** De aquí se deriva el boca a boca. ≤ `PacientesPorDiaMedio` = no crece. |
+| **`VentanaActividadDias`** | **Cuánto tarda la rampa.** Días que un paciente sigue contando como clientela activa (y recomendando). 90 → meseta en 1 año; 365 (def.) → crecimiento repartido por 3 años. |
+| `PoblacionCaptacion` | `M`: habitantes del área. Debe ir **holgado**: si la clínica acaba registrando más gente de la que vive en el barrio, el área se agota y la curva se desinfla (el informe avisa). |
+| `PacientesPorDiaMax` | Tope absoluto de pacientes en un día (red de seguridad). Debe ser ≥ `PacientesPorDiaObjetivo`. |
+| `RecurrentesPorPacienteExtra` | **Override avanzado**: fija el boca a boca a mano en vez de derivarlo. **0 (def.) = derivar del objetivo**, que es lo que quieres casi siempre. |
+| `MinVisitasRecurrente` | Visitas mínimas para contar como "recurrente" (2 = ya volvió una vez). |
+| `AsistenciaProbInsatisfecho` | Prob. de que un paciente descontento acuda a su cita (0,20 frente al 0,75 de los contentos). |
+
+---
+
+## 15. Satisfacción del paciente — la nota de cada visita
+
+Cada visita recibe una **calificación entera de 1 a 5**. **No es un dato clínico y NO se escribe en
+OpenMRS**: es estado de simulación que decide si el paciente seguirá viniendo y si recomendará la
+clínica (el `S(d)` de la fórmula de arriba). Se vuelca en los CSV de salida (§16).
+
+```
+nota = MediaBase
+     + BonusMedicoCabecera      si le atendió SU médico de siempre  (continuidad asistencial)
+     + BonusCitaCumplida        si vino a una cita agendada         (le esperaban)
+     − PenalizacionCuadroGrave  si alguno de sus dx es grave
+     − PenalizacionSaturacion × saturacion(d)
+     + ruido N(0, Desviacion)
+
+saturacion(d) = max(0, (pacientes del día − CapacidadComodaPorDia) / CapacidadComodaPorDia)
+calificación  = redondear(nota), acotada a [1, 5]
+```
+
+**La penalización por saturación es el segundo freno del sistema, y es el que lo convierte en una
+simulación y no en un contador:** crecer llena la consulta → la consulta llena atiende peor → peores
+notas → menos satisfechos → menos boca a boca. Si la clínica no da abasto, **el crecimiento se estanca
+antes de agotar el barrio**.
+
+**El paciente descontento** (promedio ≤ `UmbralSatisfaccion`) deja de contar para el boca a boca, apenas
+acude a sus citas (`Crecimiento.AsistenciaProbInsatisfecho`) — que acaban en `Missed` — y no vuelve por su
+cuenta. Es el *churn*, y por eso una corrida con esta feature produce **más citas perdidas** que una sin
+ella: es lo esperado, no un fallo.
+
+### Referencia de parámetros — sección `Satisfaccion`
+
+| Parámetro | Descripción |
+|-----------|-------------|
+| `Enabled` | `false` = no se califica ninguna visita → nadie se va descontento y no hay boca a boca. |
+| `MediaBase` | Nota de una visita neutra, en la escala 1-5 (def. 4,0). |
+| `Desviacion` | Dispersión de las notas entre pacientes (σ del ruido normal). 0 = todos puntúan igual. |
+| `BonusMedicoCabecera` | Cuánto suma que le atienda su médico de siempre. |
+| `BonusCitaCumplida` | Cuánto suma venir a una cita agendada en vez de llegar de improviso. |
+| `PenalizacionCuadroGrave` | Cuánto resta consultar por algo serio. |
+| `PenalizacionSaturacion` | Cuánto resta una saturación de 1,0 (el doble de pacientes que la capacidad cómoda). |
+| `CapacidadComodaPorDia` | Pacientes que la clínica atiende sin que se note la espera. Por encima, las notas bajan. |
+| `UmbralSatisfaccion` | Promedio **estricto** por encima del cual el paciente está contento (def. 3,0: empatar a 3 no basta). |
+
+---
+
+## 16. Archivos de salida — la evidencia de la corrida
+
+Se escriben en `Salida.Carpeta` (def. `output`; si es relativa, cuelga de la carpeta del binario; vacía =
+no se escribe nada). La ruta absoluta se imprime al final de la corrida. Es lo **único** que el simulador
+escribe en disco.
+
+**`output/crecimiento_diario.csv`** — una fila por día simulado. **Es la curva de Bass, lista para
+graficar.** Se escribe día a día (se puede abrir a media corrida para ver cómo va), así que un Ctrl+C no
+se lleva la evidencia.
+
+```csv
+fecha,activos_A,captados_total,satisfechos_activos_S,lambda_nuevos,media_efectiva,atendidos,nuevos,recurrentes,calificacion_media_dia,saturacion,pct_mercado
+2023-03-15,398,412,26,11.30,16.14,15,10,5,4.20,0.000,1.99
+```
+
+| Columna | Qué es |
+|---------|--------|
+| `activos_A` | Clientela actual (el `A(d)` de la fórmula): pacientes que vinieron dentro de la ventana de actividad. |
+| `captados_total` | Pacientes distintos que han pasado por la clínica alguna vez. |
+| `satisfechos_activos_S` | El `S(d)`: los que sostienen el boca a boca. |
+| `lambda_nuevos` | Pacientes nuevos esperados hoy (λ, antes del peso del día y del sorteo). |
+| `media_efectiva` | Media diaria que implica ese λ. **Comparar su valor final con el inicial ES la medida del crecimiento.** |
+| `atendidos` / `nuevos` / `recurrentes` | Lo que de verdad se sembró ese día. |
+| `calificacion_media_dia` | Nota media de las visitas del día. **Debe bajar cuando `saturacion` sube** (si no, el freno está roto). |
+| `saturacion` | Cuánto se pasó la clínica de su capacidad cómoda. |
+| `pct_mercado` | Qué % del área es clientela activa. |
+
+**`output/clientes_recurrentes.csv`** — instantánea del pool al cerrar la corrida, un paciente por fila:
+
+```csv
+identifier,uuid,visitas,calificaciones,promedio,satisfecho,activo,ultima_visita,proxima_cita,cronicas
+SIM-000123,3f2a…,4,5|4|5|4,4.5,true,true,2024-08-03,2024-11-12,2
+```
+
+---
+
 ## Resumen: qué editar para cambiar el comportamiento
 
 | Quiero cambiar... | Editar |
 |-------------------|--------|
 | Período de simulación | `appsettings.json` → `StartDate/EndDate` |
-| Volumen de pacientes | `appsettings.json` → `PacientesPorDiaMedio` |
-| Variación estadística diaria | `DailyScheduleGenerator.cs` → parámetro σ del Normal |
+| **Dónde ARRANCA la clínica** (pac/día el primer día) | `appsettings.json` → `PacientesPorDiaMedio` |
+| **Dónde ACABA** (pac/día en los que se estabiliza) | `appsettings.json` → `Crecimiento.PacientesPorDiaObjetivo` |
+| **Cuánto TARDA en llegar** (duración de la rampa) | `appsettings.json` → `Crecimiento.VentanaActividadDias` (365 = repartido en 3 años; 90 = meseta en 1 año) |
+| Que la clínica NO crezca (volumen fijo, como antes) | `appsettings.json` → `Crecimiento.Enabled: false` |
+| Lo contentos que salen los pacientes | `appsettings.json` → `Satisfaccion.MediaBase` / `Desviacion` |
+| A partir de cuántos pacientes/día se resiente la atención | `appsettings.json` → `Satisfaccion.CapacidadComodaPorDia` (ponlo ≈ el objetivo) |
+| Cuántos pacientes abandonan la clínica descontentos | `appsettings.json` → `Satisfaccion.UmbralSatisfaccion` / `Crecimiento.AsistenciaProbInsatisfecho` |
+| Dónde se escriben los CSV de la corrida | `appsettings.json` → `Salida.Carpeta` (vacío = no escribir) |
+| Variación estadística diaria | Con crecimiento: es Poisson (varianza = λ). Sin él: `DailyScheduleGenerator.cs` → σ del Normal |
 | Perfil pediátrico de la clínica | `appsettings.json` → `DemographicProfile.PediatricClinic` |
 | Distribución etaria | `appsettings.json` → `DemographicProfile.AgeGroups` |
 | Volumen por día de semana | `appsettings.json` → `WeekdayWeights` |

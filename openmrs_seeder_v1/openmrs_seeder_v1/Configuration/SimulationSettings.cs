@@ -4,8 +4,19 @@ public class SimulationSettings
 {
     public DateTime StartDate { get; set; } = new DateTime(2023, 1, 1);
     public DateTime EndDate { get; set; } = new DateTime(2024, 12, 31);
-    public int PacientesPorDiaMedio { get; set; } = 40;
-    public int PorcentajeRecurrentes { get; set; } = 30;
+    /// <summary>
+    /// Pacientes/día con los que ARRANCA la clínica: el día 0 el pool está vacío, así que son
+    /// <b>todos altas nuevas</b>. Con el crecimiento activo es el punto de partida de la curva (de aquí se
+    /// deriva <c>p</c>), no una constante.
+    ///
+    /// <para>⚠️ Ya <b>no</b> existe <c>PorcentajeRecurrentes</c>. El volumen del día era
+    /// <c>altas / (1 − PorcentajeRecurrentes)</c> y los recurrentes un residuo fijo del 30 %, con lo que la
+    /// demanda real del panel no pintaba nada: la mitad de las citas de control vencían sin que nadie las
+    /// atendiera. Ahora <c>visitas = altas + retornos</c> (una suma), los retornos los cuenta
+    /// <c>RecurrentSelector</c> sobre el pool de verdad y su fracción <b>emerge</b> y crece con el panel.
+    /// Ver <c>leyes_simulacion.md</c>.</para>
+    /// </summary>
+    public int PacientesPorDiaMedio { get; set; } = 6;
     /// <summary>
     /// Banda para el factor inicial de selección. Cada corrida sortea su probabilidad de "común"
     /// uniformemente en [CommonProbMin, CommonProbMax], así la proporción VARÍA entre corridas pero
@@ -62,6 +73,166 @@ public class SimulationSettings
     public VariedadSettings Variedad { get; set; } = new();
     public OrdersSettings Orders { get; set; } = new();
     public LaboratorioSettings Laboratorio { get; set; } = new();
+    public SatisfaccionSettings Satisfaccion { get; set; } = new();
+    public CrecimientoSettings Crecimiento { get; set; } = new();
+    public SalidaSettings Salida { get; set; } = new();
+}
+
+/// <summary>
+/// Calificación (1-5) que el paciente le pone a cada visita. No es un dato clínico: no se escribe en
+/// OpenMRS, vive en el pool y se persiste en los CSV de salida. Alimenta al modelo de crecimiento
+/// (<see cref="CrecimientoSettings"/>): solo los satisfechos recomiendan la clínica.
+///
+/// La nota se compone de una media base más modificadores del contexto REAL de la visita (le atendió
+/// su médico de cabecera, acudió a una cita agendada, el cuadro era grave) y se penaliza por la
+/// saturación del día. Esa penalización es el <b>freno del sistema</b>: crecer llena la consulta, la
+/// consulta llena atiende peor, y peor atención frena el boca a boca.
+/// </summary>
+public class SatisfaccionSettings
+{
+    /// <summary>Si es false, no se califica ninguna visita (nadie queda insatisfecho y el crecimiento se apoya solo en el término de innovación).</summary>
+    public bool Enabled { get; set; } = true;
+    /// <summary>Nota media de una visita neutra (sin bonus, sin penalizaciones). En la escala 1-5.</summary>
+    public double MediaBase { get; set; } = 4.0;
+    /// <summary>Desviación típica del ruido normal que se suma a la nota (dispersión entre pacientes).</summary>
+    public double Desviacion { get; set; } = 0.8;
+    /// <summary>Puntos que suma la continuidad asistencial: le atendió SU médico de cabecera.</summary>
+    public double BonusMedicoCabecera { get; set; } = 0.4;
+    /// <summary>Puntos que suma acudir a una cita agendada (le esperaban) en vez de llegar sin cita.</summary>
+    public double BonusCitaCumplida { get; set; } = 0.2;
+    /// <summary>Puntos que resta un cuadro grave (la experiencia de una consulta por algo serio es peor).</summary>
+    public double PenalizacionCuadroGrave { get; set; } = 0.3;
+    /// <summary>
+    /// Puntos que resta una saturación de 1,0 (el doble de pacientes que la capacidad cómoda). El
+    /// descuento es proporcional: <c>PenalizacionSaturacion × saturacion(d)</c>.
+    /// </summary>
+    public double PenalizacionSaturacion { get; set; } = 1.2;
+    /// <summary>
+    /// Pacientes que la clínica atiende en un día sin que se note la espera. A partir de aquí la
+    /// saturación crece y las notas bajan. Ponerlo ≈ <c>Crecimiento.PacientesPorDiaObjetivo</c>: así, en la
+    /// meseta la consulta va cómoda y solo los días punta pasan factura. Muy por debajo del objetivo, la
+    /// clínica vive saturada, las notas se hunden y el churn se dispara.
+    /// </summary>
+    public int CapacidadComodaPorDia { get; set; } = 25;
+    /// <summary>
+    /// Promedio de calificaciones por encima del cual el paciente se considera satisfecho (estricto).
+    /// El insatisfecho deja de recomendar la clínica y casi deja de acudir a sus citas.
+    /// </summary>
+    public double UmbralSatisfaccion { get; set; } = 3.0;
+}
+
+/// <summary>
+/// Crecimiento de la clínica por <b>difusión de Bass</b> (1969), el modelo estándar de adopción por
+/// boca a boca. La llegada de pacientes NUEVOS por día es:
+/// <code>
+/// λ(d) = [ p + q · S(d)/M ] · ( M − A(d) )
+/// </code>
+/// con <c>M</c> = <see cref="PoblacionCaptacion"/>, <c>A(d)</c> = clientela activa,
+/// <c>S(d)</c> = recurrentes activos y satisfechos, <c>q</c> = coeficiente de imitación (boca a boca) y
+/// <c>p</c> = coeficiente de innovación (los que llegan solos).
+///
+/// <b>Ni <c>p</c> ni <c>q</c> se configuran: se derivan</b> de los dos extremos de la curva —<c>p</c> del
+/// arranque, <c>q</c> del objetivo—. Son coeficientes con los que nadie puede apuntar a ojo; los extremos
+/// de la curva, en cambio, son números que el usuario sí entiende.
+///
+/// <b>La curva se gobierna con tres mandos, y significan exactamente lo que dicen:</b>
+/// <list type="bullet">
+/// <item><c>PacientesPorDiaMedio</c> — <b>dónde arranca</b> la clínica. De ahí se deriva <c>p</c>.</item>
+/// <item><see cref="PacientesPorDiaObjetivo"/> — <b>dónde se estabiliza</b>. De ahí se deriva <c>q</c>.</item>
+/// <item><see cref="VentanaActividadDias"/> — <b>cuánto tarda</b> en llegar.</item>
+/// </list>
+/// </summary>
+public class CrecimientoSettings
+{
+    /// <summary>Si es false, el volumen diario sale del plan precalculado de siempre (media fija).</summary>
+    public bool Enabled { get; set; } = true;
+    /// <summary>
+    /// <b>Dónde se estabiliza la clínica</b>, en <b>visitas totales</b>/día (altas + controles) — que es lo
+    /// mismo que decir <b>su capacidad de trabajo</b>: el simulador lo usa también como <b>aforo</b>
+    /// (<c>BassGrowthModel.CapacidadDelDia</c>). Por eso <c>Satisfaccion.CapacidadComodaPorDia</c> debe
+    /// valer lo mismo. De aquí se deriva la fuerza del boca a boca por bisección
+    /// (<c>BassGrowthModel.CalibrarImitacion</c>), igual que <c>PacientesPorDiaMedio</c> fija el arranque.
+    ///
+    /// <para>Cuando la demanda del día lo supera, <b>lo que se recorta son las altas</b>: una consulta llena
+    /// deja de captar gente nueva, no le da plantón al crónico que tenía cita. Ese recorte es, además, el
+    /// freno al crecimiento más honesto que tiene el modelo.</para>
+    ///
+    /// <para>⚠️ Antes el pomo era <see cref="RecurrentesPorPacienteExtra"/> a pelo, y era <b>inservible</b>:
+    /// el punto fijo del lazo vale <c>1/(1 − ganancia)</c> y explota al acercarse a 1 — entre 1/25 y 1/8
+    /// (un factor 3) el resultado saltaba de crecer un 60 % a estrellarse contra el techo en 12 meses.
+    /// Nadie puede apuntar con eso. Ahora se apunta al destino y el modelo calcula el resto.</para>
+    ///
+    /// <para>⚠️ El <b>suelo</b> no es <c>PacientesPorDiaMedio</c>: el panel por sí solo ya produce
+    /// <c>PacientesPorDiaMedio × 1/(1−k)</c> visitas al día (cada paciente vuelve varias veces). Si el
+    /// objetivo no supera ese suelo, la clínica no necesita boca a boca y <c>q</c> se deriva a 0.</para>
+    /// </summary>
+    public int PacientesPorDiaObjetivo { get; set; } = 25;
+    /// <summary>
+    /// <b>Cuánto tarda</b> la clínica en llegar a su meseta: son los días que un paciente sigue contando
+    /// como clientela activa (y por tanto sigue recomendándola) desde su última visita. Es la memoria del
+    /// boca a boca, y con ella se estira o se comprime la rampa. Con objetivo 25 y arranque 6:
+    /// 90 d → la meseta llega en ~1 año; <b>365 d → el crecimiento se reparte por los 3 años</b> (arranque
+    /// lento, rampa sostenida, estabilidad al final).
+    ///
+    /// <para>Es también lo que impide que S(d) sea un contador acumulado que solo sube: el que se alejó
+    /// deja de hablar de la clínica.</para>
+    /// </summary>
+    public int VentanaActividadDias { get; set; } = 365;
+    /// <summary>
+    /// <c>M</c> — población del área de influencia. Guardarraíl: cuando la clientela activa se acerca a M
+    /// ya no queda a quién captar y el crecimiento se apaga.
+    ///
+    /// <para>⚠️ Debe ser <b>holgado</b> respecto a lo que la clínica va a captar en la ventana. Con 20.000
+    /// y el escenario real (6 → 25 pac/día en 3,5 años) la clínica acababa registrando 22.000 pacientes
+    /// distintos: <b>más gente de la que vive en el barrio</b>. El área se agotaba, la curva se desinflaba
+    /// al final y la calibración se distorsionaba. A volúmenes sanos este freno <b>apenas actúa</b> (la
+    /// clientela ronda el 5-10 % del área): quien fija la meseta es el objetivo.</para>
+    /// </summary>
+    public int PoblacionCaptacion { get; set; } = 60000;
+    /// <summary>
+    /// <b>Override avanzado.</b> Fija a mano los recurrentes satisfechos que hacen falta para traer +1
+    /// paciente nuevo al día (el inverso del coeficiente de imitación: 25 → <c>q = 0,04</c>). Gana sobre
+    /// <see cref="PacientesPorDiaObjetivo"/>.
+    ///
+    /// <para><b>0 (por defecto) = derivar del objetivo</b>, que es lo que quieres el 99 % de las veces:
+    /// este número es inestable y no se puede apuntar a ojo.</para>
+    /// </summary>
+    public int RecurrentesPorPacienteExtra { get; set; } = 0;
+    /// <summary>
+    /// Red de seguridad: tope absoluto de pacientes atendidos en un día. Debe quedar <b>por encima</b> del
+    /// objetivo, que es quien fija el aforo de verdad; esto solo evita una explosión si se desconfigura algo.
+    ///
+    /// <para>⚠️ Cuando el objetivo no se respetaba, era ESTE número el que acababa gobernando la clínica:
+    /// en la corrida de 3,5 años la media diaria se clavó en 45 (aquí) durante 33 de los 42 meses, con un
+    /// objetivo de 25. Un techo de seguridad que muerde todos los días no es un techo de seguridad: es el
+    /// modelo. La ley L5 (<c>Invariantes</c>) vigila justamente eso.</para>
+    /// </summary>
+    public int PacientesPorDiaMax { get; set; } = 45;
+    /// <summary>Visitas mínimas para contar como "recurrente" a efectos del boca a boca (2 = ya volvió una vez).</summary>
+    public int MinVisitasRecurrente { get; set; } = 2;
+    /// <summary>
+    /// Probabilidad de que un paciente INSATISFECHO acuda a su cita de control (frente a
+    /// <c>Appointments.AsistenciaProb</c> para los satisfechos). Además queda fuera del relleno
+    /// aleatorio de recurrentes: es el churn, y sus citas acaban en Missed.
+    /// </summary>
+    public double AsistenciaProbInsatisfecho { get; set; } = 0.20;
+}
+
+/// <summary>Artefactos de salida de la corrida (evidencia en disco; no tocan OpenMRS).</summary>
+public class SalidaSettings
+{
+    /// <summary>
+    /// Carpeta donde se escriben <c>crecimiento_diario.csv</c>, <c>clientes_recurrentes.csv</c> y el log de
+    /// la corrida. Si es relativa, cuelga de la carpeta del binario. Vacía = no se escribe nada.
+    /// </summary>
+    public string Carpeta { get; set; } = "output";
+
+    /// <summary>
+    /// Volcar a <c>output/corrida_&lt;fecha&gt;.log</c> <b>todo lo que sale por consola</b> (las 5 etapas, el
+    /// progreso, los errores), para poder auditarlo después con calma. Una corrida de 3,5 años escupe miles
+    /// de líneas y la terminal no las guarda.
+    /// </summary>
+    public bool ArchivoLog { get; set; } = true;
 }
 
 /// <summary>
@@ -146,6 +317,31 @@ public class RecurrenceSettings
     public int MinDiasCronico { get; set; } = 30;
     /// <summary>Días máximos del control crónico.</summary>
     public int MaxDiasCronico { get; set; } = 120;
+    /// <summary>
+    /// Banda del <b>control post-alta</b>: cuándo vuelve el paciente al que hoy se ha referido al
+    /// hospital. Propia a propósito — con la banda aguda (7-21 d) aún estaría ingresado, y con la crónica
+    /// (30-120 d) se vería demasiado tarde cómo salió.
+    /// </summary>
+    public int MinDiasPostReferencia { get; set; } = 15;
+    public int MaxDiasPostReferencia { get; set; } = 30;
+
+    /// <summary>
+    /// <b>Veces al año que un paciente del panel vuelve POR SU CUENTA</b>, sin que nadie le haya citado:
+    /// le pasa algo nuevo meses después y se acuerda de la clínica. Es la segunda vía de retorno, junto a
+    /// la cita de control, y es la que hace que el pool de pacientes <b>se use</b> — "coger a cualquiera de
+    /// la lista al azar", pero como <b>tasa por paciente</b>, no rellenando un cupo.
+    ///
+    /// <para>Solo aplica a los pacientes <b>activos</b> (última visita dentro de
+    /// <c>Crecimiento.VentanaActividadDias</c>) y que ya cumplieron su intervalo mínimo entre visitas. El
+    /// paciente insatisfecho no vuelve solo. Internamente se convierte a probabilidad diaria
+    /// (<c>RecurrentSelector.ProbRetornoEspontaneoDiaria</c>): nadie sabe apuntar un 0,0014 diario, pero
+    /// todo el mundo sabe decir "por aquí pasa por su cuenta como una vez cada dos años".</para>
+    ///
+    /// <para>Es el mando que fija <b>cuánta consulta genera el panel por sí solo</b> y, con él, la fracción
+    /// de recurrentes en régimen. 0 = solo se vuelve si hay cita (el panel no genera consulta espontánea).
+    /// </para>
+    /// </summary>
+    public double VisitasEspontaneasPorPacienteAno { get; set; } = 0.5;
 }
 
 public class AllergySettings
@@ -255,6 +451,11 @@ public class ReferralProbabilitiesSettings
     public double FollowUpCronico { get; set; } = 0.90;
     /// <summary>Prob. de agendar control cuando el cuadro (no crónico) es grave. Def. 0,80.</summary>
     public double FollowUpGrave { get; set; } = 0.80;
+    /// <summary>
+    /// Prob. de citar al paciente que se refiere al hospital. Es su <b>control post-alta</b>: la visita en
+    /// la que la clínica retoma el seguimiento cuando le dan de alta. Def. 0,95 (casi siempre).
+    /// </summary>
+    public double FollowUpReferido { get; set; } = 0.95;
     // El antiguo LabResult (fracción de resultados que "volvían" el mismo día) lo sustituye
     // Simulation.Laboratorio: ahora el "cuándo" lo decide el catálogo (se hace en la clínica → hoy;
     // externo → dias_entrega_*) y el "si llega" es Laboratorio.ProbResultadoLlega.

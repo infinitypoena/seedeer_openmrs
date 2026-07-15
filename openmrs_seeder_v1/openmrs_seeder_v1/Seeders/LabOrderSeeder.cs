@@ -74,9 +74,13 @@ public class LabOrderSeeder
         int ordenesOk = 0;
         foreach (var lab in elegidos)
         {
-            var esUrgente = patient.TodosDiagnosticos.Any(d => d.Severidad == "grave")
-                ? _rng.NextDouble() < 0.50
-                : _rng.NextDouble() < _urgentProb;
+            // Al paciente que se va al hospital, los labs son de ESTABILIZACIÓN: siempre urgentes, no la
+            // mitad de las veces. Un cuadro grave que se queda en la clínica, la mitad; el resto, la
+            // probabilidad base.
+            var esUrgente = patient.Referido
+                || (patient.TodosDiagnosticos.Any(d => d.Severidad == "grave")
+                    ? _rng.NextDouble() < 0.50
+                    : _rng.NextDouble() < _urgentProb);
 
             var orderUuid = await PostOrderAsync(patient, lab, esUrgente ? "STAT" : "ROUTINE", fechaVisita, ct);
             if (orderUuid is null) continue;

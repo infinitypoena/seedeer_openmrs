@@ -134,10 +134,12 @@ CREATE PROCEDURE sp_sim_fechas_preparar(
     IN p_ejecucion     VARCHAR(40)
 )
 BEGIN
-    DECLARE v_retorno INT DEFAULT NULL;   -- concepto "Return visit date" (5096…)
-    DECLARE v_medicos VARCHAR(48);
+    DECLARE v_retorno  INT DEFAULT NULL;   -- concepto "Return visit date" (5096…)
+    DECLARE v_personal VARCHAR(48);
 
-    SET v_medicos = CONCAT(p_prefijo, 'MED-%');
+    -- Personal de referencia: médicos (SIM-MED-*) y laboratorio (SIM-LAB-*). En la tabla
+    -- provider solo viven ellos (un paciente nunca es provider), así que basta el prefijo.
+    SET v_personal = CONCAT(p_prefijo, '%');
     SELECT concept_id INTO v_retorno FROM concept
      WHERE uuid = '5096AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' LIMIT 1;
 
@@ -310,18 +312,20 @@ BEGIN
       FROM patient_appointment_audit t
       JOIN sim_fecha_cita c ON c.patient_appointment_id = t.appointment_id;
 
-    -- 20 · Médicos: datos de referencia, existen antes de abrir el día 1 de la ventana
+    -- 20 · Personal (médicos + laboratorio): datos de referencia, existen antes de abrir
+    -- el día 1 de la ventana. Si no, el técnico que firma un resultado de 2023 constaría
+    -- como creado el día de la corrida.
     INSERT INTO sim_fecha_plan (tabla, pk, nueva_created)
     SELECT 'provider', t.provider_id, p_fecha_medicos
-      FROM provider t WHERE t.identifier LIKE v_medicos;
+      FROM provider t WHERE t.identifier LIKE v_personal;
     INSERT IGNORE INTO sim_fecha_plan (tabla, pk, nueva_created)
     SELECT 'person', t.person_id, p_fecha_medicos
       FROM person t
-     WHERE t.person_id IN (SELECT person_id FROM provider WHERE identifier LIKE v_medicos);
+     WHERE t.person_id IN (SELECT person_id FROM provider WHERE identifier LIKE v_personal);
     INSERT IGNORE INTO sim_fecha_plan (tabla, pk, nueva_created)
     SELECT 'person_name', t.person_name_id, p_fecha_medicos
       FROM person_name t
-     WHERE t.person_id IN (SELECT person_id FROM provider WHERE identifier LIKE v_medicos);
+     WHERE t.person_id IN (SELECT person_id FROM provider WHERE identifier LIKE v_personal);
 
     INSERT INTO sim_fecha_log (ejecucion, fase, tabla, filas, mensaje)
     SELECT p_ejecucion, 'preparar', 'sim_fecha_plan', COUNT(*), 'filas en alcance (destino calculado)'
@@ -494,11 +498,14 @@ BEGIN
             SET v_difiere = CONCAT(v_difiere, ' OR NOT (t.', v_extra, ' <=> p.nueva_created)');
         END IF;
 
+        -- COALESCE: una tabla puede no tener NINGUNA fila en el alcance (p.ej. patient_state
+        -- si ningún paciente entró a un programa con workflow). El join sale vacío y SUM()
+        -- devuelve NULL, que no cabe en las columnas NOT NULL del check.
         SET @sql = CONCAT(
             'INSERT INTO sim_fecha_check (orden, tabla, filas, pendientes, fuera_ventana, min_created, max_created) ',
             'SELECT ', v_orden, ', ''', v_tabla, ''', COUNT(*), ',
-            'SUM(CASE WHEN ', v_difiere, ' THEN 1 ELSE 0 END), ',
-            'SUM(CASE WHEN t.date_created < ''', p_inicio, ''' OR t.date_created > ''', p_fin, ''' THEN 1 ELSE 0 END), ',
+            'COALESCE(SUM(CASE WHEN ', v_difiere, ' THEN 1 ELSE 0 END), 0), ',
+            'COALESCE(SUM(CASE WHEN t.date_created < ''', p_inicio, ''' OR t.date_created > ''', p_fin, ''' THEN 1 ELSE 0 END), 0), ',
             'MIN(t.date_created), MAX(t.date_created) ',
             'FROM ', v_tabla, ' t ',
             'JOIN sim_fecha_plan p ON p.tabla = ''', v_tabla, ''' AND p.pk = t.', v_pk);

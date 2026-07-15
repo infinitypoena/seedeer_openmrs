@@ -12,6 +12,7 @@
 #   • laboratorios.csv      → el nombre del examen en la orden y en la cola
 #   • examenes_clinicos.csv → los exámenes de consultorio
 #   • paneles.csv           → cada componente del panel (Hb, Hto, LDL…)
+#   • alergenos.csv         → el alérgeno en la lista de alergias
 #   • respuestas codificadas (Normal/Anormal, Positivo/Negativo…), que no salen
 #     de ningún catálogo: van en el mapa $Respuestas de abajo.
 #
@@ -46,7 +47,8 @@ $fuentes = @(
     @{ Archivo = 'diagnosticos.csv';      Uuid = 'ciel_uuid';       Nombre = 'nombre_es' },
     @{ Archivo = 'laboratorios.csv';      Uuid = 'ciel_uuid';       Nombre = 'nombre_es' },
     @{ Archivo = 'examenes_clinicos.csv'; Uuid = 'ciel_uuid';       Nombre = 'nombre_es' },
-    @{ Archivo = 'paneles.csv';           Uuid = 'componente_uuid'; Nombre = 'nombre'    }
+    @{ Archivo = 'paneles.csv';           Uuid = 'componente_uuid'; Nombre = 'nombre'    },
+    @{ Archivo = 'alergenos.csv';         Uuid = 'concept_uuid';    Nombre = 'nombre_es' }
 )
 
 # Respuestas codificadas de los laboratorios: son las que se leen en el resultado

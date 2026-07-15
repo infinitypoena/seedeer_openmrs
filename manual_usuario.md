@@ -319,8 +319,10 @@ Claves importantes y cómo verificarlas:
 | Parámetro | Por defecto | Qué controla |
 |-----------|-------------|--------------|
 | `StartDate` / `EndDate` | — | Período histórico simulado |
-| `PacientesPorDiaMedio` | 15–40 | Promedio de pacientes/día (antes de peso semanal y variación) |
-| `PorcentajeRecurrentes` | 30 | % de visitas de pacientes ya existentes |
+| `PacientesPorDiaMedio` | 5–15 | **Altas** (pacientes nuevos)/día con las que arranca la clínica |
+| `Crecimiento.PacientesPorDiaObjetivo` | 25 | **Visitas totales**/día en la meseta. Es también el **aforo** de la consulta |
+| `Recurrence.VisitasEspontaneasPorPacienteAno` | 0.5 | Veces al año que un paciente del panel vuelve **por su cuenta** (sin cita). Fija cuánta consulta genera el panel solo |
+| ~~`PorcentajeRecurrentes`~~ | — | **ELIMINADO** (jul 2026). El % de recurrentes **ya no se configura: emerge** del panel y crece con los años. Forzarlo estranguló la agenda — ver `leyes_simulacion.md` |
 | `CommonProbMin/Max` | 0.75–0.95 | Banda del sesgo a enfermedades comunes (se sortea por corrida) |
 | `SeguimientoCronicoProb` | 0.70 | Prob. de que un crónico recurrente venga a control de su enfermedad |
 | `SeguimientoAgudoProb` / `VentanaSeguimientoAgudoDias` | 0.70 / 30 | Prob. y ventana del control del mismo episodio agudo |
@@ -447,7 +449,7 @@ No hay pasos intermedios: el proceso valida la configuración, muestra un **resu
 
 ```
 info: Seeder[0]
-      OpenMRS: ONLINE (http://localhost/openmrs/ws/rest/v1) | Ventana: 2025-04-01 → 2025-04-07 | 15 pac/día medio, 30% recurrentes, seed 42
+      OpenMRS: ONLINE (http://localhost/openmrs/ws/rest/v1) | seed 42
 info: Seeder[0]
       Catálogos: 948 diagnósticos, 30 medicamentos, 27 laboratorios, 21 alérgenos, 3 consultorios, 2 programas
 info: Seeder[0]
@@ -554,21 +556,23 @@ Agregar una categoría (p. ej. `oftalmologico`) requiere tocar código además d
 "StartDate": "2024-01-02",
 "EndDate":   "2024-01-08",
 "PacientesPorDiaMedio": 5,
-"PorcentajeRecurrentes": 0
+"Crecimiento": { "Enabled": false }
 ```
 
-~30 pacientes nuevos en 6 días hábiles. Al terminar, en OpenMRS: buscar `SIM-`, abrir un paciente y verificar visita → vitales → diagnóstico → labs con resultado → medicación. El campo `errores` del progress debe estar vacío.
+~30 pacientes nuevos en 6 días hábiles. Al terminar, en OpenMRS: buscar `SIM-`, abrir un paciente y verificar visita → vitales → diagnóstico → labs con resultado → medicación. El resumen debe decir 0 errores de proceso y 0 de operación.
 
-### Caso 2 — Clínica pequeña, 1 año (escenario de referencia)
+> ⚠️ **Una ventana corta NO verifica el modelo de simulación.** Las leyes L1 (el crónico vuelve), L4 (el panel madura) y L7 (visitas por paciente) necesitan ≥90 días, 2 años naturales y ≥365 días respectivamente; con menos salen como *"no procede"*. Para validar un cambio en el volumen/recurrencia/crecimiento hay que correr **≥18 meses** — ver `leyes_simulacion.md`.
+
+### Caso 2 — Clínica que crece, 3 años (escenario de referencia)
 
 ```json
-"StartDate": "2024-01-01",
-"EndDate":   "2024-12-31",
-"PacientesPorDiaMedio": 15,
-"PorcentajeRecurrentes": 30
+"StartDate": "2023-01-01",
+"EndDate":   "2025-12-31",
+"PacientesPorDiaMedio": 6,
+"Crecimiento": { "Enabled": true, "PacientesPorDiaObjetivo": 25 }
 ```
 
-Con `consultorios.csv` de 3 médicos produce ~4.500 visitas / ~3.200 pacientes (≈5-6 pacientes/médico/día — carga holgada, típica de clínica pequeña). Duración: ~4-6 horas. Para más carga por médico, subir `PacientesPorDiaMedio` a 20-24.
+La clínica **arranca** en 6 altas/día y **crece** hasta 25 visitas/día: 6,2/día en enero de 2023 → 17,9 en diciembre → 23,8 al segundo año → meseta en 25. Y su panel **madura**: la fracción de visitas recurrentes sube del **4 % al 60 %** — al final la clínica vive de sus propios pacientes, como una de verdad. Duración: varias horas.
 
 ### Caso 3 — Demostrar la agenda de citas
 
@@ -621,11 +625,25 @@ El simulador itera fechas históricas sin relación con el reloj del servidor: `
 PacientesDelDía = max(0, round(Normal(μ, σ)))
 ```
 
-Los domingos (peso 0.00) siempre dan 0. El split nuevos/recurrentes usa `PorcentajeRecurrentes` — pero el nº real de recurrentes puede quedar por debajo si pocos pacientes del pool están *elegibles* (ver 10.3).
+Los domingos (peso 0.00) siempre dan 0. Esa fórmula da **solo las ALTAS**, y solo con `Crecimiento.Enabled=false` (con el crecimiento activo las pone la difusión de Bass). **Los recurrentes NO salen de aquí**: ver 10.3.
 
-### 10.3 Elegibilidad de recurrentes
+### 10.3 Quién vuelve a la clínica (la demanda del panel)
 
-Tras cada visita el paciente queda inelegible hasta `ProximoElegibleDesde`: 7–21 días (agudo) o 30–120 días (crónico). En ventanas cortas el % de recurrentes realizado será menor al configurado — es intencional: la recurrencia "madura" con el tiempo simulado.
+**El número de recurrentes de un día no se configura: se cuenta.** El volumen del día es una **suma**:
+
+```
+visitas(d) = altas(d)  +  retornos(d)
+             └ Bass ┘     └ el panel ┘
+```
+
+Los retornos son los pacientes a los que hoy les toca, por dos vías:
+
+1. **Su cita de control** (±3 días de tolerancia): acude con probabilidad `Appointments.AsistenciaProb` (0,75). **Se atienden todos los que acuden** — la agenda no compite con nada. El que no acude es un no-show de verdad y su cita se marca `Missed`.
+2. **Vuelve por su cuenta**: un paciente **activo** (vino en el último año) que ya cumplió su intervalo mínimo (7–21 d si fue algo agudo, 30–120 d si es crónico) reaparece con algo nuevo, a la tasa de `Recurrence.VisitasEspontaneasPorPacienteAno` (0,5 → una visita espontánea cada dos años).
+
+Si la demanda del día supera el **aforo** (`Crecimiento.PacientesPorDiaObjetivo`), **lo que se recorta son las altas**: la consulta llena deja de captar gente nueva, pero jamás le da plantón al crónico que tenía cita.
+
+**Consecuencia:** la fracción de recurrentes **crece sola con los años** (≈4 % el primer mes → ≈60 % al tercer año), porque el panel de pacientes va creciendo y generando su propia consulta. Eso es lo que hace una clínica de verdad. ⚠️ El viejo `PorcentajeRecurrentes` forzaba un 30 % fijo para siempre y **estranguló la agenda** (media agenda perdida, el 65 % de los crónicos sin volver jamás a un control) — se eliminó. Ver `leyes_simulacion.md`.
 
 ### 10.4 Hora de visita y timestamps del pipeline
 
@@ -827,7 +845,7 @@ Para quien quiera extender el simulador sin romper su coherencia:
 
 **Catálogos CSV, no código.** Cualquier persona puede ampliar el conocimiento clínico (diagnósticos, pesos, fármacos, programas) editando CSVs, sin tocar C#. La contracara: los UUIDs de los CSV son de **una instancia concreta** y deben verificarse al migrar a otra.
 
-**Seams puros y testeables.** Toda decisión probabilística o de clasificación (selección de diagnóstico, comorbilidades, vitales, resultados de lab, clasificación de citas, probabilidad de seguimiento, selección de recurrentes por cita, vigencia de órdenes, grupo de edad, roster de médicos) está aislada en funciones puras con RNG inyectado, cubiertas por la suite de tests (`dotnet test`, 210 tests). Las llamadas HTTP quedan en la cáscara de los seeders.
+**Seams puros y testeables.** Toda decisión probabilística o de clasificación (selección de diagnóstico, comorbilidades, vitales, resultados de lab, clasificación de citas, probabilidad de seguimiento, selección de recurrentes por cita, vigencia de órdenes, grupo de edad, roster de médicos) está aislada en funciones puras con RNG inyectado, cubiertas por la suite de tests (`dotnet test`, 406 tests). Las llamadas HTTP quedan en la cáscara de los seeders.
 
 **Estado compartido del paciente en el pool.** Las colecciones y rasgos del paciente (problem list, programas, citas pendientes, crónicas activas, vigencia de órdenes, talla e IMC basal) se comparten/heredan entre la copia del pool y la copia de cada visita recurrente — así la historia del paciente es acumulativa y físicamente coherente a lo largo de la simulación.
 

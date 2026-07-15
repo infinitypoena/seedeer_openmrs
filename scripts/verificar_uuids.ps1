@@ -46,8 +46,23 @@ $clasesEsperadas = @{
     alergeno    = @('Drug', 'Misc', 'Pharmacologic Drug Class', 'Diagnosis')
     examen      = @('Test', 'Finding', 'Question', 'Procedure')
     componente  = @('Test', 'Finding')
-    respuesta   = @()   # una respuesta codificada puede ser de cualquier clase
+    pregunta    = @('Question')   # concepto sobre el que se registra una obs (la referencia al hospital)
+    respuesta   = @()             # una respuesta codificada puede ser de cualquier clase
 }
+
+# ⚠️ Conceptos que NO viven en ningún CSV: son constantes del código (Services/ReferenciaPolicy.cs).
+# Sin esto quedarían fuera del arnés y un UUID equivocado fallaría en silencio, que es exactamente el
+# fallo que este script existe para cazar.
+$constantesDelCodigo = @(
+    @{ uuid = '1272AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'; nombre = 'Remisiones solicitadas';   uso = 'pregunta';  valor = $true  }
+    @{ uuid = '1589AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'; nombre = '→ Hospital';               uso = 'respuesta'; valor = $false }
+    @{ uuid = '1788AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'; nombre = '¿Referido a hospital?';    uso = 'pregunta';  valor = $true  }
+    @{ uuid = '1065AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'; nombre = '→ Sí';                     uso = 'respuesta'; valor = $false }
+    @{ uuid = '1885AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'; nombre = 'Prioridad de referencia';  uso = 'pregunta';  valor = $true  }
+    @{ uuid = '1882AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'; nombre = '→ Emergencia';             uso = 'respuesta'; valor = $false }
+    @{ uuid = '1883AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'; nombre = '→ Urgente';                uso = 'respuesta'; valor = $false }
+    @{ uuid = '164359AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'; nombre = 'Motivo de la referencia';  uso = 'pregunta';  valor = $true  }
+)
 
 function Get-Concepto([string]$uuid) {
     if ($cache.ContainsKey($uuid)) { return $cache[$uuid] }
@@ -100,6 +115,10 @@ foreach ($l in Leer 'laboratorios.csv') {
 }
 foreach ($p in Leer 'paneles.csv') {
     Revisar $p.componente_uuid $p.nombre 'paneles.csv' 'componente' -esperaValor $true
+}
+
+foreach ($k in $constantesDelCodigo) {
+    Revisar $k.uuid $k.nombre 'ReferenciaPolicy.cs' $k.uso -esperaValor $k.valor
 }
 
 # Los fármacos se recetan por su producto del formulario (tabla drug), no solo por su concepto

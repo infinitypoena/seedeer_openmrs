@@ -40,6 +40,15 @@ public class PrescriptionSeeder
             return;
         }
 
+        // Al paciente que se refiere al hospital, la clínica no le pone tratamiento definitivo: lo
+        // estabiliza y lo traslada. La prescripción es del hospital que lo recibe.
+        if (patient.Referido)
+        {
+            _logger.LogInformation("[Prescription] Sin receta para {Id}: referido a hospital (el tratamiento lo pauta el hospital)",
+                patient.Identifier);
+            return;
+        }
+
         var debeRx = patient.TodosDiagnosticos.Any(d => d.RequiereRx)
             ? _rng.NextDouble() < 0.90
             : _rng.NextDouble() < _drugOrderProb;

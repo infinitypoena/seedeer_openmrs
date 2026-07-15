@@ -34,15 +34,15 @@ public class DailyScheduleGenerator
                 count = Math.Max(0, (int)Math.Round(SampleNormal(mean, mean * 0.20)));
             }
 
-            var recurrentes = (int)Math.Round(count * _settings.PorcentajeRecurrentes / 100.0);
-            var nuevos = count - recurrentes;
-
+            // El plan solo dice cuántas ALTAS habrá (y solo se usa con el crecimiento apagado). Los
+            // recurrentes no se pueden planificar: son la demanda del panel, y esa la mide el orquestador
+            // sobre el pool real, día a día. Repartir el total con un PorcentajeRecurrentes fijo era el
+            // origen del cupo que se comía la agenda — ver leyes_simulacion.md.
             result.Add(new DailySchedule
             {
-                Date                = current,
-                TotalPatients       = count,
-                NuevosPacientes     = nuevos,
-                PacientesRecurrentes = recurrentes
+                Date            = current,
+                TotalPatients   = count,
+                NuevosPacientes = count
             });
 
             current = current.AddDays(1);
@@ -51,17 +51,38 @@ public class DailyScheduleGenerator
         return result.AsReadOnly();
     }
 
-    private double GetWeekdayWeight(DayOfWeek day) => day switch
+    private double GetWeekdayWeight(DayOfWeek day) => PesoDelDia(day, _settings.WeekdayWeights);
+
+    /// <summary>
+    /// Peso del día de la semana (0 = la clínica no abre). Público porque el modelo de crecimiento lo
+    /// necesita para escalar la llegada de pacientes del día sin depender del plan precalculado.
+    /// </summary>
+    public static double PesoDelDia(DayOfWeek day, WeekdayWeightsSettings w) => day switch
     {
-        DayOfWeek.Monday    => _settings.WeekdayWeights.Monday,
-        DayOfWeek.Tuesday   => _settings.WeekdayWeights.Tuesday,
-        DayOfWeek.Wednesday => _settings.WeekdayWeights.Wednesday,
-        DayOfWeek.Thursday  => _settings.WeekdayWeights.Thursday,
-        DayOfWeek.Friday    => _settings.WeekdayWeights.Friday,
-        DayOfWeek.Saturday  => _settings.WeekdayWeights.Saturday,
-        DayOfWeek.Sunday    => _settings.WeekdayWeights.Sunday,
+        DayOfWeek.Monday    => w.Monday,
+        DayOfWeek.Tuesday   => w.Tuesday,
+        DayOfWeek.Wednesday => w.Wednesday,
+        DayOfWeek.Thursday  => w.Thursday,
+        DayOfWeek.Friday    => w.Friday,
+        DayOfWeek.Saturday  => w.Saturday,
+        DayOfWeek.Sunday    => w.Sunday,
         _                   => 1.0
     };
+
+    /// <summary>
+    /// Peso medio de un día <b>abierto</b> (los cerrados, peso 0, no cuentan). Con él, "25 pacientes/día"
+    /// significa 25 <b>de media en un día que la clínica abre</b>, y no 25 en el día tipo teórico: el aforo
+    /// de cada día se escala por <c>peso / pesoMedio</c>, así el lunes cabe más y el sábado menos, pero la
+    /// media a lo largo de la semana cae exactamente donde se pidió. 1.0 si no hay ningún día abierto.
+    /// </summary>
+    public static double PesoMedioDeApertura(WeekdayWeightsSettings w)
+    {
+        var pesos = Enum.GetValues<DayOfWeek>()
+            .Select(d => PesoDelDia(d, w))
+            .Where(p => p > 0)
+            .ToList();
+        return pesos.Count == 0 ? 1.0 : pesos.Average();
+    }
 
     /// <summary>
     /// Genera una hora realista para una visita en el día dado,

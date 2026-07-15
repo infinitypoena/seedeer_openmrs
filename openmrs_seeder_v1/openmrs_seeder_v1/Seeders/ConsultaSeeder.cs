@@ -65,24 +65,62 @@ public class ConsultaSeeder
         if (debeExamen)
             await SeedExamenClinicoAsync(patient, encounterUuid, ct);
 
-        // Nota de seguimiento: la probabilidad se condiciona al cuadro (crónico ≫ grave ≫ resto) y la
-        // fecha sale de la banda clínica de recurrencia (crónico mensual/trimestral, agudo 1–3 semanas),
-        // NO de un 7–30 días plano. Así la cita coincide con la próxima elegibilidad del paciente y
+        // ── Referencia al hospital ────────────────────────────────────────────────────────────────
+        // La clínica es de primer nivel: si el cuadro se le sale de las manos (apendicitis, IAM, sepsis,
+        // eclampsia…) no lo trata — lo estabiliza y lo refiere. Es determinista: lo dice la columna
+        // 'ambito' del catálogo, no una tirada de dados.
+        patient.Referido = ReferenciaPolicy.DebeReferir(patient.TodosDiagnosticos);
+        if (patient.Referido)
+            await SeedReferenciaAsync(patient, encounterUuid, fechaConsulta, ct);
+
+        // Nota de seguimiento: la probabilidad se condiciona al cuadro (referido ≫ crónico ≫ grave ≫
+        // resto) y la fecha sale de la banda clínica que le toca — control post-alta (15–30 d) al
+        // referido, banda de recurrencia (crónico mensual/trimestral, agudo 1–3 semanas) al resto. NO un
+        // 7–30 días plano. Así la cita coincide con la próxima elegibilidad del paciente y
         // AppointmentSeeder puede agendar la cita real que después gobierna su retorno.
         var esCronico = patient.TodosDiagnosticos.Any(d => d.EsCronica);
-        if (_rng.NextDouble() < SeguimientoPolicy.Probabilidad(patient.TodosDiagnosticos, _referral))
+        if (_rng.NextDouble() < SeguimientoPolicy.Probabilidad(patient.TodosDiagnosticos, _referral, patient.Referido))
         {
-            var fechaCita  = RecurrenceScheduler.ProximaFechaElegible(
-                DateOnly.FromDateTime(patient.VisitDatetime), esCronico, _rng, _recurrence);
+            // El referido vuelve a la clínica tras el alta hospitalaria, no dentro de una semana.
+            var fechaCita = patient.Referido
+                ? RecurrenceScheduler.ProximaFechaPostReferencia(
+                    DateOnly.FromDateTime(patient.VisitDatetime), _rng, _recurrence)
+                : RecurrenceScheduler.ProximaFechaElegible(
+                    DateOnly.FromDateTime(patient.VisitDatetime), esCronico, _rng, _recurrence);
             var returnDate = fechaCita.ToDateTime(TimeOnly.FromDateTime(patient.VisitDatetime));
             patient.FechaSeguimiento = returnDate;
             await PostObsDateAsync(patient.Identifier, patient.OpenMrsUuid, encounterUuid,
                 ReturnVisitDateUuid, returnDate, fechaConsulta, ct);
         }
 
-        _logger.LogInformation("[Consulta] Encounter {Uuid} para {Id} | Dx: {Dx} | comun: {Comun} | +{Comorb} comorbilidad(es)",
+        _logger.LogInformation("[Consulta] Encounter {Uuid} para {Id} | Dx: {Dx} | comun: {Comun} | +{Comorb} comorbilidad(es){Ref}",
             encounterUuid, patient.Identifier, patient.Diagnostico?.NombreEs ?? "—",
-            patient.Diagnostico?.EsComun, patient.Comorbilidades.Count);
+            patient.Diagnostico?.EsComun, patient.Comorbilidades.Count,
+            patient.Referido ? " | REFERIDO a hospital" : "");
+    }
+
+    /// <summary>
+    /// Registra la referencia al hospital de segundo nivel: qué se solicita (remisión a Hospital), el sí
+    /// explícito, con qué prisa (Emergencia si el cuadro es grave, Urgente si no) y por qué.
+    /// Las cuatro obs cuelgan del encuentro de consulta — en esta instancia no hay encounter type ni
+    /// location de referencia (los "Transfer" que existen son traslados internos de cama, ADT).
+    /// </summary>
+    private async Task SeedReferenciaAsync(
+        SimulatedPatient patient, string encounterUuid, DateTime fechaConsulta, CancellationToken ct)
+    {
+        var dxs = patient.TodosDiagnosticos.ToList();
+
+        await PostObsCodedAsync(patient.Identifier, patient.OpenMrsUuid, encounterUuid,
+            ReferenciaPolicy.RemisionesSolicitadasUuid, ReferenciaPolicy.HospitalUuid, fechaConsulta, ct);
+        await PostObsCodedAsync(patient.Identifier, patient.OpenMrsUuid, encounterUuid,
+            ReferenciaPolicy.ReferidoAHospitalUuid, ReferenciaPolicy.SiUuid, fechaConsulta, ct);
+        await PostObsCodedAsync(patient.Identifier, patient.OpenMrsUuid, encounterUuid,
+            ReferenciaPolicy.PrioridadReferenciaUuid, ReferenciaPolicy.Prioridad(dxs), fechaConsulta, ct);
+
+        var motivo = ReferenciaPolicy.Motivo(dxs);
+        if (!string.IsNullOrEmpty(motivo))
+            await PostObsTextAsync(patient.Identifier, patient.OpenMrsUuid, encounterUuid,
+                ReferenciaPolicy.MotivoReferenciaUuid, motivo, fechaConsulta, ct);
     }
 
     /// <summary>

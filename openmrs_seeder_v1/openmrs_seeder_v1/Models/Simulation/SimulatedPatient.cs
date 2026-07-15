@@ -107,6 +107,14 @@ public class SimulatedPatient
     /// </summary>
     public HashSet<string> EnrolledPrograms { get; set; } = [];
     /// <summary>
+    /// En ESTA visita el cuadro se salió de la capacidad resolutiva de la clínica y el paciente fue
+    /// <b>referido al hospital</b> (ver <see cref="Services.ReferenciaPolicy"/>). Lo fija
+    /// <c>ConsultaSeeder</c>. Consecuencias: <c>PrescriptionSeeder</c> no prescribe (el tratamiento
+    /// definitivo es del hospital) y la cita de control se agenda a 15-30 días, para cuando le den el alta.
+    /// </summary>
+    public bool Referido { get; set; }
+
+    /// <summary>
     /// Fecha de retorno decidida en la consulta de ESTA visita (obs "Return visit date").
     /// La consume <c>AppointmentSeeder</c> para agendar la cita real. Null = sin seguimiento.
     /// </summary>
@@ -168,6 +176,39 @@ public class SimulatedPatient
     public DiagnosticoEntry? UltimoDxAgudo { get; set; }
     /// <summary>Fecha de la visita que abrió/renovó el episodio agudo.</summary>
     public DateOnly? FechaUltimoDxAgudo { get; set; }
+    /// <summary>
+    /// Nota (1-5) que el paciente le puso a cada una de sus visitas. NO es un dato clínico: no se
+    /// escribe en OpenMRS, alimenta al modelo de crecimiento (solo los satisfechos recomiendan la
+    /// clínica) y se vuelca en los CSV de salida. Compartida por referencia con la copia recurrente
+    /// (como <see cref="ProblemListConcepts"/>), así una visita de control puntúa al mismo paciente.
+    /// </summary>
+    public List<int> Calificaciones { get; set; } = [];
+
+    /// <summary>Media de <see cref="Calificaciones"/>; 0 si aún no tiene ninguna.</summary>
+    public double CalificacionPromedio =>
+        Calificaciones.Count == 0 ? 0 : Calificaciones.Average();
+
+    /// <summary>
+    /// El paciente quedó descontento (promedio ≤ umbral). Deja de contar para el boca a boca, casi no
+    /// acude a sus citas (que acaban en Missed) y no entra en el relleno aleatorio de recurrentes.
+    /// Se recalcula tras cada calificación; sin calificaciones es <c>false</c> (nadie nace insatisfecho).
+    /// </summary>
+    public bool Insatisfecho { get; set; }
+
+    /// <summary>
+    /// Fecha de la última visita ATENDIDA. Vive en el objeto del pool (la copia recurrente no lo
+    /// escribe): con ella se sabe si el paciente sigue "activo" o ya se alejó de la clínica.
+    /// </summary>
+    public DateOnly? UltimaVisita { get; set; }
+
+    /// <summary>
+    /// Visitas atendidas de este paciente. Vive en el objeto del pool. Antes se infería de
+    /// <see cref="Calificaciones"/>.Count, que <b>solo existe con la satisfacción activa</b>: con
+    /// <c>Satisfaccion.Enabled=false</c> todo el mundo parecía tener 0 visitas y las leyes de la
+    /// simulación (<see cref="Services.Invariantes"/>) no podían medir nada.
+    /// </summary>
+    public int Visitas { get; set; }
+
     /// <summary>Consultorio (location) asignado a esta visita por ClinicResourceAssigner. Null = usar default.</summary>
     public string? AssignedLocationUuid { get; set; }
     /// <summary>Médico (provider) asignado a esta visita. Null = usar ProviderUuid por defecto.</summary>

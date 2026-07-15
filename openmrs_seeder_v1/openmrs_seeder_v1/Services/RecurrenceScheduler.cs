@@ -22,4 +22,17 @@ public static class RecurrenceScheduler
         var dias = rng.Next(min, max + 1);
         return ultimaVisita.AddDays(dias);
     }
+
+    /// <summary>
+    /// Cuándo vuelve a la clínica el paciente que hoy se ha referido al hospital: es el <b>control
+    /// post-alta</b>, así que tiene banda propia (15-30 d por defecto) — ni la aguda (7-21 d: aún estaría
+    /// ingresado) ni la crónica (30-120 d: demasiado tarde para ver cómo salió).
+    /// </summary>
+    public static DateOnly ProximaFechaPostReferencia(DateOnly visita, Random rng, RecurrenceSettings s)
+    {
+        var min = s.MinDiasPostReferencia;
+        var max = s.MaxDiasPostReferencia;
+        if (max < min) max = min;
+        return visita.AddDays(rng.Next(min, max + 1));
+    }
 }

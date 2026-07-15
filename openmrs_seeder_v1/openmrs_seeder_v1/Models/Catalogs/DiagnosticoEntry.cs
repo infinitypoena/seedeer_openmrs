@@ -34,4 +34,19 @@ public class DiagnosticoEntry
     public string VitalSpo2 { get; set; } = "";
     /// <summary>Sexo al que aplica el diagnóstico: <c>"M"</c> | <c>"F"</c> | <c>""</c> (ambos). Excluye duro el sexo contrario (embarazo→F, próstata→M).</summary>
     public string Sexo { get; set; } = "";
+
+    /// <summary>
+    /// Qué puede hacer la clínica con este cuadro (col. <c>ambito</c>):
+    /// <c>"clinica"</c> (o vacío) = lo trata ella misma · <c>"referencia"</c> = lo detecta, lo estabiliza
+    /// y lo <b>refiere al hospital</b> (apendicitis, IAM, sepsis, eclampsia…).
+    ///
+    /// <para>⚠️ <b>No es lo mismo que <see cref="Severidad"/> = grave.</b> Muchas graves las maneja el
+    /// primer nivel: VIH, tuberculosis (el DOTS es de primer nivel), pie diabético o trastorno bipolar
+    /// son graves y tienen sus programas de atención. Referirlas sería un error clínico. La referencia es
+    /// para lo <b>quirúrgico y lo agudo de emergencia</b>, y se cura a mano en el catálogo.</para>
+    /// </summary>
+    public string Ambito { get; set; } = "";
+
+    /// <summary>La clínica no puede resolverlo: lo estabiliza y lo manda al hospital.</summary>
+    public bool EsReferencia => Ambito.Equals("referencia", StringComparison.OrdinalIgnoreCase);
 }

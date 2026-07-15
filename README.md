@@ -37,9 +37,9 @@ Todos se lanzan con `--project openmrs_seeder_v1/openmrs_seeder_v1/openmrs_seede
 | `dotnet run -- clear` | **Anula** (void) todos los pacientes `SIM-` y **cancela** sus citas pendientes. Pide confirmación `s/N` |
 | `dotnet run -- fechas --dry-run` | Informa cuántas filas de auditoría corregiría, **sin escribir nada** |
 | `dotnet run -- fechas` | Retrofecha `date_created` de datos **ya sembrados** (la etapa 5/5 por separado) |
-| `dotnet test openmrs_seeder_v1/openmrs_seeder_v1.Tests/openmrs_seeder_v1.Tests.csproj` | Suite de tests (308) |
+| `dotnet test openmrs_seeder_v1/openmrs_seeder_v1.Tests/openmrs_seeder_v1.Tests.csproj` | Suite de tests (406) |
 
-**Exit codes**: `0` completado · `1` fallo del proceso · `2` OpenMRS inaccesible, argumento inválido o **catálogos inválidos** — en los tres casos **no se toca ningún dato**.
+**Exit codes**: `0` completado · `1` fallo del proceso · `2` OpenMRS inaccesible, argumento inválido o **catálogos inválidos** (en los tres casos **no se toca ningún dato**) · `3` la corrida terminó pero **rompió alguna [ley de la simulación](leyes_simulacion.md)**: los datos están sembrados y **no describen una clínica coherente**.
 
 **Ctrl+C** cancela limpiamente: lo ya insertado persiste y se imprime el resumen parcial.
 
@@ -75,9 +75,9 @@ docker compose -f docker/docker-compose.yml run --rm -i seeder clear # limpieza
 | Etapa | Qué hace |
 |:-----:|----------|
 | **1/5** Validación de catálogos | Carga los 16 CSV, informa de las filas de cada uno y **valida**: dominios, bandas, filas inseleccionables, cruce perfil ↔ diagnósticos. Con errores **aborta (exit 2) antes de tocar OpenMRS** |
-| **2/5** Días a simular | Ventana, días con atención vs. cerrados, volumen previsto (nuevos/recurrentes) y desglose por día o por mes. Es el plan **exacto** que se va a ejecutar, no una estimación |
+| **2/5** Días a simular | Ventana, días con atención vs. cerrados, y la **proyección** de la curva de crecimiento (altas + controles, con el % de recurrentes mes a mes). Con el crecimiento activo el volumen **no es precalculable**: es una estimación, y la corrida escribe la curva real. Aquí se comprueban ya las leyes L5 y L6, **antes de tocar OpenMRS** |
 | **3/5** Ejecución | **Pausa de 5 s** para abortar con Ctrl+C tras leer el informe; luego siembra, con progreso cada ~15 s |
-| **4/5** Resumen final | Visitas (nuevos vs. recurrentes), pacientes distintos y cuántos volvieron, visitas por semana, **top-5 diagnósticos**, y errores separados en *de proceso* y *de operación* (una obs rechazada no es lo mismo que una corrida caída) |
+| **4/5** Resumen final | Visitas (altas vs. controles), **cómo maduró el panel año a año**, agenda (citas cumplidas / no-show), crecimiento y satisfacción, **top-5 diagnósticos**, errores separados en *de proceso* y *de operación* — y el veredicto de las **[leyes de la simulación](leyes_simulacion.md)**: una ley rota ⇒ exit code 3 |
 | **5/5** Fechas de auditoría | *Opcional, desactivada por defecto.* Retrofecha `date_created` derivándolo de la fecha de negocio. Idempotente, acotada a `SIM-` y reversible |
 
 ## Diseño
@@ -104,13 +104,15 @@ docker compose -f docker/docker-compose.yml run --rm -i seeder clear # limpieza
 
 ### Servicios de decisión
 
-Aquí vive la inteligencia del simulador. El patrón que gobierna todo el proyecto: son **seams puros** (estáticos, con el RNG inyectado), lo que permite testear las reglas clínicas **sin red ni base de datos** — de ahí que los 308 tests corran en ~120 ms.
+Aquí vive la inteligencia del simulador. El patrón que gobierna todo el proyecto: son **seams puros** (estáticos, con el RNG inyectado), lo que permite testear las reglas clínicas **sin red ni base de datos** — de ahí que los 406 tests corran en ~120 ms.
 
 | Servicio | Decide |
 |----------|--------|
 | `EpidemiologySelector` | El diagnóstico: categoría por edad/sexo/estación, sesgo hacia enfermedades comunes, *damping* anti-repetición, comorbilidades por afinidad clínica, y si el crónico viene a su control |
 | `ClinicResourceAssigner` | Consultorio y médico: roster diario (2-3 médicos), médico de cabecera, y qué médico atenderá una cita futura |
-| `RecurrentSelector` · `RecurrenceScheduler` | Quién vuelve hoy (prioridad a quien tiene cita) y cuándo será elegible de nuevo (agudo 7–21 d, crónico 30–120 d) |
+| `RecurrentSelector` · `RecurrenceScheduler` | **Quién vuelve hoy** — y su respuesta **es** el volumen de recurrentes del día, no un cupo: los que tienen cita (y acuden) más los del panel que vuelven por su cuenta. Y cuándo será elegible de nuevo cada uno (agudo 7–21 d, crónico 30–120 d) |
+| `BassGrowthModel` | **Cuánta gente NUEVA capta la clínica** (difusión de Bass: boca a boca × mercado por captar), y el **aforo** del día. Nada más: las visitas del día son `altas + retornos`, una suma |
+| `Invariantes` | **Las [leyes de la simulación](leyes_simulacion.md)**: si lo sembrado describe una clínica o no. Corre en cada corrida y devuelve **exit code 3** si alguna se rompe |
 | `SeguimientoPolicy` | Si se agenda control, con probabilidad condicionada al cuadro (crónico > grave > resto) |
 | `LabResultGenerator` | El valor del laboratorio: banda normal o anormal según la enfermedad; los componentes del panel, cada uno por su cuenta |
 | `LabWorkflow` · `LabStaffAssigner` | El proceso del laboratorio: si la muestra se rechaza, cuándo llega el resultado (aquí mismo o desde un laboratorio externo) y quién la toma y la valida |
@@ -127,6 +129,14 @@ El proceso **no arranca** con configuración o catálogos inválidos, y aborta *
 
 - `SettingsValidator` — rangos y coherencia de `appsettings.json` (probabilidades en [0,1], bandas `Min ≤ Max`, fechas, volúmenes). Además avisa de las claves del JSON que el binding ignoraría **en silencio**.
 - `CatalogValidator` — los 16 CSV. `CatalogLoader` es deliberadamente mudo (un CSV ausente da lista vacía; un booleano mal escrito, `false`), así que una errata se manifestaba como *una feature apagada sin que nadie lo notara*. Ahora se caza al arrancar.
+
+### Las leyes de la simulación
+
+Los dos validadores de arriba comprueban que la **entrada** sea válida. Las [**leyes**](leyes_simulacion.md) comprueban que la **salida** sea una clínica.
+
+Existen porque hicieron falta: el modelo de crecimiento se añadió, **compiló, pasó los tests y una corrida de 3,5 años terminó con exit code 0** — y había roto lo esencial. El 79 % de los pacientes venía una sola vez, el **65 % de los crónicos no volvía jamás a un control** y la mitad de la agenda se perdía. Todos los tests seguían verdes porque **las piezas estaban bien: lo roto era el sistema**.
+
+Ocho invariantes (el crónico vuelve · la agenda se honra · el panel madura · la curva no es una pared…) se miden **en cada corrida** sobre lo que de verdad se sembró, con su umbral y su número al lado. Una ley rota ⇒ **exit code 3**: los datos están escritos, pero no se declaran buenos.
 
 ## De dónde sale la coherencia clínica
 
@@ -177,7 +187,7 @@ openmrs_seeder_v1/
     Configuration/            #   settings + validación fail-fast
     Clients/                  #   OpenMrsRestClient
     catalogs/                 #   los 16 CSV
-  openmrs_seeder_v1.Tests/    # 308 tests
+  openmrs_seeder_v1.Tests/    # 406 tests
 querys/                       # QA sobre la BD + los stored procedures
 scripts/                      # backup y utilidades de mantenimiento
 docker/                       # ejecutar el seeder sin instalar .NET

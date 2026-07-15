@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using OpenmrsSeeder.Clients;
 using OpenmrsSeeder.Configuration;
 using OpenmrsSeeder.Models.Simulation;
+using OpenmrsSeeder.Services;
 
 namespace OpenmrsSeeder.Seeders;
 
@@ -20,18 +21,21 @@ public class AppointmentSeeder
     private readonly OpenMrsSettings _settings;
     private readonly int _toleranciaDias;
     private readonly Random _rng;
+    private readonly RunStats _stats;
     private readonly ILogger<AppointmentSeeder> _logger;
 
     public AppointmentSeeder(
         OpenMrsRestClient client,
         OpenMrsSettings settings,
         SimulationSettings simSettings,
+        RunStats stats,
         ILogger<AppointmentSeeder> logger)
     {
         _client         = client;
         _settings       = settings;
         _toleranciaDias = simSettings.Appointments.ToleranciaDias;
         _rng = new Random(simSettings.RandomSeed + 17);
+        _stats          = stats;
         _logger         = logger;
     }
 
@@ -175,6 +179,13 @@ public class AppointmentSeeder
             await _client.PostAsync($"appointments/{cita.Uuid}/status-change", payload, ct);
             _logger.LogInformation("[Appointment] Cita del {Fecha:yyyy-MM-dd} → {Estado} para {Id}",
                 cita.Fecha, estado, patient.Identifier);
+
+            // La ley L2 se mide aquí: una clínica pierde el 15-25 % de sus citas por no-show. Si pierde la
+            // mitad, es que algo se las está tirando a la basura (fue un cupo de recurrentes: 14.025 Missed
+            // contra 14.115 Completed en la corrida de 3,5 años).
+            if (estado is "Completed" or "Missed")
+                _stats.RegistrarCitaResuelta(cumplida: estado == "Completed");
+
             return true;
         }
         catch (Exception ex)

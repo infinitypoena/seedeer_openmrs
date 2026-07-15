@@ -173,7 +173,9 @@ public class CatalogLoader
         VitalPa               = S(row, "vital_pa").ToLowerInvariant(),
         VitalFc               = S(row, "vital_fc").ToLowerInvariant(),
         VitalSpo2             = S(row, "vital_spo2").ToLowerInvariant(),
-        Sexo                  = S(row, "sexo").Trim().ToUpperInvariant() is "M" or "F" ? S(row, "sexo").Trim().ToUpperInvariant() : ""
+        Sexo                  = S(row, "sexo").Trim().ToUpperInvariant() is "M" or "F" ? S(row, "sexo").Trim().ToUpperInvariant() : "",
+        // Columna ausente o vacía → "" = la clínica lo trata (retrocompatible).
+        Ambito                = S(row, "ambito").Trim().ToLowerInvariant()
     };
 
     private static ClimaEntry ParseClima(Dictionary<string, string> row) => new()

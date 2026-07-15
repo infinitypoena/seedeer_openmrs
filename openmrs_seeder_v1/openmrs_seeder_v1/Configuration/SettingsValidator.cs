@@ -42,8 +42,6 @@ public static class SettingsValidator
             violaciones.Add($"StartDate ({sim.StartDate:yyyy-MM-dd}) no puede ser posterior a EndDate ({sim.EndDate:yyyy-MM-dd})");
         if (sim.PacientesPorDiaMedio <= 0)
             violaciones.Add($"PacientesPorDiaMedio debe ser mayor que 0 (valor: {sim.PacientesPorDiaMedio})");
-        if (sim.PorcentajeRecurrentes is < 0 or > 100)
-            violaciones.Add($"PorcentajeRecurrentes debe estar entre 0 y 100 (valor: {sim.PorcentajeRecurrentes})");
 
         // Probabilidades simples
         Prob(sim.SeguimientoCronicoProb, "SeguimientoCronicoProb");
@@ -58,6 +56,7 @@ public static class SettingsValidator
         Prob(rp.FollowUp, "ReferralProbabilities.FollowUp");
         Prob(rp.FollowUpCronico, "ReferralProbabilities.FollowUpCronico");
         Prob(rp.FollowUpGrave, "ReferralProbabilities.FollowUpGrave");
+        Prob(rp.FollowUpReferido, "ReferralProbabilities.FollowUpReferido");
 
         // Ciclo de vida de la orden de laboratorio
         var lb = sim.Laboratorio;
@@ -104,6 +103,10 @@ public static class SettingsValidator
         NoNegativo(re.MinDiasCronico, "Recurrence.MinDiasCronico");
         Banda(re.MinDiasAgudo, re.MaxDiasAgudo, "Recurrence.MinDiasAgudo", "Recurrence.MaxDiasAgudo");
         Banda(re.MinDiasCronico, re.MaxDiasCronico, "Recurrence.MinDiasCronico", "Recurrence.MaxDiasCronico");
+        NoNegativo(re.MinDiasPostReferencia, "Recurrence.MinDiasPostReferencia");
+        Banda(re.MinDiasPostReferencia, re.MaxDiasPostReferencia,
+            "Recurrence.MinDiasPostReferencia", "Recurrence.MaxDiasPostReferencia");
+        NoNegativo(re.VisitasEspontaneasPorPacienteAno, "Recurrence.VisitasEspontaneasPorPacienteAno");
 
         // Citas
         NoNegativo(sim.Appointments.ToleranciaDias, "Appointments.ToleranciaDias");
@@ -111,6 +114,69 @@ public static class SettingsValidator
 
         // Variedad
         NoNegativo(sim.Variedad.RepeticionDamping, "Variedad.RepeticionDamping");
+
+        // Satisfacción (la nota 1-5 de cada visita)
+        var sa = sim.Satisfaccion;
+        if (sa.MediaBase is < 1 or > 5)
+            violaciones.Add($"Satisfaccion.MediaBase debe estar en la escala 1-5 (valor: {sa.MediaBase})");
+        if (sa.UmbralSatisfaccion is < 1 or > 5)
+            violaciones.Add($"Satisfaccion.UmbralSatisfaccion debe estar en la escala 1-5 (valor: {sa.UmbralSatisfaccion})");
+        NoNegativo(sa.Desviacion, "Satisfaccion.Desviacion");
+        NoNegativo(sa.BonusMedicoCabecera, "Satisfaccion.BonusMedicoCabecera");
+        NoNegativo(sa.BonusCitaCumplida, "Satisfaccion.BonusCitaCumplida");
+        NoNegativo(sa.PenalizacionCuadroGrave, "Satisfaccion.PenalizacionCuadroGrave");
+        NoNegativo(sa.PenalizacionSaturacion, "Satisfaccion.PenalizacionSaturacion");
+        if (sa.CapacidadComodaPorDia < 1)
+            violaciones.Add($"Satisfaccion.CapacidadComodaPorDia debe ser al menos 1 (valor: {sa.CapacidadComodaPorDia})");
+
+        // Crecimiento (difusión de Bass). Los tres mandos de la curva: dónde arranca
+        // (PacientesPorDiaMedio), dónde acaba (PacientesPorDiaObjetivo) y cuánto tarda
+        // (VentanaActividadDias). El techo es solo una red de seguridad y debe quedar por encima de ambos.
+        var cr = sim.Crecimiento;
+        if (cr.PoblacionCaptacion < 1)
+            violaciones.Add($"Crecimiento.PoblacionCaptacion debe ser al menos 1 (valor: {cr.PoblacionCaptacion})");
+        if (cr.RecurrentesPorPacienteExtra < 0)
+            violaciones.Add(
+                $"Crecimiento.RecurrentesPorPacienteExtra no puede ser negativo (valor: {cr.RecurrentesPorPacienteExtra}); " +
+                "0 = derivar el boca a boca del objetivo (lo normal)");
+        if (cr.MinVisitasRecurrente < 1)
+            violaciones.Add($"Crecimiento.MinVisitasRecurrente debe ser al menos 1 (valor: {cr.MinVisitasRecurrente})");
+        if (cr.VentanaActividadDias < 1)
+            violaciones.Add($"Crecimiento.VentanaActividadDias debe ser al menos 1 (valor: {cr.VentanaActividadDias})");
+        if (cr.PacientesPorDiaObjetivo < 1)
+            violaciones.Add($"Crecimiento.PacientesPorDiaObjetivo debe ser al menos 1 (valor: {cr.PacientesPorDiaObjetivo})");
+        if (cr.PacientesPorDiaMax < sim.PacientesPorDiaMedio)
+            violaciones.Add(
+                $"Crecimiento.PacientesPorDiaMax ({cr.PacientesPorDiaMax}) no puede ser menor que " +
+                $"PacientesPorDiaMedio ({sim.PacientesPorDiaMedio}): el techo dejaría a la clínica por debajo de su volumen de arranque");
+        if (cr.PacientesPorDiaMax < cr.PacientesPorDiaObjetivo)
+            violaciones.Add(
+                $"Crecimiento.PacientesPorDiaMax ({cr.PacientesPorDiaMax}) no puede ser menor que " +
+                $"PacientesPorDiaObjetivo ({cr.PacientesPorDiaObjetivo}): el techo impediría alcanzar el objetivo");
+        // El objetivo ES el aforo de la consulta, y PacientesPorDiaMax solo una red de seguridad POR ENCIMA.
+        // Si van pegados, quien gobierna la clínica acaba siendo el techo (33 de los 42 meses de la corrida
+        // de 3,5 años se pasaron clavados en él) y la ley L5 no tiene margen para distinguirlo.
+        if (cr.Enabled && cr.PacientesPorDiaMax < cr.PacientesPorDiaObjetivo * 1.3)
+            violaciones.Add(
+                $"Crecimiento.PacientesPorDiaMax ({cr.PacientesPorDiaMax}) debe quedar holgado por encima de " +
+                $"PacientesPorDiaObjetivo ({cr.PacientesPorDiaObjetivo}, al menos ×1,3 = " +
+                $"{(int)Math.Ceiling(cr.PacientesPorDiaObjetivo * 1.3)}): el techo es una red de seguridad, no el aforo");
+        // El aforo (el objetivo) y la capacidad cómoda tienen que ser el mismo número: si la clínica trabaja
+        // sistemáticamente por encima de lo que puede atender con holgura, las notas se hunden por diseño y
+        // el churn se dispara sin que eso signifique nada.
+        if (cr.Enabled && sim.Satisfaccion.Enabled &&
+            sim.Satisfaccion.CapacidadComodaPorDia < cr.PacientesPorDiaObjetivo)
+            violaciones.Add(
+                $"Satisfaccion.CapacidadComodaPorDia ({sim.Satisfaccion.CapacidadComodaPorDia}) no puede ser menor que " +
+                $"Crecimiento.PacientesPorDiaObjetivo ({cr.PacientesPorDiaObjetivo}): la clínica viviría saturada en su " +
+                "propia meseta y las calificaciones se hundirían por construcción");
+        Prob(cr.AsistenciaProbInsatisfecho, "Crecimiento.AsistenciaProbInsatisfecho");
+        // El coeficiente de innovación se deriva (p = PacientesPorDiaMedio / M): si el mercado es más
+        // pequeño que las altas de un solo día, p > 1 y el modelo pierde sentido.
+        if (cr.Enabled && cr.PoblacionCaptacion >= 1 && sim.PacientesPorDiaMedio > cr.PoblacionCaptacion)
+            violaciones.Add(
+                $"Crecimiento.PoblacionCaptacion ({cr.PoblacionCaptacion}) es menor que las altas de un solo día: " +
+                "el área de influencia se agotaría el primer día");
 
         // Órdenes
         if (sim.Orders.LabVigenciaDias < 1)

@@ -17,7 +17,9 @@ const int PausaPreviaSegundos = 5;
 // `dotnet run -- fechas [--dry-run]` corrige las fechas de auditoría (date_created) de los datos ya
 // sembrados; es también la etapa 5/5 de una corrida normal si OpenMRS:Database:CorregirFechas = true.
 // Exit codes: 0 = corrida completada · 1 = fallo del proceso · 2 = OpenMRS inaccesible / uso inválido /
-// catálogos inválidos (en los tres casos no se toca ningún dato).
+// catálogos inválidos (en los tres casos no se toca ningún dato) · 3 = la corrida terminó pero ROMPIÓ
+// alguna ley de la simulación (los datos están sembrados y no describen una clínica coherente — ver
+// Services/Invariantes.cs y leyes_simulacion.md).
 
 // Content root = carpeta del binario (allí se copian appsettings.json y catalogs/), así la app
 // funciona igual desde cualquier directorio de trabajo (dotnet run, exe publicado, Docker).
@@ -53,10 +55,26 @@ var errorTally = new ErrorTally();
 builder.Services.AddSingleton(errorTally);
 builder.Logging.AddProvider(new ErrorTallyLoggerProvider(errorTally));
 
+// Log en fichero: un espejo de la consola en output/corrida_<fecha>.log. Una corrida de años escupe
+// decenas de miles de líneas y la terminal no las guarda — sin esto no hay forma de auditar los errores
+// después. Se registra aquí para que capture ya la etapa 1/5 (la validación de catálogos).
+var carpetaSalida = string.IsNullOrWhiteSpace(simSettings.Salida.Carpeta)
+    ? null
+    : Path.IsPathRooted(simSettings.Salida.Carpeta)
+        ? simSettings.Salida.Carpeta
+        : Path.Combine(AppContext.BaseDirectory, simSettings.Salida.Carpeta);
+
+var fileLogger = new FileLoggerProvider(
+    simSettings.Salida.ArchivoLog ? carpetaSalida : null, DateTime.Now);
+builder.Logging.AddProvider(fileLogger);
+
 // Servicios singleton (stateless, seguros para reusar)
 builder.Services.AddSingleton<SeedProgressTracker>();
 builder.Services.AddSingleton<RunStats>();
 builder.Services.AddSingleton<CatalogLoader>();
+// Los CSV de salida (la curva de crecimiento y el padrón de pacientes): singleton porque mantienen
+// abierto el fichero de la curva durante toda la corrida.
+builder.Services.AddSingleton<RunReportWriter>();
 builder.Services.AddSingleton<DailyScheduleGenerator>();
 builder.Services.AddSingleton<PatientProfileGenerator>();
 builder.Services.AddSingleton<EpidemiologySelector>();
@@ -104,6 +122,9 @@ builder.Services.AddHttpClient<OpenMrsRestClient>(client =>
 
 using var host = builder.Build();
 var logger = host.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Seeder");
+
+if (fileLogger.Ruta is { } rutaLog)
+    logger.LogInformation("Log de esta corrida: {Ruta}", rutaLog);
 
 // Claves del JSON que el binding ignoró en silencio (típicamente parámetros renombrados/obsoletos).
 var clavesDesconocidas = SettingsValidator
@@ -308,6 +329,64 @@ async Task<int> EjecutarSimulacionAsync()
                 semana, totalSemana, nuevosSemana, recSemana);
     }
 
+    // ── Cómo maduró el panel (lo que el cupo fijo ocultaba) ───────────────────────────────────────
+    var anios = stats.PorAnio();
+    if (anios.Count > 0)
+    {
+        logger.LogInformation("Panel de pacientes por año (la fracción de recurrentes tiene que SUBIR):");
+        foreach (var (anio, totalAnio, nuevosAnio, recAnio) in anios)
+            logger.LogInformation(
+                "   {Anio}  {Total,6} visitas ({Nuevos} altas, {Rec} controles = {Pct,4:0.0} % recurrentes)",
+                anio, totalAnio, nuevosAnio, recAnio, totalAnio == 0 ? 0 : 100.0 * recAnio / totalAnio);
+    }
+
+    logger.LogInformation(
+        "Agenda: {Cumplidas} citas cumplidas, {Perdidas} perdidas ({PctPerdidas:0.0} % de no-show)",
+        stats.CitasCompletadas, stats.CitasPerdidas, 100 * stats.FraccionCitasPerdidas);
+
+    // ── Crecimiento y satisfacción ────────────────────────────────────────────────────────────────
+    if (simSettings.Crecimiento.Enabled || simSettings.Satisfaccion.Enabled)
+    {
+        var cr = simSettings.Crecimiento;
+        var pctMercado = cr.PoblacionCaptacion == 0
+            ? 0
+            : 100.0 * stats.PacientesActivosFinal / cr.PoblacionCaptacion;
+
+        // Se reporta el PICO además del final: si el área se llena, la captación decae y la media final
+        // baja del pico — con solo el último mes parecería que la clínica encogió cuando en realidad creció
+        // hasta topar con su mercado. Y son medias de lo ATENDIDO, no de lo que el modelo pretendía.
+        logger.LogInformation(
+            "Crecimiento: media diaria {Inicial:0.0} → máx. {Maxima:0.0} → {Final:0.0} visitas/día " +
+            "(objetivo: {Objetivo}) | {Captados} pacientes captados en total, {Activos} siguen viniendo = " +
+            "{PctMercado:0.0} % de un área de {M} | {S} recurrentes satisfechos activos (el boca a boca " +
+            "que la sostiene) | {Rechazados} altas no captadas por consulta llena",
+            stats.MediaDiariaInicial, stats.MediaDiariaMaxima, stats.MediaDiariaFinal,
+            cr.Enabled ? cr.PacientesPorDiaObjetivo.ToString() : "—",
+            stats.PacientesUnicos, stats.PacientesActivosFinal, pctMercado,
+            cr.PoblacionCaptacion, stats.RecurrentesSatisfechosFinal, stats.NuevosRechazadosPorAforo);
+
+        if (cr.Enabled && pctMercado > 80)
+            logger.LogWarning(
+                "El área de captación se está agotando ({Pct:0.0} % ya es clientela): la llegada de " +
+                "pacientes nuevos se frena y la media diaria cae desde su pico. Si no es lo que buscas, " +
+                "sube Crecimiento.PoblacionCaptacion.", pctMercado);
+
+        if (stats.VisitasCalificadas > 0)
+        {
+            logger.LogInformation("Satisfacción: nota media {Media:0.00}/5 sobre {N} visitas calificadas",
+                stats.CalificacionMedia, stats.VisitasCalificadas);
+            foreach (var (nota, veces) in stats.Histograma())
+                logger.LogInformation("   {Nota} ★  {Veces,6} visitas ({Pct,5:0.0} %)  {Barra}",
+                    nota, veces, 100.0 * veces / stats.VisitasCalificadas,
+                    new string('█', (int)Math.Round(40.0 * veces / stats.VisitasCalificadas)));
+        }
+
+        var writer = host.Services.GetRequiredService<RunReportWriter>();
+        if (writer.Carpeta is { } carpetaEvidencia)
+            logger.LogInformation("Evidencia de la corrida (curva de crecimiento + padrón de pacientes): {Carpeta}",
+                carpetaEvidencia);
+    }
+
     var top = stats.TopDiagnosticos(5);
     if (top.Count > 0)
     {
@@ -330,11 +409,32 @@ async Task<int> EjecutarSimulacionAsync()
             logger.LogWarning("  {Mensaje}", mensaje);
     }
 
+    // ── Las leyes de la simulación ────────────────────────────────────────────────────────────────
+    // El veredicto sobre lo que de VERDAD se sembró. Una corrida puede terminar sin un solo error y aun
+    // así no describir una clínica: eso fue exactamente lo que pasó con la de 3,5 años. Ver
+    // leyes_simulacion.md. Una ley rota no revierte nada (los datos ya están), pero cambia el exit code:
+    // la corrida no se declara buena.
+    var leyes = Invariantes.Evaluar(stats, orchestrator.Pool, simSettings);
+    ReportarLeyes(leyes, "Leyes de la simulación", rotasSonError: true);
+    var leyesRotas = Invariantes.Rotas(leyes);
+    if (leyesRotas.Count > 0)
+        logger.LogError(
+            "La corrida termina con {N} ley(es) de la simulación ROTA(S) ({Codigos}): los datos están " +
+            "sembrados, pero NO describen una clínica coherente. No los des por buenos.",
+            leyesRotas.Count, string.Join(", ", leyesRotas.Select(l => l.Codigo)));
+    else
+        logger.LogInformation("Leyes de la simulación: todas las aplicables se cumplen.");
+
+    if (fileLogger.Ruta is { } rutaFinal)
+        logger.LogInformation("Log completo de la corrida: {Ruta}", rutaFinal);
+
     // ══ Etapa 5/5 · Fechas de auditoría ══════════════════════════════════════════════════════════
     var codigoFechas = await CorregirFechasAsync(soloDryRun: false, automatico: true);
 
     EsperarTecla();
-    return run.Etapa == "error" ? 1 : codigoFechas;
+    if (run.Etapa == "error") return 1;
+    if (codigoFechas != 0) return codigoFechas;
+    return leyesRotas.Count > 0 ? 3 : 0;
 }
 
 /// <summary>
@@ -438,50 +538,177 @@ void EsperarTecla()
 /// <summary>
 /// Informe de los días que se van a simular: ventana, volumen previsto y desglose. Con pocos días el
 /// desglose es diario; con muchos (corridas de meses o años) se agrupa por mes para no inundar la
-/// consola. Los volúmenes ya vienen sorteados (peso del día de la semana + normal), así que esto es
-/// exactamente lo que se va a sembrar, no una estimación.
+/// consola.
+///
+/// <para>Sin crecimiento, los volúmenes ya vienen sorteados (peso del día + normal): es exactamente lo
+/// que se va a sembrar. <b>Con crecimiento activo el volumen no se puede precalcular</b> — depende de
+/// cuántos pacientes satisfechos vaya acumulando la clínica —, así que se muestra la <b>proyección
+/// determinista</b> de la curva de Bass: una estimación, no una predicción. La curva real la escribe la
+/// corrida en <c>crecimiento_diario.csv</c>.</para>
 /// </summary>
 void ReportarPlan(IReadOnlyList<DailySchedule> plan)
 {
-    var es          = System.Globalization.CultureInfo.GetCultureInfo("es-ES");
-    var conAtencion = plan.Where(d => d.TotalPatients > 0).ToList();
-    var total       = plan.Sum(d => d.TotalPatients);
-    var nuevos      = plan.Sum(d => d.NuevosPacientes);
-    var recurrentes = plan.Sum(d => d.PacientesRecurrentes);
+    var es = System.Globalization.CultureInfo.GetCultureInfo("es-ES");
+    var cr = simSettings.Crecimiento;
 
     logger.LogInformation("══ Etapa 2/5 · Días a simular ══");
+
+    // La proyección describe los dos modos: con crecimiento las altas las pide Bass, sin él salen del plan
+    // precalculado — pero los RETORNOS los estima igual, porque en ambos modos los pone el panel. El boca a
+    // boca se deriva UNA vez (la bisección recorre la ventana entera) y se reusa en todo el informe.
+    var qBocaABoca = cr.Enabled ? BassGrowthModel.CoeficienteImitacion(plan, simSettings) : 0;
+    var proyeccion = BassGrowthModel.Proyectar(plan, simSettings, qBocaABoca);
+
+    var dias = proyeccion.Where(d => d.Total > 0)
+        .Select(d => (Fecha: d.Fecha, Total: d.Total, Nuevos: d.Nuevos, Recurrentes: d.Recurrentes))
+        .ToList();
+
+    var total       = dias.Sum(d => d.Total);
+    var nuevos      = dias.Sum(d => d.Nuevos);
+    var recurrentes = dias.Sum(d => d.Recurrentes);
+
     logger.LogInformation(
         "Ventana: {Inicio:yyyy-MM-dd} → {Fin:yyyy-MM-dd} | {Dias} días naturales, {ConAtencion} con " +
         "atención ({Cerrados} cerrados por peso 0 en WeekdayWeights)",
         simSettings.StartDate, simSettings.EndDate,
-        plan.Count, conAtencion.Count, plan.Count - conAtencion.Count);
-    logger.LogInformation(
-        "Volumen previsto: {Total} visitas ({Nuevos} de pacientes nuevos + {Rec} de recurrentes) | " +
-        "media {Media:0.0}/día de atención | {Medio} pac/día medio configurado, {Pct}% recurrentes",
-        total, nuevos, recurrentes,
-        conAtencion.Count == 0 ? 0 : (double)total / conAtencion.Count,
-        simSettings.PacientesPorDiaMedio, simSettings.PorcentajeRecurrentes);
+        plan.Count, dias.Count, plan.Count - dias.Count);
 
-    if (conAtencion.Count == 0)
+    if (dias.Count == 0)
     {
         logger.LogWarning("Ningún día de la ventana tiene pacientes — revisa WeekdayWeights y las fechas.");
         return;
     }
 
-    if (conAtencion.Count <= 31)
+    // Cuánta consulta genera el panel POR SÍ SOLO: cada paciente captado vuelve 1/(1−k) veces. Es el
+    // "suelo" de la clínica y el número que explica por qué el volumen ya no se puede derivar de las altas.
+    var k = BassGrowthModel.ProbabilidadDeRetorno(simSettings);
+    logger.LogInformation(
+        "El panel genera su propia consulta: {K:P0} de las visitas dejan otra visita del mismo paciente " +
+        "(cita de control + retorno espontáneo) → cada paciente vuelve {V:0.0} veces, y esa misma fracción " +
+        "es la de recurrentes en régimen. Las altas ({Medio}/día al arrancar) son solo la puerta de entrada.",
+        k, BassGrowthModel.VisitasPorPaciente(k), simSettings.PacientesPorDiaMedio);
+
+    if (cr.Enabled)
     {
-        foreach (var d in conAtencion)
-            logger.LogInformation("   {Fecha:yyyy-MM-dd} {Dia,-9} {Total,3} visitas ({Nuevos} nuevos, {Rec} recurrentes)",
-                d.Date, es.DateTimeFormat.GetDayName(d.Date.DayOfWeek),
-                d.TotalPatients, d.NuevosPacientes, d.PacientesRecurrentes);
+        var (meseta, mediaFinal) = BassGrowthModel.MediasProyectadas(plan, simSettings, qBocaABoca);
+        var ultimo = proyeccion[^1];
+        var suelo  = BassGrowthModel.MesetaProyectada(plan, simSettings, 0);
+
+        logger.LogInformation(
+            "Crecimiento (difusión de Bass): arranca en {Medio} altas/día y apunta a {Objetivo} visitas/día " +
+            "(que es también el AFORO de la consulta) | sin nada de boca a boca la clínica ya llegaría a " +
+            "{Suelo:0.0}/día solo con su panel | boca a boca {Origen}: 1 alta más al día por cada {Q:0.0} " +
+            "recurrentes satisfechos | la rampa dura lo que la memoria del boca a boca ({Ventana} días) | " +
+            "área de {M} personas, techo de seguridad {Max}/día",
+            simSettings.PacientesPorDiaMedio, cr.PacientesPorDiaObjetivo, suelo,
+            cr.RecurrentesPorPacienteExtra > 0 ? "fijado a mano" : "derivado del objetivo",
+            qBocaABoca > 0 ? 1 / qBocaABoca : 0,
+            cr.VentanaActividadDias, cr.PoblacionCaptacion, cr.PacientesPorDiaMax);
+
+        logger.LogInformation(
+            "Proyección (ESTIMACIÓN determinista, la corrida real la medirá): {Total} visitas " +
+            "({Nuevos} altas + {Rec} controles = {PctRec:0} % recurrentes) | se estabiliza en {Meseta:0.0}/día | " +
+            "al cierre: {Captados} pacientes captados, {Activos} siguen viniendo = {Pct:0.0} % del área, " +
+            "{S} recurrentes satisfechos",
+            total, nuevos, recurrentes, total == 0 ? 0 : 100.0 * recurrentes / total, meseta,
+            ultimo.CaptadosTotal, ultimo.Activos,
+            cr.PoblacionCaptacion == 0 ? 0 : 100.0 * ultimo.Activos / cr.PoblacionCaptacion,
+            ultimo.Satisfechos);
+
+        if (suelo >= cr.PacientesPorDiaObjetivo)
+            logger.LogWarning(
+                "El objetivo ({Objetivo}/día) NO supera lo que el panel produce solo ({Suelo:0.0}/día): la " +
+                "clínica no necesita boca a boca para llegar y la curva no crecerá. Sube el objetivo o baja " +
+                "Recurrence.VisitasEspontaneasPorPacienteAno.",
+                cr.PacientesPorDiaObjetivo, suelo);
+        else if (cr.RecurrentesPorPacienteExtra == 0 && meseta < cr.PacientesPorDiaObjetivo * 0.95)
+            logger.LogWarning(
+                "La clínica NO llega al objetivo de {Objetivo}/día: se queda en {Meseta:0.0}/día. El freno lo " +
+                "pone el área de captación ({M} personas) — súbela, o baja el objetivo.",
+                cr.PacientesPorDiaObjetivo, meseta, cr.PoblacionCaptacion);
+
+        // La clínica llega a su meseta y luego SE DESINFLA: ha captado a tanta gente del área que ya no le
+        // queda a quién captar. Es un síntoma de que el área se le queda pequeña, no del modelo.
+        if (mediaFinal < meseta * 0.8)
+            logger.LogWarning(
+                "La clínica crece hasta {Meseta:0.0}/día y luego DECAE a {Final:0.0}/día: se está quedando sin " +
+                "área que captar ({Captados} pacientes distintos de {M} habitantes). Sube " +
+                "Crecimiento.PoblacionCaptacion si no es lo que buscas.",
+                meseta, mediaFinal, ultimo.CaptadosTotal, cr.PoblacionCaptacion);
+
+        // Las leyes que se pueden juzgar ANTES de sembrar. Vale más una advertencia aquí que descubrir a
+        // las 6 horas que la clínica ha registrado a media ciudad.
+        ReportarLeyes(
+            Invariantes.EvaluarProyeccion(proyeccion, simSettings),
+            titulo: "Leyes de la simulación (sobre la proyección — la corrida las medirá de verdad)",
+            rotasSonError: false);
     }
     else
     {
-        logger.LogInformation("   Desglose por mes ({N} días con atención, demasiados para listarlos):", conAtencion.Count);
-        foreach (var mes in conAtencion.GroupBy(d => new { d.Date.Year, d.Date.Month }).OrderBy(g => g.Key.Year).ThenBy(g => g.Key.Month))
-            logger.LogInformation("   {Mes,-10} {Anio}  {Dias,2} días  {Total,5} visitas ({Nuevos} nuevos, {Rec} recurrentes)",
+        logger.LogInformation(
+            "Volumen previsto: {Total} visitas ({Nuevos} altas + {Rec} controles) | media {Media:0.0}/día | " +
+            "{Medio} altas/día configuradas | crecimiento DESACTIVADO (las altas salen del plan fijo; los " +
+            "controles los sigue poniendo el panel)",
+            total, nuevos, recurrentes,
+            (double)total / dias.Count, simSettings.PacientesPorDiaMedio);
+    }
+
+    if (dias.Count <= 31)
+    {
+        foreach (var (fecha, t, n, r) in dias)
+            logger.LogInformation("   {Fecha:yyyy-MM-dd} {Dia,-9} {Total,3} visitas ({Nuevos} altas, {Rec} controles)",
+                fecha, es.DateTimeFormat.GetDayName(fecha.DayOfWeek), t, n, r);
+    }
+    else
+    {
+        // El % de recurrentes por mes es la columna que hay que mirar: tiene que SUBIR (el panel madura).
+        // Con el cupo fijo salía plana en el 31 %, el primer mes y el último — y nadie lo vio.
+        logger.LogInformation("   Desglose por mes ({N} días con atención, demasiados para listarlos):", dias.Count);
+        foreach (var mes in dias.GroupBy(d => new { d.Fecha.Year, d.Fecha.Month })
+                     .OrderBy(g => g.Key.Year).ThenBy(g => g.Key.Month))
+        {
+            var t = mes.Sum(d => d.Total);
+            logger.LogInformation(
+                "   {Mes,-10} {Anio}  {Dias,2} días  {Total,5} visitas ({Nuevos} altas, {Rec} controles = " +
+                "{PctRec,4:0.0} % recurrentes) | media {Media:0.0}/día",
                 es.DateTimeFormat.GetMonthName(mes.Key.Month), mes.Key.Year, mes.Count(),
-                mes.Sum(d => d.TotalPatients), mes.Sum(d => d.NuevosPacientes), mes.Sum(d => d.PacientesRecurrentes));
+                t, mes.Sum(d => d.Nuevos), mes.Sum(d => d.Recurrentes),
+                t == 0 ? 0 : 100.0 * mes.Sum(d => d.Recurrentes) / t,
+                (double)t / mes.Count());
+        }
+    }
+}
+
+/// <summary>
+/// Imprime el veredicto de las <b>leyes de la simulación</b> (<see cref="Invariantes"/>): las propiedades
+/// que una corrida tiene que cumplir para que los datos describan una clínica y no un montón de filas
+/// plausibles. Cada ley con su número medido al lado.
+///
+/// <para>Existe porque el modelo de crecimiento se añadió, rompió la continuidad longitudinal del paciente
+/// —el 65 % de los crónicos no volvió jamás a un control, la mitad de la agenda se perdió— y la corrida
+/// terminó en "completado" sin una sola advertencia. Doc: <c>leyes_simulacion.md</c>.</para>
+/// </summary>
+void ReportarLeyes(IReadOnlyList<Ley> leyes, string titulo, bool rotasSonError)
+{
+    if (leyes.Count == 0) return;
+
+    logger.LogInformation("{Titulo}:", titulo);
+    foreach (var ley in leyes)
+    {
+        var marca = !ley.Aplica ? "—" : ley.Cumple ? "✓" : "✗";
+        if (ley.Aplica && !ley.Cumple)
+            logger.LogWarning("   {Marca} {Codigo} · {Nombre}: {Medido}", marca, ley.Codigo, ley.Nombre, ley.Medido);
+        else if (!ley.Aplica)
+            logger.LogInformation("   {Marca} {Codigo} · {Nombre}: no procede en esta corrida (ventana corta o sin datos)",
+                marca, ley.Codigo, ley.Nombre);
+        else
+            logger.LogInformation("   {Marca} {Codigo} · {Nombre}: {Medido}", marca, ley.Codigo, ley.Nombre, ley.Medido);
+    }
+
+    foreach (var ley in Invariantes.Rotas(leyes))
+    {
+        if (rotasSonError) logger.LogError("   ↳ {Codigo}: {Pista}", ley.Codigo, ley.Pista);
+        else               logger.LogWarning("   ↳ {Codigo}: {Pista}", ley.Codigo, ley.Pista);
     }
 }
 

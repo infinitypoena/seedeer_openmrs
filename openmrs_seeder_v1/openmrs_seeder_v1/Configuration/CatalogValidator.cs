@@ -37,6 +37,10 @@ public static class CatalogValidator
     private static readonly IReadOnlySet<string> Severidades = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         { "leve", "moderado", "grave" };
 
+    /// <summary>Qué puede hacer la clínica con el cuadro: tratarlo ella, o estabilizarlo y referirlo.</summary>
+    private static readonly IReadOnlySet<string> Ambitos = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        { "clinica", "referencia" };
+
     private static readonly IReadOnlySet<string> TiposAlergeno = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         { "DRUG", "FOOD", "ENVIRONMENT" };
 
@@ -73,7 +77,7 @@ public static class CatalogValidator
 
         ValidarSinDuplicados(c, errores);
         ValidarEpidemiologia(c, errores);
-        ValidarDiagnosticos(c, errores);
+        ValidarDiagnosticos(c, errores, avisos);
         ValidarCruceCategorias(c, errores);
         ValidarLaboratorios(c, errores, avisos);
         ValidarPersonalLaboratorio(c, errores, avisos);
@@ -183,7 +187,7 @@ public static class CatalogValidator
             }
     }
 
-    private static void ValidarDiagnosticos(CatalogLoader c, List<string> errores)
+    private static void ValidarDiagnosticos(CatalogLoader c, List<string> errores, List<string> avisos)
     {
         var imc  = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "alto", "bajo" };
         var alta = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "alta" };
@@ -200,6 +204,15 @@ public static class CatalogValidator
             if (!EsCategoria(d.Categoria))
                 errores.Add($"{donde}: categoria='{d.Categoria}' no es una de las 13 categorías del simulador");
             Enum_(d.Severidad, Severidades, donde, "severidad", errores, permiteVacio: false);
+
+            Enum_(d.Ambito, Ambitos, donde, "ambito", errores);
+            // Un cuadro que se refiere al hospital es agudo por definición: se estabiliza y se traslada.
+            // Una crónica (VIH, tuberculosis, pie diabético) la maneja el primer nivel con sus programas.
+            // Que una fila sea las dos cosas casi siempre significa que se marcó por severidad, no por
+            // criterio clínico.
+            if (d.EsReferencia && d.EsCronica)
+                avisos.Add($"{donde}: es ambito=referencia Y cronica=true — una condición crónica la " +
+                           "maneja el primer nivel, no se refiere al hospital. Revisa el etiquetado.");
 
             if (d.Sexo is not ("" or "M" or "F"))
                 errores.Add($"{donde}: sexo='{d.Sexo}' no es válido (esperado: M | F | vacío = ambos)");
