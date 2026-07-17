@@ -233,6 +233,13 @@ public class SalidaSettings
     /// de líneas y la terminal no las guarda.
     /// </summary>
     public bool ArchivoLog { get; set; } = true;
+
+    /// <summary>
+    /// Volcar a <c>output/errores.csv</c> una fila por cada error de operación e ítem perdido (timestamp,
+    /// componente, tipo, mensaje completo). El <c>.log</c> los tiene pero mezclados con miles de líneas
+    /// INFO; el resumen de consola los trunca y capa a 100 — este CSV es la vista navegable.
+    /// </summary>
+    public bool ArchivoErrores { get; set; } = true;
 }
 
 /// <summary>

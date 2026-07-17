@@ -227,7 +227,12 @@ BEGIN
     SELECT p_ejecucion, 'preparar', 'sim_fecha_cita', COUNT(*), 'citas en alcance' FROM sim_fecha_cita;
 
     -- ── El plan: toda fila en alcance con su fecha destino ──────────────────
-    DELETE FROM sim_fecha_plan;
+    -- TRUNCATE, no DELETE: el plan de una corrida grande ronda las 800k filas y un DELETE
+    -- completo tardaba >1 h (undo row a row) — saltaba el timeout del driver y dejaba a
+    -- MariaDB otra hora haciendo rollback. TRUNCATE es DDL (instantáneo) y aquí es
+    -- equivalente: vaciado total de una tabla de trabajo sin FKs. El backup reversible
+    -- (sim_fecha_backup) NO se toca.
+    TRUNCATE TABLE sim_fecha_plan;
 
     -- 1-6 · Registro del paciente: no tienen fecha de negocio, se derivan de la primera visita
     INSERT INTO sim_fecha_plan (tabla, pk, nueva_created)

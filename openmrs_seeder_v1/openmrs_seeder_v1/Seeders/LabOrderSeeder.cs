@@ -46,7 +46,7 @@ public class LabOrderSeeder
     {
         if (string.IsNullOrEmpty(patient.ConsultaEncounterUuid))
         {
-            _logger.LogWarning("[LabOrder] Skip: sin encounter de consulta para {Id}", patient.Identifier);
+            _logger.LogWarning(Eventos.ItemPerdido, "[LabOrder] Skip: sin encounter de consulta para {Id}", patient.Identifier);
             return;
         }
 
@@ -141,7 +141,7 @@ public class LabOrderSeeder
         }
         catch (Exception ex)
         {
-            _logger.LogError("[LabOrder] Error en orden para {Id}: {Msg}", patient.Identifier, ex.Message);
+            _logger.LogError(ex, "[LabOrder] Error en orden para {Id}: {Msg}", patient.Identifier, ex.Message);
             return null;
         }
     }

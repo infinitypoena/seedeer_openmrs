@@ -134,7 +134,7 @@ public class AllergySeeder
         }
         catch (Exception ex)
         {
-            _logger.LogError("[Allergy] Error en alérgeno '{Alergeno}' para {Id}: {Msg}",
+            _logger.LogError(ex, "[Allergy] Error en alérgeno '{Alergeno}' para {Id}: {Msg}",
                 alergeno.NombreEs, identifier, ex.Message);
             return false;
         }

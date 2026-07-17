@@ -36,7 +36,7 @@ public class PrescriptionSeeder
     {
         if (string.IsNullOrEmpty(patient.ConsultaEncounterUuid))
         {
-            _logger.LogWarning("[Prescription] Skip: sin encounter de consulta para {Id}", patient.Identifier);
+            _logger.LogWarning(Eventos.ItemPerdido, "[Prescription] Skip: sin encounter de consulta para {Id}", patient.Identifier);
             return;
         }
 
@@ -124,7 +124,7 @@ public class PrescriptionSeeder
         }
         catch (Exception ex)
         {
-            _logger.LogError("[Prescription] Error en prescripción para {Id}: {Msg}", patient.Identifier, ex.Message);
+            _logger.LogError(ex, "[Prescription] Error en prescripción para {Id}: {Msg}", patient.Identifier, ex.Message);
             return false;
         }
     }

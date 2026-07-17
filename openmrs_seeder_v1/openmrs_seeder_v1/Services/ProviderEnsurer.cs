@@ -60,7 +60,7 @@ public class ProviderEnsurer
         }
         catch (Exception ex)
         {
-            _logger.LogError("[Provider] Error asegurando {Id}: {Msg}", identifier, ex.Message);
+            _logger.LogError(ex, "[Provider] Error asegurando {Id}: {Msg}", identifier, ex.Message);
             return null;
         }
     }

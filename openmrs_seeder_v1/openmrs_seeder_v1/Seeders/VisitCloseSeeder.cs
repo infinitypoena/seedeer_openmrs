@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using OpenmrsSeeder.Clients;
 using OpenmrsSeeder.Models.Simulation;
+using OpenmrsSeeder.Services;
 
 namespace OpenmrsSeeder.Seeders;
 
@@ -24,7 +25,7 @@ public class VisitCloseSeeder
     {
         if (string.IsNullOrEmpty(patient.VisitUuid))
         {
-            _logger.LogWarning("[VisitClose] Skip: sin VisitUuid para {Id}", patient.Identifier);
+            _logger.LogWarning(Eventos.ItemPerdido, "[VisitClose] Skip: sin VisitUuid para {Id}", patient.Identifier);
             return;
         }
 
@@ -42,7 +43,7 @@ public class VisitCloseSeeder
         }
         catch (Exception ex)
         {
-            _logger.LogError("[VisitClose] Error cerrando visita de {Id}: {Msg}", patient.Identifier, ex.Message);
+            _logger.LogError(ex, "[VisitClose] Error cerrando visita de {Id}: {Msg}", patient.Identifier, ex.Message);
         }
     }
 

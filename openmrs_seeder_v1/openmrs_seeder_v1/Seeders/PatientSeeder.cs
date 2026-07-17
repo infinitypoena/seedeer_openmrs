@@ -99,11 +99,11 @@ public class PatientSeeder
                 _logger.LogInformation("[Patient] Creado {Id} → {Uuid}", patient.Identifier, uuid);
                 return uuid;
             }
-            _logger.LogWarning("[Patient] Respuesta sin uuid para {Id}", patient.Identifier);
+            _logger.LogWarning(Eventos.ItemPerdido, "[Patient] Respuesta sin uuid para {Id}", patient.Identifier);
         }
         catch (Exception ex)
         {
-            _logger.LogError("[Patient] Error creando {Id}: {Msg}", patient.Identifier, ex.Message);
+            _logger.LogError(ex, "[Patient] Error creando {Id}: {Msg}", patient.Identifier, ex.Message);
         }
 
         return null;

@@ -462,9 +462,9 @@ info: Seeder[0]
 ```
 
 - El **resumen inicial** reemplaza al viejo `GET /status`: estado de OpenMRS, ventana, volumen y conteos de catálogos. Si OpenMRS no responde, el proceso termina sin tocar datos.
-- El **progreso** se imprime cada ~15 segundos (porcentaje, fecha simulada, pacientes, errores).
-- El **resumen final** lista los errores no fatales uno a uno (el pipeline continúa con el siguiente paciente ante errores individuales).
-- **Ctrl+C** cancela limpiamente: los datos ya insertados persisten y se imprime el resumen parcial.
+- El **progreso** se imprime cada ~15 segundos (porcentaje, fecha simulada, pacientes, y los tres contadores de error — ver abajo).
+- El **resumen final** distingue tres medidas que **no se suman entre sí**: errores de **PROCESO** (un paciente/visita que no se pudo crear — se interrumpió el pipeline de esa visita), errores de **OPERACIÓN** (una escritura REST que falló, clasificada por tipo: `4xx` = dato rechazado, determinista, se repetirá; `5xx`/`timeout`/`red` = entorno, transitorio) e **ÍTEMS PERDIDOS** (un dato que debió sembrarse y no quedó; varias pérdidas pueden compartir una misma causa). Muestra el desglose componente × tipo y hasta 100 mensajes; el detalle completo, fila a fila y sin truncar, queda en `output/errores.csv` (los stacktraces, en `output/corrida_<fecha>.log`).
+- **Ctrl+C** cancela limpiamente: los datos ya insertados persisten y se imprime el resumen parcial (la cascada de cancelación no se cuenta como errores).
 
 **Exit codes** (útiles para scripts/automatización):
 

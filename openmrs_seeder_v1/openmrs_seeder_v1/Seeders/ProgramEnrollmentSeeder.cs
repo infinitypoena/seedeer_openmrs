@@ -79,7 +79,7 @@ public class ProgramEnrollmentSeeder
             }
             catch (Exception ex)
             {
-                _logger.LogError("[Program] Error inscribiendo {Prog} para {Id}: {Msg}",
+                _logger.LogError(ex, "[Program] Error inscribiendo {Prog} para {Id}: {Msg}",
                     prog.Nombre, patient.Identifier, ex.Message);
             }
         }

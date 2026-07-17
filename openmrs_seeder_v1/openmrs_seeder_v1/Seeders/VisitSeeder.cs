@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using OpenmrsSeeder.Clients;
 using OpenmrsSeeder.Configuration;
 using OpenmrsSeeder.Models.Simulation;
+using OpenmrsSeeder.Services;
 
 namespace OpenmrsSeeder.Seeders;
 
@@ -40,7 +41,7 @@ public class VisitSeeder
                     uuid, patient.Identifier, patient.VisitDatetime.ToString("yyyy-MM-dd"));
                 return uuid;
             }
-            _logger.LogWarning("[Visit] Respuesta sin uuid para {Id}", patient.Identifier);
+            _logger.LogWarning(Eventos.ItemPerdido, "[Visit] Respuesta sin uuid para {Id}", patient.Identifier);
         }
         catch (HttpRequestException ex) when (ex.Message.Contains("visitCannotOverlapAnother"))
         {
@@ -56,7 +57,7 @@ public class VisitSeeder
         }
         catch (Exception ex)
         {
-            _logger.LogError("[Visit] Error para {Id} ({Date}): {Msg}",
+            _logger.LogError(ex, "[Visit] Error para {Id} ({Date}): {Msg}",
                 patient.Identifier, patient.VisitDatetime.ToString("yyyy-MM-dd"), ex.Message);
         }
         return null;
@@ -74,7 +75,7 @@ public class VisitSeeder
         }
         catch (Exception ex)
         {
-            _logger.LogError("[Visit] Error buscando visita activa para {Patient}: {Msg}", patientUuid, ex.Message);
+            _logger.LogError(ex, "[Visit] Error buscando visita activa para {Patient}: {Msg}", patientUuid, ex.Message);
         }
         return null;
     }

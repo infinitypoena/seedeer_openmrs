@@ -68,6 +68,12 @@ var fileLogger = new FileLoggerProvider(
     simSettings.Salida.ArchivoLog ? carpetaSalida : null, DateTime.Now);
 builder.Logging.AddProvider(fileLogger);
 
+// errores.csv: una fila por error de operación e ítem perdido, con el mensaje completo. Es bitácora
+// de todo el proceso (el Reset del tally al iniciar la corrida limpia los contadores del resumen,
+// pero el CSV conserva lo escrito en las etapas 1-2 — a propósito).
+using var erroresCsv = new ErrorReportWriter(simSettings.Salida.ArchivoErrores ? carpetaSalida : null);
+errorTally.Sink = erroresCsv.Escribir;
+
 // Servicios singleton (stateless, seguros para reusar)
 builder.Services.AddSingleton<SeedProgressTracker>();
 builder.Services.AddSingleton<RunStats>();
@@ -264,9 +270,9 @@ async Task<int> EjecutarSimulacionAsync()
                 var r = tracker.GetRun(runId);
                 if (r is null) continue;
                 logger.LogInformation(
-                    "Progreso: {Pct}% | día {Dias}/{Total} ({Fecha}) | {Pacientes} pacientes | {Errores} errores de proceso | {Operacion} errores de operación",
+                    "Progreso: {Pct}% | día {Dias}/{Total} ({Fecha}) | {Pacientes} pacientes | {Errores} errores de proceso | {Operacion} errores de operación | {Perdidas} ítems perdidos",
                     r.Porcentaje, r.DiasProcesados, r.TotalDias, r.FechaActual,
-                    r.PacientesCreados, r.Errores.Count, errorTally.Total);
+                    r.PacientesCreados, r.Errores.Count, errorTally.Total, errorTally.TotalPerdidas);
             }
         }
         catch (OperationCanceledException) { /* fin normal */ }
@@ -398,16 +404,7 @@ async Task<int> EjecutarSimulacionAsync()
             logger.LogInformation("   {Puesto}. {Nombre,-45} {Veces,4} veces ({Pct:0.0} %)", puesto++, nombre, veces, pct);
     }
 
-    logger.LogInformation("Errores: {Proceso} de proceso | {Operacion} de operación",
-        run.Errores.Count, errorTally.Total);
-    foreach (var error in run.Errores)
-        logger.LogWarning("  [proceso] {Error}", error);
-    if (errorTally.Total > 0)
-    {
-        logger.LogWarning("Errores de operación por componente: {Desglose}", errorTally.Desglose());
-        foreach (var mensaje in errorTally.Mensajes)
-            logger.LogWarning("  {Mensaje}", mensaje);
-    }
+    ReportarErrores(run);
 
     // ── Las leyes de la simulación ────────────────────────────────────────────────────────────────
     // El veredicto sobre lo que de VERDAD se sembró. Una corrida puede terminar sin un solo error y aun
@@ -710,6 +707,57 @@ void ReportarLeyes(IReadOnlyList<Ley> leyes, string titulo, bool rotasSonError)
         if (rotasSonError) logger.LogError("   ↳ {Codigo}: {Pista}", ley.Codigo, ley.Pista);
         else               logger.LogWarning("   ↳ {Codigo}: {Pista}", ley.Codigo, ley.Pista);
     }
+}
+
+/// <summary>
+/// Bloque de errores del resumen final. Tres medidas que NO se suman entre sí: los errores de PROCESO
+/// (un paciente/visita que no se pudo crear — se interrumpió el pipeline de esa visita), los de
+/// OPERACIÓN (una escritura REST que falló, clasificada por tipo: un 4xx es un dato rechazado que se
+/// repetirá, un timeout es transitorio) y los ÍTEMS PERDIDOS (un dato que debió sembrarse y no quedó;
+/// varias pérdidas pueden compartir una misma causa). El detalle fila a fila queda en errores.csv.
+/// </summary>
+void ReportarErrores(SeedRun run)
+{
+    if (run.Errores.Count == 0 && errorTally.EventosTotales == 0)
+    {
+        logger.LogInformation("Errores: 0 de proceso, 0 de operación, 0 ítems perdidos.");
+        return;
+    }
+
+    logger.LogInformation(
+        "Errores — PROCESO = interrumpió la visita o la corrida; OPERACIÓN = una escritura REST que " +
+        "falló; ÍTEM PERDIDO = un dato que debió sembrarse y no quedó (varias pérdidas pueden compartir " +
+        "una misma causa):");
+    logger.LogInformation("   De proceso: {Proceso} | De operación: {Operacion} | Ítems perdidos: {Perdidas}",
+        run.Errores.Count, errorTally.Total, errorTally.TotalPerdidas);
+
+    foreach (var error in run.Errores)
+        logger.LogWarning("   [proceso] {Error}", error);
+
+    if (errorTally.Total > 0)
+    {
+        logger.LogWarning("   Errores de operación por componente × tipo:");
+        foreach (var (fuente, tipo, n) in errorTally.PorFuenteYTipo())
+            logger.LogWarning("      {Fuente,-28} {Tipo,-24} {N,5}", fuente, ClasificadorErrores.Etiqueta(tipo), n);
+    }
+
+    if (errorTally.TotalPerdidas > 0)
+        logger.LogWarning("   Ítems perdidos por componente: {Desglose}", errorTally.DesglosePerdidas());
+
+    if (errorTally.Mensajes.Count > 0)
+    {
+        if (errorTally.EventosTotales > errorTally.Mensajes.Count)
+            logger.LogWarning("   Mensajes (mostrando {Retenidos} de {Total} — el resto solo en errores.csv):",
+                errorTally.Mensajes.Count, errorTally.EventosTotales);
+        else
+            logger.LogWarning("   Mensajes:");
+        foreach (var mensaje in errorTally.Mensajes)
+            logger.LogWarning("      {Mensaje}", mensaje);
+    }
+
+    if (erroresCsv.Ruta is { } rutaErrores)
+        logger.LogInformation("   Detalle fila a fila: {Ruta} (los stacktraces completos, en el .log de la corrida)",
+            rutaErrores);
 }
 
 async Task<int> EjecutarLimpiezaAsync()

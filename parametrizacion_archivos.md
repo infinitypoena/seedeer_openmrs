@@ -934,6 +934,23 @@ identifier,uuid,visitas,calificaciones,promedio,satisfecho,activo,ultima_visita,
 SIM-000123,3f2a…,4,5|4|5|4,4.5,true,true,2024-08-03,2024-11-12,2
 ```
 
+**`output/errores.csv`** (`Salida.ArchivoErrores`, def. `true`) — una fila por **error de operación**
+(una escritura REST que falló, clasificada: `4xx` = dato rechazado, determinista; `5xx`/`timeout`/`red` =
+entorno, transitorio) y por **ítem perdido** (un dato que debió sembrarse y no quedó — los warnings
+marcados con `Eventos.ItemPerdido`). El mensaje va **completo** (el resumen de consola lo trunca a 220 y
+capa 100 mensajes; el `.log` lo tiene pero mezclado con miles de líneas INFO). Se crea al arrancar con
+solo la cabecera: un fichero sin filas es la evidencia positiva de "0 errores". Los errores posteriores a
+un Ctrl+C no se anotan (la cascada de cancelación no son fallos reales).
+
+```csv
+timestamp,componente,evento,tipo,mensaje
+2026-07-17 10:30:05,LabOrderSeeder,error,4xx,"POST order → 400 Bad Request: …"
+2026-07-17 10:31:12,VitalsSeeder,item_perdido,,"[Vitals] Skip obs: encounter no creado para SIM-000123"
+```
+
+**`output/corrida_<fecha>.log`** (`Salida.ArchivoLog`, def. `true`) — el espejo exacto de la consola
+(las 5 etapas, el progreso, los errores **con su stacktrace completo**).
+
 ---
 
 ## Resumen: qué editar para cambiar el comportamiento
@@ -949,6 +966,7 @@ SIM-000123,3f2a…,4,5|4|5|4,4.5,true,true,2024-08-03,2024-11-12,2
 | A partir de cuántos pacientes/día se resiente la atención | `appsettings.json` → `Satisfaccion.CapacidadComodaPorDia` (ponlo ≈ el objetivo) |
 | Cuántos pacientes abandonan la clínica descontentos | `appsettings.json` → `Satisfaccion.UmbralSatisfaccion` / `Crecimiento.AsistenciaProbInsatisfecho` |
 | Dónde se escriben los CSV de la corrida | `appsettings.json` → `Salida.Carpeta` (vacío = no escribir) |
+| Apagar el CSV de errores / el log en fichero | `appsettings.json` → `Salida.ArchivoErrores` / `Salida.ArchivoLog` |
 | Variación estadística diaria | Con crecimiento: es Poisson (varianza = λ). Sin él: `DailyScheduleGenerator.cs` → σ del Normal |
 | Perfil pediátrico de la clínica | `appsettings.json` → `DemographicProfile.PediatricClinic` |
 | Distribución etaria | `appsettings.json` → `DemographicProfile.AgeGroups` |

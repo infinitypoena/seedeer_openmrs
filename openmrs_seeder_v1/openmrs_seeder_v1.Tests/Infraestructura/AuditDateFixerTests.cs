@@ -39,4 +39,20 @@ public class AuditDateFixerTests
 
         Assert.True(distintos > 8, $"Se esperaba variedad de desfases, hubo {distintos}");
     }
+
+    [Fact]
+    public void FormatearLineaLog_SinTabla_SoloFaseYMensaje()
+    {
+        Assert.Equal("[aplicar] inicio (lote 5000)",
+            AuditDateFixer.FormatearLineaLog("aplicar", null, null, "inicio (lote 5000)"));
+    }
+
+    [Fact]
+    public void FormatearLineaLog_ConTabla_ColumnasAlineadas()
+    {
+        // El mismo formato lo usan el volcado normal y el poller de progreso en vivo: si divergen,
+        // el log de la etapa 5/5 se vuelve ilegible a mitad del CALL largo
+        Assert.Equal("[aplicar] obs                                5000  lote pk [0, 5000)",
+            AuditDateFixer.FormatearLineaLog("aplicar", "obs", 5000, "lote pk [0, 5000)"));
+    }
 }

@@ -81,7 +81,14 @@ public class AuditDateFixer(
         var previsto = await LeerConteosAsync(cn,
             "CALL sp_sim_fechas_aplicar(1, @lote, @eje)", ct,
             ("@lote", _db.TamanoLote), ("@eje", ejecucion));
-        _ = await ConsumirLogAsync(cn, ejecucion, ct);   // el detalle por lote del dry-run no aporta
+
+        // En el --dry-run explícito (el modo de inspección) se muestra el detalle por lote que escriben
+        // los SP, menos los totales por tabla, que ya se imprimen abajo desde el result set. En la pasada
+        // automática previa al apply se descarta: ahí es ruido antes de la confirmación.
+        var detalleDryRun = await ConsumirLogAsync(cn, ejecucion, ct);
+        if (soloDryRun)
+            foreach (var fila in detalleDryRun.Where(f => f.Mensaje != "filas que se corregirían"))
+                logger.LogInformation("   {Linea}", FormatearLineaLog(fila.Fase, fila.Tabla, fila.Filas, fila.Mensaje));
 
         var totalPrevisto = previsto.Sum(p => p.Filas);
         if (totalPrevisto == 0)
@@ -109,9 +116,23 @@ public class AuditDateFixer(
         // ── Aplicar ─────────────────────────────────────────────────────────────────────────────────
         logger.LogInformation("Aplicando por lotes de {Lote} filas (snapshot reversible en sim_fecha_backup)…",
             _db.TamanoLote);
-        var aplicado = await LeerConteosAsync(cn,
-            "CALL sp_sim_fechas_aplicar(0, @lote, @eje)", ct,
-            ("@lote", _db.TamanoLote), ("@eje", ejecucion));
+
+        // Progreso en vivo: el CALL puede tardar minutos (obs son ~170k filas) y sin esto la consola
+        // queda muda hasta el final. El poller usa su propia conexión; ver VolcarLogPeriodicamenteAsync.
+        List<(string Tabla, long Filas)> aplicado;
+        using var pollerCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        var poller = VolcarLogPeriodicamenteAsync(conexion.ConnectionString, ejecucion, _ultimoLog, pollerCts.Token);
+        try
+        {
+            aplicado = await LeerConteosAsync(cn,
+                "CALL sp_sim_fechas_aplicar(0, @lote, @eje)", ct,
+                ("@lote", _db.TamanoLote), ("@eje", ejecucion));
+        }
+        finally
+        {
+            pollerCts.Cancel();
+            _ultimoLog = Math.Max(_ultimoLog, await poller);
+        }
         await VolcarLogAsync(cn, ejecucion, ct);
 
         var totalAplicado = aplicado.Sum(a => a.Filas);
@@ -170,8 +191,20 @@ public class AuditDateFixer(
         return filas;
     }
 
-    /// <summary>Lee las filas nuevas del log persistente y las devuelve (sin imprimirlas).</summary>
-    private async Task<List<string>> ConsumirLogAsync(MySqlConnection cn, string ejecucion, CancellationToken ct)
+    /// <summary>
+    /// Seam puro: la línea de consola de una fila de <c>sim_fecha_log</c> — prefijo de fase entre
+    /// corchetes y, si la fila habla de una tabla, columnas alineadas (tabla a 30, filas a 8).
+    /// </summary>
+    public static string FormatearLineaLog(string fase, string? tabla, long? filas, string mensaje) =>
+        tabla is null
+            ? $"[{fase}] {mensaje}"
+            : $"[{fase}] {tabla,-30} {filas,8}  {mensaje}";
+
+    private sealed record FilaLog(long Id, string Fase, string? Tabla, long? Filas, string Mensaje);
+
+    /// <summary>Lee las filas nuevas del log persistente (a partir de <paramref name="desdeId"/>) sin imprimirlas.</summary>
+    private static async Task<List<FilaLog>> LeerLogAsync(
+        MySqlConnection cn, string ejecucion, long desdeId, CancellationToken ct)
     {
         const string sql = """
             SELECT id, fase, tabla, filas, mensaje
@@ -181,29 +214,67 @@ public class AuditDateFixer(
             """;
         await using var cmd = new MySqlCommand(sql, cn) { CommandTimeout = TimeoutSegundos };
         cmd.Parameters.AddWithValue("@eje", ejecucion);
-        cmd.Parameters.AddWithValue("@ultimo", _ultimoLog);
+        cmd.Parameters.AddWithValue("@ultimo", desdeId);
 
-        var lineas = new List<string>();
+        var filas = new List<FilaLog>();
         await using var reader = await cmd.ExecuteReaderAsync(ct);
         while (await reader.ReadAsync(ct))
         {
-            _ultimoLog = reader.GetInt64("id");
-            var fase    = reader.GetString("fase");
-            var tabla   = reader["tabla"] as string;
-            var filas   = reader["filas"] is DBNull ? (long?)null : Convert.ToInt64(reader["filas"]);
-            var mensaje = reader["mensaje"] as string ?? "";
-            lineas.Add(tabla is null
-                ? $"[{fase}] {mensaje}"
-                : $"[{fase}] {tabla,-30} {filas,8}  {mensaje}");
+            filas.Add(new FilaLog(
+                reader.GetInt64("id"),
+                reader.GetString("fase"),
+                reader["tabla"] as string,
+                reader["filas"] is DBNull ? null : Convert.ToInt64(reader["filas"]),
+                reader["mensaje"] as string ?? ""));
         }
-        return lineas;
+        return filas;
+    }
+
+    /// <summary>Lee las filas nuevas del log y avanza el cursor <see cref="_ultimoLog"/>.</summary>
+    private async Task<List<FilaLog>> ConsumirLogAsync(MySqlConnection cn, string ejecucion, CancellationToken ct)
+    {
+        var filas = await LeerLogAsync(cn, ejecucion, _ultimoLog, ct);
+        if (filas.Count > 0) _ultimoLog = filas[^1].Id;
+        return filas;
     }
 
     /// <summary>Vuelca a la consola el progreso que los SP han ido escribiendo en sim_fecha_log.</summary>
     private async Task VolcarLogAsync(MySqlConnection cn, string ejecucion, CancellationToken ct)
     {
-        foreach (var linea in await ConsumirLogAsync(cn, ejecucion, ct))
-            logger.LogInformation("   {Linea}", linea);
+        foreach (var fila in await ConsumirLogAsync(cn, ejecucion, ct))
+            logger.LogInformation("   {Linea}", FormatearLineaLog(fila.Fase, fila.Tabla, fila.Filas, fila.Mensaje));
+    }
+
+    /// <summary>
+    /// Progreso en vivo del CALL largo de aplicar: los SP insertan una fila en sim_fecha_log por cada
+    /// lote (autocommit, sin transacción), así que una SEGUNDA conexión puede volcarlas cada ~5 s
+    /// mientras el UPDATE de obs (~170k filas) sigue corriendo en la primera. Es cosmético: cualquier
+    /// fallo se degrada a un aviso y el volcado final imprime lo que falte. Devuelve el último id visto.
+    /// </summary>
+    private async Task<long> VolcarLogPeriodicamenteAsync(
+        string connectionString, string ejecucion, long desdeId, CancellationToken ct)
+    {
+        var ultimo = desdeId;
+        try
+        {
+            await using var cn = new MySqlConnection(connectionString);
+            await cn.OpenAsync(ct);
+            while (true)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(5), ct);
+                foreach (var fila in await LeerLogAsync(cn, ejecucion, ultimo, ct))
+                {
+                    ultimo = fila.Id;
+                    logger.LogInformation("   {Linea}", FormatearLineaLog(fila.Fase, fila.Tabla, fila.Filas, fila.Mensaje));
+                }
+            }
+        }
+        catch (OperationCanceledException) { /* fin normal: el CALL terminó */ }
+        catch (Exception ex)
+        {
+            logger.LogWarning("Progreso en vivo detenido ({Msg}) — el detalle saldrá al terminar el CALL.", ex.Message);
+        }
+        return ultimo;
     }
 
     /// <summary>

@@ -157,12 +157,12 @@ public class AppointmentSeeder
             }
             else
             {
-                _logger.LogWarning("[Appointment] Respuesta sin uuid al agendar para {Id}", patient.Identifier);
+                _logger.LogWarning(Eventos.ItemPerdido, "[Appointment] Respuesta sin uuid al agendar para {Id}", patient.Identifier);
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError("[Appointment] Error agendando cita para {Id}: {Msg}", patient.Identifier, ex.Message);
+            _logger.LogError(ex, "[Appointment] Error agendando cita para {Id}: {Msg}", patient.Identifier, ex.Message);
         }
     }
 
@@ -190,7 +190,7 @@ public class AppointmentSeeder
         }
         catch (Exception ex)
         {
-            _logger.LogError("[Appointment] Error marcando {Estado} la cita {Uuid} de {Id}: {Msg}",
+            _logger.LogError(ex, "[Appointment] Error marcando {Estado} la cita {Uuid} de {Id}: {Msg}",
                 estado, cita.Uuid, patient.Identifier, ex.Message);
             return false;
         }

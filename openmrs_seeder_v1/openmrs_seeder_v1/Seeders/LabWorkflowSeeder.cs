@@ -213,7 +213,7 @@ public class LabWorkflowSeeder
         }
         catch (Exception ex)
         {
-            _logger.LogError("[Lab] Error moviendo la orden {Order} a {Estado} para {Id}: {Msg}",
+            _logger.LogError(ex, "[Lab] Error moviendo la orden {Order} a {Estado} para {Id}: {Msg}",
                 orderUuid, estado, identifier, ex.Message);
         }
     }
@@ -245,7 +245,7 @@ public class LabWorkflowSeeder
         }
         catch (Exception ex)
         {
-            _logger.LogError("[Lab] Error creando el encuentro de laboratorio de {Id}: {Msg}",
+            _logger.LogError(ex, "[Lab] Error creando el encuentro de laboratorio de {Id}: {Msg}",
                 patient.Identifier, ex.Message);
         }
         return null;
@@ -308,7 +308,7 @@ public class LabWorkflowSeeder
         }
         catch (Exception ex)
         {
-            _logger.LogError("[Lab] Error registrando el resultado {Concept} de {Id}: {Msg}",
+            _logger.LogError(ex, "[Lab] Error registrando el resultado {Concept} de {Id}: {Msg}",
                 conceptUuid, patient.Identifier, ex.Message);
             return false;
         }

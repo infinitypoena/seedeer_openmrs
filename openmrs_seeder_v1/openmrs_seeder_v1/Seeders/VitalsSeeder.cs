@@ -39,7 +39,7 @@ public class VitalsSeeder
         var encounterUuid = await CreateEncounterAsync(patient, ct);
         if (encounterUuid is null)
         {
-            _logger.LogWarning("[Vitals] Skip obs: encounter no creado para {Id}", patient.Identifier);
+            _logger.LogWarning(Eventos.ItemPerdido, "[Vitals] Skip obs: encounter no creado para {Id}", patient.Identifier);
             return;
         }
 
@@ -78,11 +78,11 @@ public class VitalsSeeder
             var json = await _client.PostAsync("encounter", payload, ct);
             var doc  = JsonSerializer.Deserialize<JsonElement>(json);
             if (doc.TryGetProperty("uuid", out var uuid)) return uuid.GetString();
-            _logger.LogWarning("[Vitals] Encounter sin uuid para {Id}", patient.Identifier);
+            _logger.LogWarning(Eventos.ItemPerdido, "[Vitals] Encounter sin uuid para {Id}", patient.Identifier);
         }
         catch (Exception ex)
         {
-            _logger.LogError("[Vitals] Error creando encounter para {Id}: {Msg}", patient.Identifier, ex.Message);
+            _logger.LogError(ex, "[Vitals] Error creando encounter para {Id}: {Msg}", patient.Identifier, ex.Message);
         }
         return null;
     }
@@ -106,7 +106,7 @@ public class VitalsSeeder
         }
         catch (Exception ex)
         {
-            _logger.LogError("[Vitals] Error en obs {Concept} para {Id}: {Msg}", conceptUuid, identifier, ex.Message);
+            _logger.LogError(ex, "[Vitals] Error en obs {Concept} para {Id}: {Msg}", conceptUuid, identifier, ex.Message);
             return false;
         }
     }

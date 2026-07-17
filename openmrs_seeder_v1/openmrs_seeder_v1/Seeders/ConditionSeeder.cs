@@ -44,7 +44,7 @@ public class ConditionSeeder
             }
             catch (Exception ex)
             {
-                _logger.LogError("[Condition] Error agregando {Dx} para {Id}: {Msg}",
+                _logger.LogError(ex, "[Condition] Error agregando {Dx} para {Id}: {Msg}",
                     dx.NombreEs, patient.Identifier, ex.Message);
             }
         }

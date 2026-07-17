@@ -45,7 +45,7 @@ public class ConsultaSeeder
         var encounterUuid = await CreateEncounterAsync(patient, ct);
         if (encounterUuid is null)
         {
-            _logger.LogWarning("[Consulta] Encounter no creado para {Id} — LabOrder y Prescription se omitirán", patient.Identifier);
+            _logger.LogWarning(Eventos.ItemPerdido, "[Consulta] Encounter no creado para {Id} — LabOrder y Prescription se omitirán", patient.Identifier);
             return;
         }
         patient.ConsultaEncounterUuid = encounterUuid;
@@ -167,11 +167,11 @@ public class ConsultaSeeder
             var json = await _client.PostAsync("encounter", payload, ct);
             var doc  = JsonSerializer.Deserialize<JsonElement>(json);
             if (doc.TryGetProperty("uuid", out var uuid)) return uuid.GetString();
-            _logger.LogWarning("[Consulta] Encounter sin uuid para {Id}", patient.Identifier);
+            _logger.LogWarning(Eventos.ItemPerdido, "[Consulta] Encounter sin uuid para {Id}", patient.Identifier);
         }
         catch (Exception ex)
         {
-            _logger.LogError("[Consulta] Error creando encounter para {Id}: {Msg}", patient.Identifier, ex.Message);
+            _logger.LogError(ex, "[Consulta] Error creando encounter para {Id}: {Msg}", patient.Identifier, ex.Message);
         }
         return null;
     }
@@ -255,7 +255,7 @@ public class ConsultaSeeder
             value       = text
         };
         try { await _client.PostAsync("obs", payload, ct); }
-        catch (Exception ex) { _logger.LogError("[Consulta] Error obs texto para {Id}: {Msg}", identifier, ex.Message); }
+        catch (Exception ex) { _logger.LogError(ex, "[Consulta] Error obs texto para {Id}: {Msg}", identifier, ex.Message); }
     }
 
     private async Task PostObsDateAsync(string identifier, string personUuid, string encounterUuid,
@@ -270,7 +270,7 @@ public class ConsultaSeeder
             value       = VisitSeeder.FormatDatetime(value)
         };
         try { await _client.PostAsync("obs", payload, ct); }
-        catch (Exception ex) { _logger.LogError("[Consulta] Error obs fecha para {Id}: {Msg}", identifier, ex.Message); }
+        catch (Exception ex) { _logger.LogError(ex, "[Consulta] Error obs fecha para {Id}: {Msg}", identifier, ex.Message); }
     }
 
     private async Task PostObsCodedAsync(string identifier, string personUuid, string encounterUuid,
@@ -285,7 +285,7 @@ public class ConsultaSeeder
             value       = valueConceptUuid
         };
         try { await _client.PostAsync("obs", payload, ct); }
-        catch (Exception ex) { _logger.LogError("[Consulta] Error obs coded para {Id}: {Msg}", identifier, ex.Message); }
+        catch (Exception ex) { _logger.LogError(ex, "[Consulta] Error obs coded para {Id}: {Msg}", identifier, ex.Message); }
     }
 
     private async Task PostObsNumericAsync(string identifier, string personUuid, string encounterUuid,
@@ -300,6 +300,6 @@ public class ConsultaSeeder
             value
         };
         try { await _client.PostAsync("obs", payload, ct); }
-        catch (Exception ex) { _logger.LogError("[Consulta] Error obs numeric para {Id}: {Msg}", identifier, ex.Message); }
+        catch (Exception ex) { _logger.LogError(ex, "[Consulta] Error obs numeric para {Id}: {Msg}", identifier, ex.Message); }
     }
 }
