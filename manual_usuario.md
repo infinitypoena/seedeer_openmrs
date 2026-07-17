@@ -845,7 +845,7 @@ Para quien quiera extender el simulador sin romper su coherencia:
 
 **Catálogos CSV, no código.** Cualquier persona puede ampliar el conocimiento clínico (diagnósticos, pesos, fármacos, programas) editando CSVs, sin tocar C#. La contracara: los UUIDs de los CSV son de **una instancia concreta** y deben verificarse al migrar a otra.
 
-**Seams puros y testeables.** Toda decisión probabilística o de clasificación (selección de diagnóstico, comorbilidades, vitales, resultados de lab, clasificación de citas, probabilidad de seguimiento, selección de recurrentes por cita, vigencia de órdenes, grupo de edad, roster de médicos) está aislada en funciones puras con RNG inyectado, cubiertas por la suite de tests (`dotnet test`, 406 tests). Las llamadas HTTP quedan en la cáscara de los seeders.
+**Seams puros y testeables.** Toda decisión probabilística o de clasificación (selección de diagnóstico, comorbilidades, vitales, resultados de lab, clasificación de citas, probabilidad de seguimiento, selección de recurrentes por cita, vigencia de órdenes, grupo de edad, roster de médicos) está aislada en funciones puras con RNG inyectado, cubiertas por la suite de tests (`dotnet test`, 448 tests). Las llamadas HTTP quedan en la cáscara de los seeders.
 
 **Estado compartido del paciente en el pool.** Las colecciones y rasgos del paciente (problem list, programas, citas pendientes, crónicas activas, vigencia de órdenes, talla e IMC basal) se comparten/heredan entre la copia del pool y la copia de cada visita recurrente — así la historia del paciente es acumulativa y físicamente coherente a lo largo de la simulación.
 

@@ -37,7 +37,7 @@ Todos se lanzan con `--project openmrs_seeder_v1/openmrs_seeder_v1/openmrs_seede
 | `dotnet run -- clear` | **Anula** (void) todos los pacientes `SIM-` y **cancela** sus citas pendientes. Pide confirmación `s/N` |
 | `dotnet run -- fechas --dry-run` | Informa cuántas filas de auditoría corregiría, **sin escribir nada** |
 | `dotnet run -- fechas` | Retrofecha `date_created` de datos **ya sembrados** (la etapa 5/5 por separado) |
-| `dotnet test openmrs_seeder_v1/openmrs_seeder_v1.Tests/openmrs_seeder_v1.Tests.csproj` | Suite de tests (406) |
+| `dotnet test openmrs_seeder_v1/openmrs_seeder_v1.Tests/openmrs_seeder_v1.Tests.csproj` | Suite de tests (448) |
 
 **Exit codes**: `0` completado · `1` fallo del proceso · `2` OpenMRS inaccesible, argumento inválido o **catálogos inválidos** (en los tres casos **no se toca ningún dato**) · `3` la corrida terminó pero **rompió alguna [ley de la simulación](leyes_simulacion.md)**: los datos están sembrados y **no describen una clínica coherente**.
 
@@ -104,7 +104,7 @@ docker compose -f docker/docker-compose.yml run --rm -i seeder clear # limpieza
 
 ### Servicios de decisión
 
-Aquí vive la inteligencia del simulador. El patrón que gobierna todo el proyecto: son **seams puros** (estáticos, con el RNG inyectado), lo que permite testear las reglas clínicas **sin red ni base de datos** — de ahí que los 406 tests corran en ~120 ms.
+Aquí vive la inteligencia del simulador. El patrón que gobierna todo el proyecto: son **seams puros** (estáticos, con el RNG inyectado), lo que permite testear las reglas clínicas **sin red ni base de datos** — de ahí que los 448 tests corran en un par de segundos.
 
 | Servicio | Decide |
 |----------|--------|
@@ -187,7 +187,7 @@ openmrs_seeder_v1/
     Configuration/            #   settings + validación fail-fast
     Clients/                  #   OpenMrsRestClient
     catalogs/                 #   los 16 CSV
-  openmrs_seeder_v1.Tests/    # 406 tests
+  openmrs_seeder_v1.Tests/    # 448 tests (Sistema/ · Modelo/ · Clinica/ · Laboratorio/ · Catalogos/ · Infraestructura/)
 querys/                       # QA sobre la BD + los stored procedures
 scripts/                      # backup y utilidades de mantenimiento
 docker/                       # ejecutar el seeder sin instalar .NET
@@ -199,7 +199,7 @@ docker/                       # ejecutar el seeder sin instalar .NET
 dotnet test openmrs_seeder_v1/openmrs_seeder_v1.Tests/openmrs_seeder_v1.Tests.csproj
 ```
 
-Los tests son rápidos (~120 ms) porque prueban **seams puros**, no la red: las reglas clínicas se ejercitan con un RNG determinista. Incluyen un test de humo que valida **los CSV reales del repositorio**, así una edición futura de un catálogo no puede romper el simulador en silencio.
+Los tests son rápidos (unos segundos) porque prueban **seams puros**, no la red: las reglas clínicas se ejercitan con un RNG determinista. La suite está organizada **alrededor de la clínica, no de las piezas**: la carpeta `Sistema/` corre la clínica entera en memoria (`TestSupport/MiniClinica.cs`, un harness que ejecuta la mecánica del día durante 3 años con los mismos seams de producción) y la juzga con las 8 leyes — la corrida sana deja todo en verde y reintroducir el cupo de recurrentes del bug histórico enciende L1/L2/L3/L7/L8. El resto (`Modelo/`, `Clinica/`, `Laboratorio/`, `Catalogos/`, `Infraestructura/`) cubre cada seam por separado, incluido un test de humo que valida **los CSV reales del repositorio**, así una edición futura de un catálogo no puede romper el simulador en silencio.
 
 ## Documentación
 
