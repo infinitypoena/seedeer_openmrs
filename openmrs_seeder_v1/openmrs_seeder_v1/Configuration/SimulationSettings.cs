@@ -288,7 +288,7 @@ public class VariedadSettings
     /// No altera el perfil epidemiológico (la categoría se sortea igual por edad/sexo/clima) ni las
     /// visitas de control crónico/agudo (repiten dx a propósito, fuera del selector). 0 = desactivado.
     /// </summary>
-    public double RepeticionDamping { get; set; } = 0.25;
+    public double RepeticionDamping { get; set; } = 0.10;
 }
 
 /// <summary>

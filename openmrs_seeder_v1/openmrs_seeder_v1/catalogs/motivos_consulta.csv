@@ -36,26 +36,26 @@ infeccioso,Dolor de cabeza intenso con fiebre y rigidez de cuello
 endocrino,Control de función tiroidea y resultados de laboratorio
 endocrino,Aumento de peso sin cambio en la dieta habitual
 endocrino,Caída excesiva del cabello y cansancio constante
-respiratorio,Estornudos, moqueo y malestar general como gripe
-respiratorio,Fiebre, dolor muscular y cansancio repentino
+respiratorio,"Estornudos, moqueo y malestar general como gripe"
+respiratorio,"Fiebre, dolor muscular y cansancio repentino"
 respiratorio,Dolor de oído y sensación de oído tapado
 respiratorio,Congestión nasal y presión en la cara desde hace días
-respiratorio,Ojos llorosos, picazón en la nariz y estornudos seguidos
+respiratorio,"Ojos llorosos, picazón en la nariz y estornudos seguidos"
 digestivo,Diarrea líquida varias veces al día desde anoche
 digestivo,Vómitos y diarrea con dolor de estómago
 digestivo,Náuseas y malestar luego de comer fuera de casa
-digestivo,Picazón anal y molestias digestivas, sospecha de parásitos
+digestivo,"Picazón anal y molestias digestivas, sospecha de parásitos"
 infeccioso,Fiebre alta con dolor de cabeza y dolor detrás de los ojos
-infeccioso,Dolor de cuerpo, fiebre y brote en la piel
+infeccioso,"Dolor de cuerpo, fiebre y brote en la piel"
 infeccioso,Ojo rojo con secreción y sensación de arenilla
 infeccioso,Ronchas con picazón y fiebre en los últimos días
-infeccioso,Enrojecimiento, calor e hinchazón en una zona de la piel
+infeccioso,"Enrojecimiento, calor e hinchazón en una zona de la piel"
 urologico,Ardor al orinar y ganas frecuentes de ir al baño
 urologico,Dolor intenso en el costado que baja hacia la ingle
 cardiovascular,Revisión de presión arterial y ajuste de medicación
 osteomuscular,Dolor e inflamación en una articulación del pie
 osteomuscular,Torcedura de tobillo con dolor al apoyar
-diabetes,Episodios de mareo, sudor y temblor por azúcar baja
+diabetes,"Episodios de mareo, sudor y temblor por azúcar baja"
 neurologico,Dolor de cabeza intenso y pulsátil con náuseas
 neurologico,Mareos y sensación de que todo da vueltas
 neurologico,Hormigueo y entumecimiento en manos y pies
@@ -85,3 +85,62 @@ trauma,Herida que necesita ser revisada y suturada
 trauma,Quemadura en la mano con agua caliente
 trauma,Torcedura del tobillo al caminar
 trauma,Mordedura de perro en la pierna
+respiratorio,Tos que no se quita desde hace más de dos semanas
+respiratorio,Ronquera y pérdida de la voz desde hace días
+respiratorio,Sensación de ahogo al acostarse por la noche
+respiratorio,Dolor de garganta al tragar con placas blancas
+respiratorio,El niño amaneció con tos perruna y ronquera
+cardiovascular,Mareos al levantarme rápido de la silla
+cardiovascular,Se me duermen las piernas y se me ven venas gruesas
+cardiovascular,Falta de aire al subir la cuesta de la casa
+cardiovascular,Vengo a control de mi corazón y a traer receta
+diabetes,Vengo por mi control de diabetes y mis medicinas
+diabetes,Visión borrosa y mucha hambre a toda hora
+diabetes,Me salió una llaga en el talón y soy diabético
+diabetes,Últimamente bajo de peso aunque como igual
+diabetes,Vengo a que me revisen los pies por el azúcar
+digestivo,Dolor de estómago en ayunas que calma al comer
+digestivo,Ardor en la boca del estómago casi todos los días
+digestivo,Dolor debajo de las costillas después de comer frituras
+digestivo,Al niño le duele la panza y anda sin apetito
+digestivo,Llevo varios días sin poder ir al baño
+osteomuscular,Dolor de cuello que se corre al brazo
+osteomuscular,Dolor en la planta del pie al dar los primeros pasos
+osteomuscular,Se me traba el dedo de la mano al doblarlo
+osteomuscular,Dolor de cadera que no me deja dormir de lado
+urologico,Vengo a control de la próstata
+urologico,Se me sale la orina cuando toso o me río
+urologico,Chorro de orina débil y goteo al terminar
+urologico,Dolor en un testículo con hinchazón
+infeccioso,Fiebre y ronchas después de andar en el monte
+infeccioso,Me pica todo el cuerpo y en la casa hay varios igual
+infeccioso,Herida en la pierna que se puso roja y caliente
+infeccioso,Fiebre con dolor de huesos que no baja con acetaminofén
+infeccioso,El niño tiene granitos con agüita en manos y boca
+endocrino,Me hicieron exámenes de tiroides y vengo a que me los lean
+endocrino,Mucho frío y estreñimiento con la piel reseca
+endocrino,Nerviosismo con temblor y bajando de peso
+endocrino,Vengo a control por el sobrepeso y la dieta
+endocrino,Me encontraron el colesterol alto en un examen
+neurologico,Dolor de cabeza de un solo lado que empeora con la luz
+neurologico,Se me olvidan las cosas y me pierdo en la calle
+neurologico,Adormecimiento de la mano que me despierta de noche
+neurologico,Vengo a control de la epilepsia y por mi medicamento
+dermatologico,Me salieron manchas blancas en la espalda con el sol
+dermatologico,Caspa gruesa y picazón en el cuero cabelludo
+dermatologico,Un lunar que me está creciendo y cambia de color
+dermatologico,Sarpullido en los pliegues por el calor
+salud_mental,Desde que falleció mi familiar no levanto cabeza
+salud_mental,Estoy tomando mucho y quiero dejarlo
+salud_mental,Me dan ataques de llanto y no sé por qué
+salud_mental,En el trabajo ya no aguanto la presión y exploto por todo
+ginecoobstetrico,Vengo a mi citología de control
+ginecoobstetrico,Quiero empezar a planificar y que me orienten
+ginecoobstetrico,Menstruación muy abundante que me deja débil
+ginecoobstetrico,Dolor en un pecho con una bolita que me palpé
+ginecoobstetrico,Vengo embarazada a mi primer control
+trauma,Me corté con lámina oxidada trabajando
+trauma,Caí de la bicicleta y me raspé el brazo y la pierna
+trauma,Me doblé la muñeca al caer sobre la mano
+trauma,Me entró algo al ojo trabajando con el esmeril
+trauma,Picadura de alacrán en el pie esta madrugada

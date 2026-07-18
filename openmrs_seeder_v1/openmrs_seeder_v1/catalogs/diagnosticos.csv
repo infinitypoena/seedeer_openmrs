@@ -2,12 +2,9 @@ ciel_uuid,nombre_es,categoria,severidad,aplica_0_14,aplica_15_29,aplica_30_44,ap
 10AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Bronquitis aguda,respiratorio,leve,true,true,true,true,true,12,12,false,true,true,invierno,false,true,,,,,,,clinica
 110508AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Neurocisticercosis,neurologico,grave,false,true,true,true,false,10,10,false,false,false,,false,false,,,,,,,clinica
 110702AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hipertrofia Prostática Benigna con Retención Urinaria,urologico,leve,true,true,true,true,true,4,4,false,true,false,,false,false,,,M,,,,clinica
-110811AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Insomnio psicofisiológico,salud_mental,leve,true,true,true,true,true,4,4,false,true,false,,false,false,,,,,,,clinica
-110834AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Gastritis,digestivo,leve,true,true,true,true,true,4,4,false,true,false,,false,false,,,,,,,clinica
 110929AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Celulitis,infeccioso,moderado,true,true,true,true,true,10,10,false,true,false,verano,false,true,true,,,,,,clinica
 110987AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Trastorno bipolar,salud_mental,grave,false,true,true,false,false,10,10,false,true,false,,true,false,,,,,,,clinica
-111000AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Insuficiencia cardíaca,cardiovascular,grave,false,false,false,true,true,10,10,true,true,true,,true,true,,,,,,baja,clinica
-111004AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Quemadura grave,trauma,grave,true,true,true,true,true,4,4,true,true,true,,false,false,,,,,,,referencia
+111000AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Insuficiencia cardíaca,cardiovascular,grave,false,false,false,true,true,10,10,true,true,true,,true,false,,,,,,baja,clinica
 111103AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Accidente cerebrovascular hemorrágico,cardiovascular,grave,false,false,false,true,true,10,10,false,false,false,,false,false,,,,,,,referencia
 111167AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hiperémesis gravídica,ginecoobstetrico,moderado,false,true,true,false,false,10,10,false,false,false,,false,true,,,,,,,referencia
 111177AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Micosis superficial (tiña/dermatofitosis),infeccioso,leve,true,true,true,true,true,10,10,false,false,false,lluvia,false,true,,,,,,,clinica
@@ -21,7 +18,6 @@ ciel_uuid,nombre_es,categoria,severidad,aplica_0_14,aplica_15_29,aplica_30_44,ap
 112412AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Conducta suicida / autolesión,salud_mental,grave,false,true,false,false,false,10,10,false,false,false,,false,false,,,,,,,referencia
 112415AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Amenaza de aborto,ginecoobstetrico,moderado,false,true,true,false,false,0,8,true,false,true,,false,true,,,F,,,,clinica
 112476AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Lupus eritematoso sistémico,osteomuscular,grave,false,true,true,false,false,10,10,false,false,false,,true,false,,,,,,,clinica
-112480AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Sepsis grave,infeccioso,grave,true,true,true,true,true,4,4,true,true,true,,false,false,true,,,,,,referencia
 112492AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Sífilis,infeccioso,moderado,false,true,true,true,false,10,10,false,false,false,,false,true,,,,,,,clinica
 112583AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Quemadura solar,dermatologico,leve,true,true,true,true,false,8,7,false,true,false,verano,false,true,,,,,,,clinica
 112770AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Esguince,osteomuscular,leve,true,true,true,true,true,15,15,false,true,false,,false,true,,,,,,,clinica
@@ -37,11 +33,10 @@ ciel_uuid,nombre_es,categoria,severidad,aplica_0_14,aplica_15_29,aplica_30_44,ap
 113555AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Trastorno por consumo de sustancias,salud_mental,grave,false,true,true,false,false,10,10,false,false,false,,true,false,,,,,,,clinica
 113588AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Prostatitis,urologico,moderado,false,false,true,true,false,10,10,false,true,false,,false,true,,,M,,,,clinica
 113753AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Cáncer de mama,ginecoobstetrico,grave,false,false,false,true,false,10,10,false,false,false,,true,false,,bajo,F,,,,clinica
-113792AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Insomnio primario,salud_mental,leve,true,true,true,true,true,4,4,false,true,false,,false,false,,,,,,,clinica
 113809AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Neumonía atípica,respiratorio,moderado,false,true,true,true,false,10,10,false,false,false,invierno,false,true,,,,,,,clinica
 113828AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Bursitis prerrotuliana,osteomuscular,leve,true,true,true,true,true,4,4,false,true,false,,false,false,,,,,,,clinica
 113881AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Trastorno por estres postraumatico,salud_mental,moderado,false,true,true,true,false,6,8,false,true,false,,true,true,,,,,,,clinica
-114100AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Neumonía adquirida en comunidad,respiratorio,grave,true,true,true,true,true,10,10,true,true,true,invierno,false,true,,,,,,,clinica
+114100AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Neumonía adquirida en comunidad,respiratorio,grave,true,true,true,true,true,10,10,true,true,true,invierno,false,false,,,,,,,clinica
 114108AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Derrame pleural,respiratorio,grave,false,false,true,true,true,3,3,true,false,true,,false,false,,,,,,,referencia
 114182AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Intoxicación por plaguicidas,trauma,grave,false,true,true,false,false,10,10,false,false,false,,false,false,,,,,,,referencia
 114190AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Tos ferina (pertussis),infeccioso,grave,true,false,false,false,false,10,10,false,false,false,,false,false,,,,,,,clinica
@@ -56,15 +51,13 @@ ciel_uuid,nombre_es,categoria,severidad,aplica_0_14,aplica_15_29,aplica_30_44,ap
 115223AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Retinopatía diabética no proliferativa,diabetes,leve,true,true,true,true,true,4,4,false,true,false,,true,false,,,,,,,clinica
 115277AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Vejiga neurogénica,urologico,moderado,false,false,true,true,true,10,10,false,false,false,,true,true,,,,,,,clinica
 115303AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Síndrome nefrótico,urologico,grave,true,true,false,false,false,10,10,false,false,false,,true,false,,,,,,,clinica
-115733AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Trastorno afectivo bipolar,salud_mental,moderado,false,true,true,true,false,4,4,false,true,false,,true,false,,,,,,,clinica
 115779AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Migrana,neurologico,moderado,false,true,true,true,false,10,20,false,true,false,,true,true,,,,,,,clinica
 115822AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Otros trastornos menopáusicos y posmenopáusicos especificados,ginecoobstetrico,leve,false,true,true,true,true,0,5,false,true,false,,false,false,,,F,,,,clinica
-115835AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Meningitis,infeccioso,grave,true,true,true,true,true,4,4,true,true,true,,false,false,true,,,,,,referencia
 116225AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Lumbalgia,osteomuscular,leve,false,true,true,true,true,20,20,false,true,false,,false,true,,,,,,,clinica
 116341AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Leptospirosis,infeccioso,grave,false,true,true,true,false,5,3,true,true,false,lluvia,false,false,,,,,,,clinica
 116344AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Lepra (enfermedad de Hansen),infeccioso,grave,false,true,true,true,false,10,10,false,false,false,,true,false,,,,,,,clinica
 116500AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Litiasis renal (urolitiasis),urologico,moderado,false,false,true,true,false,10,10,true,true,false,verano,true,true,,,,,,,clinica
-116543AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Quemadura,trauma,moderado,true,true,true,true,true,8,7,false,true,true,,false,true,,,,,,,clinica
+116543AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Quemadura,trauma,moderado,true,true,true,true,true,10,10,false,true,true,,false,true,,,,,,,clinica
 116632AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Crisis asmática,respiratorio,grave,true,true,true,true,true,10,10,false,false,false,invierno,false,false,,,,,,,referencia
 116675AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hemorragia intracraneal,neurologico,grave,false,false,true,true,true,3,3,true,true,true,,false,false,,,,,alta,,referencia
 116699AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Parasitosis intestinal (geohelmintiasis),infeccioso,leve,true,true,true,false,false,18,18,false,true,false,verano,false,true,,,,,,,clinica
@@ -72,11 +65,10 @@ ciel_uuid,nombre_es,categoria,severidad,aplica_0_14,aplica_15_29,aplica_30_44,ap
 116838AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Traumatismo craneoencefálico,trauma,grave,false,true,true,false,false,10,10,true,false,true,,false,false,,,,,,,referencia
 116954AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hernia inguinal,digestivo,moderado,true,true,true,true,true,10,10,false,false,false,,true,true,,,,,,,clinica
 116958AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Influenza (gripe),respiratorio,moderado,true,true,true,true,true,40,40,false,true,false,invierno,false,true,,,,,,,clinica
-117024AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Conjuntivitis infecciosa,infeccioso,leve,true,true,true,true,true,10,10,false,false,false,,false,true,,,,,,,clinica
 117299AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Neuropatía periférica,neurologico,moderado,false,false,true,true,true,10,10,false,false,false,,true,true,,,,,,,clinica
 117321AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hipotiroidismo,endocrino,moderado,false,false,true,true,true,5,18,true,true,false,,true,true,,alto,,,baja,,clinica
 117346AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hipogonadismo,endocrino,leve,false,false,true,true,true,10,10,false,false,false,,true,true,,,,,,,clinica
-117386AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Cardiopatía hipertensiva,cardiovascular,grave,false,false,false,true,true,10,10,false,false,false,,true,true,,,,,,,clinica
+117386AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Cardiopatía hipertensiva,cardiovascular,grave,false,false,false,true,true,10,10,false,false,false,,true,false,,,,,,,clinica
 117398AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hipertension arterial,cardiovascular,moderado,false,false,true,true,true,28,22,true,true,true,,true,true,,,,,,,clinica
 117431AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Deficiencia de vitamina D,endocrino,leve,true,true,true,true,true,10,10,false,false,false,,false,true,,,,,,,clinica
 117542AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Herpes zóster en la región de la rodilla,dermatologico,leve,true,true,true,true,true,4,4,false,true,false,,false,false,,,,,,,clinica
@@ -84,14 +76,11 @@ ciel_uuid,nombre_es,categoria,severidad,aplica_0_14,aplica_15_29,aplica_30_44,ap
 117762AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Gota,osteomuscular,moderado,false,false,true,true,true,8,3,true,true,false,,true,true,,,,,,,clinica
 117767AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Gonorrea,infeccioso,moderado,false,true,true,false,false,10,10,false,false,false,,false,true,,,,,,,clinica
 117772AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Bocio,endocrino,leve,false,true,true,true,true,3,6,false,true,false,,true,false,,,,,,,clinica
-117888AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Gastroenteritis,digestivo,leve,true,true,true,true,true,4,4,false,true,false,,false,false,,,,,,,clinica
 117889AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Gastroenteritis aguda (EDA),digestivo,moderado,true,true,true,true,true,42,42,false,true,false,"verano,lluvia",false,true,,,,,,,clinica
 117972AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Fractura de miembro superior,trauma,moderado,true,true,true,true,true,10,10,false,false,false,,false,true,,,,,,,clinica
 118102AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Cuerpo extraño en vía aérea,trauma,grave,true,false,false,false,false,10,10,false,false,false,,false,false,,,,,,,referencia
 118349AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Caída de altura,trauma,grave,false,true,true,false,false,10,10,false,false,false,,false,false,,,,,,,referencia
 118567AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Epiglotitis,respiratorio,grave,true,false,false,false,false,10,10,false,false,false,,false,false,,,,,,,referencia
-118582AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Vértigo epidémico,neurologico,leve,true,true,true,true,true,4,4,false,true,false,,false,false,,,,,,,clinica
-118585AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Gastroenteritis eosinofílica,digestivo,leve,true,true,true,true,true,4,4,false,true,false,,false,false,,,,,,,clinica
 118631AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Endometriosis,ginecoobstetrico,moderado,false,true,true,false,false,10,10,false,true,false,,true,true,,,F,,,,clinica
 118738AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Eclampsia durante el embarazo,ginecoobstetrico,grave,false,true,true,true,true,0,5,true,true,true,,false,false,,,F,alta,,,referencia
 118744AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Eclampsia,ginecoobstetrico,grave,false,true,true,false,false,0,3,true,true,true,,false,false,,,F,alta,,,referencia
@@ -115,8 +104,8 @@ ciel_uuid,nombre_es,categoria,severidad,aplica_0_14,aplica_15_29,aplica_30_44,ap
 120466AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Fractura de cadera,trauma,grave,false,false,false,false,true,10,10,false,false,false,,false,false,,,,,,,referencia
 120514AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Fractura cerrada de tobillo,trauma,moderado,false,true,true,true,true,10,10,true,true,true,,false,true,,,,,,,clinica
 120563AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Sinusitis crónica,respiratorio,moderado,true,true,true,true,true,4,4,false,true,false,,true,false,,,,,,,clinica
-120574AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Enfermedad renal crónica (general),urologico,grave,false,false,false,true,true,10,10,true,true,false,,true,true,,,,alta,,,clinica
-120626AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Cardiopatía isquémica crónica (angina),cardiovascular,grave,false,false,false,true,true,10,10,false,false,false,,true,true,,,,,,,clinica
+120574AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Enfermedad renal crónica (general),urologico,grave,false,false,false,true,true,10,10,true,true,false,,true,false,,,,alta,,,clinica
+120626AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Cardiopatía isquémica crónica (angina),cardiovascular,grave,false,false,false,true,true,10,10,false,false,false,,true,false,,,,,,,clinica
 120728AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Clamidiasis,infeccioso,leve,false,true,true,false,false,10,10,false,false,false,,false,true,,,,,,,clinica
 120743AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Chikungunya,infeccioso,moderado,true,true,true,true,true,10,10,false,false,false,lluvia,false,true,,,,,,,clinica
 120751AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Trauma de tórax,trauma,grave,false,true,true,false,false,10,10,false,false,false,,false,false,,,,,,,referencia
@@ -142,7 +131,7 @@ ciel_uuid,nombre_es,categoria,severidad,aplica_0_14,aplica_15_29,aplica_30_44,ap
 121958AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Infarto agudo de miocardio,cardiovascular,grave,false,false,true,true,true,5,3,true,true,true,,false,false,,,,,,,referencia
 122041AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Glomerulonefritis aguda,urologico,grave,true,true,false,false,false,10,10,false,false,false,,false,false,,,,alta,,,referencia
 122101AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Colecistitis aguda,digestivo,grave,false,false,true,true,true,5,8,true,true,true,,false,false,true,,,,,,referencia
-122518AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Meningitis viral,infeccioso,grave,true,true,true,true,true,10,10,true,true,true,,false,true,true,,,,,,referencia
+122518AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Meningitis viral,infeccioso,grave,true,true,true,true,true,10,10,true,true,true,,false,false,true,,,,,,referencia
 122657AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Neumotórax,respiratorio,grave,false,true,true,false,false,10,10,false,false,false,,false,false,,,,,,,referencia
 1226AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Anemia ferropenica,endocrino,leve,true,true,true,true,true,8,16,true,true,false,,false,true,,,,,alta,,clinica
 122733AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Fisura anal,digestivo,leve,false,true,true,false,false,10,10,false,false,false,,false,true,,,,,,,clinica
@@ -158,7 +147,6 @@ ciel_uuid,nombre_es,categoria,severidad,aplica_0_14,aplica_15_29,aplica_30_44,ap
 123583AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Verrugas virales,dermatologico,leve,true,true,false,false,false,10,10,false,false,false,,false,true,,,,,,,clinica
 124637AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Tiña pedis (pie de atleta),dermatologico,leve,false,true,true,true,true,10,10,false,true,false,lluvia,false,true,,,,,,,clinica
 124650AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Tina (dermatofitosis),dermatologico,leve,true,true,true,true,true,12,10,false,true,false,verano,false,true,,,,,,,clinica
-124923AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Quemadura térmica,trauma,moderado,true,false,false,false,false,10,10,false,true,false,,false,true,,,,,,,clinica
 124992AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Tendinitis,osteomuscular,leve,false,true,true,true,true,10,10,false,true,false,,false,true,,,,,,,clinica
 125166AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Síncope cardiogénico,cardiovascular,moderado,false,false,false,true,true,10,10,false,false,false,,false,true,,,,,,,clinica
 125943AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Estado epiléptico,neurologico,grave,true,true,true,true,true,10,10,true,true,true,,false,false,,,,,,,referencia
@@ -182,7 +170,6 @@ ciel_uuid,nombre_es,categoria,severidad,aplica_0_14,aplica_15_29,aplica_30_44,ap
 129211AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Ruptura prematura de membranas,ginecoobstetrico,grave,false,true,true,false,false,10,10,false,false,false,,false,false,,,,,,,referencia
 129218AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Parto pretérmino,ginecoobstetrico,grave,false,true,true,false,false,10,10,false,false,false,,false,false,,,F,,,,referencia
 129251AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Preeclampsia (no especificada),ginecoobstetrico,grave,false,true,true,true,true,0,5,true,true,true,,false,false,,,F,alta,,,referencia
-129286AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Trastorno de estrés postraumático,salud_mental,grave,false,true,true,true,false,10,10,false,false,false,,true,false,,,,,,,clinica
 1293AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Enfermedad por reflujo gastroesofagico,digestivo,leve,false,false,true,true,true,15,15,false,true,false,,true,true,,,,,,,clinica
 129405AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Neuralgia del trigémino,neurologico,moderado,false,false,false,true,true,10,10,false,false,false,,true,true,,,,,,,clinica
 129569AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Síndrome de ovario poliquístico,ginecoobstetrico,moderado,false,true,true,false,false,10,10,false,false,false,,true,true,,alto,F,,,,clinica
@@ -234,13 +221,12 @@ ciel_uuid,nombre_es,categoria,severidad,aplica_0_14,aplica_15_29,aplica_30_44,ap
 138714AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hernia discal,osteomuscular,moderado,false,false,true,true,true,10,10,false,true,true,,true,true,,,,,,,clinica
 138849AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hemorroides,digestivo,leve,false,false,true,true,true,10,10,false,false,false,,true,true,,,,,,,clinica
 138905AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hemoptisis,respiratorio,moderado,false,false,true,true,true,10,10,false,false,false,,false,true,,,,,,,clinica
-138961AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Secuela de ACV (hemiparesia),neurologico,grave,false,false,false,true,true,10,10,false,false,false,,true,true,,,,,,,clinica
+138961AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Secuela de ACV (hemiparesia),neurologico,grave,false,false,false,true,true,10,10,false,false,false,,true,false,,,,,,,clinica
 138974AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hematuria,urologico,moderado,false,false,true,true,true,10,10,false,false,false,,false,true,,,,,,,clinica
 139041AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Infección por Helicobacter pylori,digestivo,leve,false,true,true,true,true,10,10,false,false,false,,false,true,,,,,,,clinica
 139084AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Cefalea,neurologico,leve,true,true,true,true,true,12,12,false,false,false,,false,true,,,,,,,clinica
 139251AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Duelo complicado,salud_mental,leve,true,true,true,true,true,10,10,false,false,false,,false,true,,,,,,,clinica
 139545AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Trastorno de ansiedad generalizada,salud_mental,moderado,false,true,true,true,false,10,10,false,true,false,,true,true,,,,,,,clinica
-139582AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hemorragia digestiva,digestivo,grave,false,false,true,true,true,5,4,true,true,false,,false,false,,,,,alta,,referencia
 139850AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Fractura púbica,trauma,leve,true,true,true,true,true,4,4,false,true,false,,false,false,,,,,,,clinica
 139998AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Foliculitis / forunculosis,dermatologico,leve,false,true,true,false,false,10,10,false,false,false,,false,true,,,,,,,clinica
 140185AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Fibrosis pulmonar,respiratorio,grave,false,false,false,true,true,10,10,false,false,false,,true,false,,,,,,,clinica
@@ -258,9 +244,7 @@ ciel_uuid,nombre_es,categoria,severidad,aplica_0_14,aplica_15_29,aplica_30_44,ap
 141AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Fiebre tifoidea,infeccioso,grave,true,true,true,true,false,5,5,true,true,false,"verano,lluvia",false,false,true,,,,,,clinica
 142429AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Retinopatía diabética,diabetes,grave,false,false,true,true,true,10,10,false,true,false,,true,false,,,,,,,clinica
 142431AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Nefropatía diabética,diabetes,grave,false,false,true,true,true,10,10,true,true,false,,true,false,,,,alta,,,clinica
-142447AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Estado hiperosmolar diabetico,diabetes,grave,false,false,false,true,true,3,3,true,true,true,,false,false,,,,,,,referencia
 142452AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Pie diabético (úlcera/infección),diabetes,grave,false,false,false,true,true,10,10,true,true,true,,true,false,,,,,,,clinica
-142592AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Dengue,infeccioso,moderado,true,true,true,true,true,25,25,true,false,true,"verano,lluvia",false,true,,,,,,,clinica
 142630AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Deshidratación,digestivo,moderado,true,true,true,true,true,22,22,false,true,false,,false,true,,,,,alta,,clinica
 142986AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Teniasis / cisticercosis,digestivo,moderado,false,true,true,true,false,10,10,false,false,false,,false,true,,,,,,,clinica
 143077AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Larva migrans cutánea,dermatologico,leve,true,true,true,true,true,10,10,false,false,false,lluvia,false,true,,,,,,,clinica
@@ -271,7 +255,7 @@ ciel_uuid,nombre_es,categoria,severidad,aplica_0_14,aplica_15_29,aplica_30_44,ap
 145091AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Cirrosis hepática,digestivo,grave,false,false,false,true,true,10,10,true,true,true,,true,false,,bajo,,,,,clinica
 145214AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Faringitis crónica,respiratorio,leve,false,true,true,true,true,10,10,false,false,false,,true,true,,,,,,,clinica
 145315AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Amebiasis intestinal,infeccioso,moderado,true,true,true,true,true,10,10,false,false,false,lluvia,false,true,,,,,,,clinica
-145438AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Enfermedad renal crónica de causas no tradicionales (nefropatía mesoamericana),urologico,grave,false,true,true,true,false,10,10,false,false,false,verano,true,true,,,,alta,,,clinica
+145438AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Enfermedad renal crónica de causas no tradicionales (nefropatía mesoamericana),urologico,grave,false,true,true,true,false,10,10,false,false,false,verano,true,false,,,,alta,,,clinica
 145455AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Tos crónica,respiratorio,leve,true,true,true,true,true,10,10,false,false,false,,true,true,,,,,,,clinica
 145461AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Estreñimiento crónico,digestivo,leve,true,true,true,true,true,10,10,false,true,false,,true,true,,,,,,,clinica
 145625AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Colelitiasis / cólico biliar,digestivo,moderado,false,false,true,true,true,10,10,false,false,false,,true,true,,,,,,,clinica
@@ -294,7 +278,7 @@ ciel_uuid,nombre_es,categoria,severidad,aplica_0_14,aplica_15_29,aplica_30_44,ap
 149533AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Fiebre reumática aguda,cardiovascular,moderado,true,false,false,false,false,10,10,false,false,false,invierno,false,true,true,,,,,,clinica
 149554AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Pielonefritis aguda,urologico,grave,true,true,true,true,true,4,7,true,true,false,,false,false,true,,,,,,clinica
 149579AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Faringitis aguda,respiratorio,leve,true,true,true,true,false,18,18,false,true,false,invierno,false,true,,,,,,,clinica
-149601AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Enfermedad inflamatoria pelvica,ginecoobstetrico,moderado,false,true,true,true,false,0,8,true,true,true,,false,true,true,,,,,,clinica
+149601AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Enfermedad inflamatoria pelvica,ginecoobstetrico,moderado,false,true,true,true,false,0,10,true,true,true,,false,true,true,,F,,,,clinica
 149607AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Pancreatitis aguda,digestivo,grave,false,false,true,true,true,5,4,true,true,true,,false,false,true,,,,,,referencia
 149609AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Otitis media aguda,respiratorio,leve,true,true,false,false,false,18,16,false,true,false,invierno,false,true,,,,,,,clinica
 149716AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Laringitis aguda,respiratorio,leve,true,true,true,true,true,10,10,false,true,false,invierno,false,true,,,,,,,clinica
@@ -306,12 +290,10 @@ ciel_uuid,nombre_es,categoria,severidad,aplica_0_14,aplica_15_29,aplica_30_44,ap
 150126AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Acné vulgar,dermatologico,leve,false,true,false,false,false,10,10,false,true,false,,true,true,,,,,,,clinica
 150144AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Acne,dermatologico,leve,false,true,true,false,false,16,18,false,true,false,,false,true,,,,,,,clinica
 150632AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Absceso cutáneo,infeccioso,moderado,true,true,true,true,true,10,10,false,false,false,,false,true,true,,,,,,clinica
-152170AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Enfermedad pélvica inflamatoria,ginecoobstetrico,moderado,false,true,true,false,false,10,10,false,false,false,,false,true,,,,,,,clinica
 153741AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Neuropatía diabética,diabetes,moderado,false,false,true,true,true,10,10,false,false,false,,true,true,,,,,,,clinica
 154216AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Prediabetes (intolerancia a la glucosa),diabetes,leve,false,false,true,true,true,10,10,false,false,false,,true,true,,,,,,,clinica
 154934AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Alcoholismo agudo,salud_mental,leve,true,true,true,true,true,4,4,false,true,false,,false,false,,,,,,,clinica
 154947AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Enfermedad de Chagas aguda,infeccioso,moderado,true,true,true,true,true,10,10,false,false,false,,false,true,,,,,,,clinica
-154959AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Lumbalgia aguda,osteomuscular,moderado,true,true,true,true,true,4,4,false,true,false,,false,false,,,,,,,clinica
 154965AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Pielonefritis necrótica aguda,urologico,moderado,true,true,true,true,true,4,4,false,true,false,,false,false,true,,,,,,clinica
 155195AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Luxación atlantoaxial,trauma,grave,true,true,true,true,true,4,4,false,true,false,,false,false,,,,,,,referencia
 155210AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Migraña atípica,neurologico,leve,true,true,true,true,true,4,4,false,true,false,,false,false,,,,,,,clinica
@@ -319,11 +301,9 @@ ciel_uuid,nombre_es,categoria,severidad,aplica_0_14,aplica_15_29,aplica_30_44,ap
 155296AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Neumonía bilateral,respiratorio,leve,true,true,true,true,true,4,4,false,true,false,,false,false,,,,,,,clinica
 155390AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Cálculo renal calicial,urologico,leve,true,true,true,true,true,4,4,false,true,false,,false,false,,,,,,,clinica
 155461AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Celulitis en el pie diabético,diabetes,leve,true,true,true,true,true,4,4,false,true,false,,false,false,true,,,,,,clinica
-155490AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Cefalea cervicógena,neurologico,leve,true,true,true,true,true,4,4,false,true,false,,false,false,,,,,,,clinica
 155551AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Anemia crónica,endocrino,moderado,true,true,true,true,true,4,4,false,true,false,,true,false,,,,,alta,,clinica
 155742AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Alcoholismo crónico continuo,salud_mental,moderado,true,true,true,true,true,4,4,false,true,false,,true,false,,,,,,,clinica
 155752AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Contusión del cuero cabelludo,trauma,leve,true,true,true,true,true,4,4,false,true,false,,false,false,,,,,,,clinica
-155892AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Cefalea dental,neurologico,leve,true,true,true,true,true,4,4,false,true,false,,false,false,,,,,,,clinica
 155916AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Nefropatía diabética proteinúrica,diabetes,leve,true,true,true,true,true,4,4,false,true,false,,true,false,,,,alta,,,clinica
 155919AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Neuropatia periferica diabetica,neurologico,moderado,false,false,true,true,true,8,8,true,true,false,,true,true,,,,,,,clinica
 155AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Epilepsia,neurologico,moderado,true,true,true,true,true,7,6,true,true,false,,true,false,,,,,,,clinica
@@ -334,25 +314,18 @@ ciel_uuid,nombre_es,categoria,severidad,aplica_0_14,aplica_15_29,aplica_30_44,ap
 156162AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Disfunción eréctil,urologico,leve,false,false,false,true,true,10,10,false,false,false,,true,true,,,,,,,clinica
 156385AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Fractura de miembro inferior,trauma,grave,true,true,true,true,true,10,10,false,false,false,,false,false,,,,,,,referencia
 156439AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Incontinencia urinaria,urologico,leve,false,false,false,true,true,10,10,false,false,false,,true,true,,,,,,,clinica
-156709AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Bocio hiperplásico,endocrino,leve,true,true,true,true,true,4,4,false,true,false,,false,false,,,,,,,clinica
-156733AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Insomnio idiopático,salud_mental,leve,true,true,true,true,true,4,4,false,true,false,,false,false,,,,,,,clinica
 156805AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Intoxicación alimentaria,digestivo,moderado,true,true,true,true,true,10,10,false,false,false,verano,false,true,,,,,,,clinica
 157374AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Taquicardia irregular,cardiovascular,leve,true,true,true,true,true,4,4,false,true,false,,false,false,,,,,alta,,clinica
 157375AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Síndrome de intestino irritable,digestivo,leve,false,true,true,false,false,10,10,false,false,false,,true,true,,,,,,,clinica
 157482AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Trauma ocular,trauma,moderado,false,true,true,false,false,10,10,false,false,false,,false,true,,,,,,,clinica
-157788AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Asma leve,respiratorio,leve,true,true,true,true,true,4,4,false,true,false,,false,false,,,,,,,clinica
-157802AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Asma mixto,respiratorio,leve,true,true,true,true,true,4,4,false,true,false,,false,false,,,,,,,clinica
 157809AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,EPOC,respiratorio,moderado,false,false,false,true,true,8,5,true,true,true,invierno,true,true,,,,,,,clinica
 157811AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Preeclampsia moderada,ginecoobstetrico,grave,false,true,true,true,true,0,5,true,true,true,,false,false,,,F,alta,,,referencia
 158068AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Fractura occipital,trauma,leve,true,true,true,true,true,4,4,false,true,false,,false,false,,,,,,,clinica
-158093AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Herida abierta del tobillo,trauma,leve,true,true,true,true,true,4,4,false,true,false,,false,false,,,,,,,clinica
-158110AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Herida abierta de muslo,trauma,leve,true,true,true,true,true,4,4,false,true,false,,false,false,,,,,,,clinica
 158133AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Osteoartritis (artrosis),osteomuscular,moderado,false,false,false,true,true,10,10,false,false,false,,true,true,,,,,,,clinica
 158324AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Fractura pertrocantérea,trauma,leve,true,true,true,true,true,4,4,false,true,false,,false,false,,,,,,,clinica
 158435AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hipotiroidismo posinfeccioso,endocrino,leve,true,true,true,true,true,4,4,false,true,false,,true,false,,alto,,,baja,,clinica
 158495AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Retinopatía diabética preproliferativa,diabetes,leve,true,true,true,true,true,4,4,false,true,false,,true,false,,,,,,,clinica
 158606AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Artritis séptica,osteomuscular,grave,true,true,true,true,true,10,10,false,false,false,,false,false,true,,,,,,referencia
-158636AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Sinusitis aguda recurrente,respiratorio,moderado,true,true,true,true,true,4,4,false,true,false,,false,false,,,,,,,clinica
 158653AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Embolia pulmonar,cardiovascular,grave,false,false,false,true,true,10,10,false,false,false,,false,false,,,,,alta,baja,referencia
 158725AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Psoriasis del cuero cabelludo,dermatologico,leve,true,true,true,true,true,4,4,false,true,false,,true,false,,,,,,,clinica
 158961AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hipertiroidismo subclínico,endocrino,leve,true,true,true,true,true,4,4,false,true,false,,true,false,,bajo,,alta,alta,,clinica
@@ -363,13 +336,8 @@ ciel_uuid,nombre_es,categoria,severidad,aplica_0_14,aplica_15_29,aplica_30_44,ap
 159328AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Herida por arma blanca,trauma,grave,false,true,true,false,false,10,10,false,false,false,,false,false,,,,,,,referencia
 159351AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Cáncer de piel (no melanoma),dermatologico,moderado,false,false,false,true,true,10,10,false,false,false,verano,true,true,,bajo,,,,,clinica
 160156AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Tuberculosis BK+ (baciloscopia positiva),infeccioso,leve,true,true,true,true,true,4,4,false,true,false,,false,false,,bajo,,,,,clinica
-161043AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Epilepsia insular,neurologico,leve,true,true,true,true,true,4,4,false,true,false,,true,false,,,,,,,clinica
-161044AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Epilepsia frontal,neurologico,leve,true,true,true,true,true,4,4,false,true,false,,true,false,,,,,,,clinica
 161355AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Tuberculosis de abdomen,infeccioso,leve,true,true,true,true,true,4,4,false,true,false,,false,false,,bajo,,,,,clinica
-161386AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Epilepsia perisilviana,neurologico,leve,true,true,true,true,true,4,4,false,true,false,,true,false,,,,,,,clinica
 161644AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Crisis hipertensiva,cardiovascular,grave,false,false,true,true,true,10,10,false,true,false,,false,false,,,,,,,referencia
-162042AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Anemia leve,endocrino,leve,true,true,true,true,true,4,4,false,true,false,,false,false,,,,,alta,,clinica
-162043AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Anemia moderada,endocrino,leve,true,true,true,true,true,4,4,false,true,false,,false,false,,,,,alta,,clinica
 164107AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Dermatitis atopica,dermatologico,leve,true,true,true,true,false,18,18,false,true,false,seca,true,true,,,,,,,clinica
 164936AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Acné inflamatorio,dermatologico,leve,true,true,true,true,true,4,4,false,true,false,,false,false,,,,,,,clinica
 164960AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Accidente cerebrovascular isquémico,neurologico,grave,false,false,false,true,true,10,10,true,true,true,,false,false,,,,,,,referencia
@@ -387,9 +355,54 @@ ciel_uuid,nombre_es,categoria,severidad,aplica_0_14,aplica_15_29,aplica_30_44,ap
 5042AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Tuberculosis extrapulmonar,infeccioso,grave,true,true,true,true,true,10,10,false,false,false,,true,false,,bajo,,,,,clinica
 5c46caf2-3062-4a04-bb99-fe1fae98e6db,Varicela,infeccioso,leve,true,true,false,false,false,8,8,false,true,false,invierno,false,true,,,,,,,clinica
 5e67ba1d-380b-4767-a4a0-0960d7a18db1,Bursitis subacromial,osteomuscular,leve,true,true,true,true,true,4,4,false,true,false,,false,false,,,,,,,clinica
-61304dd2-7f0c-4933-9f31-c1a909200a71,Dengue sin signos de alarma,infeccioso,leve,true,true,true,true,true,4,4,false,true,false,,false,false,,,,,,,clinica
+61304dd2-7f0c-4933-9f31-c1a909200a71,Dengue sin signos de alarma,infeccioso,leve,true,true,true,true,true,25,25,true,false,true,"verano,lluvia",false,true,,,,,,,clinica
 66020632-9c35-4b91-9206-62ac5219213a,Preeclampsia grave estabilizada,ginecoobstetrico,grave,false,true,true,true,true,0,5,true,true,true,,false,false,,,F,alta,,,referencia
 67acf134-be8a-49ae-b90b-e8bb4a158494,Dengue con signos de alarma,infeccioso,grave,true,true,true,true,true,4,4,false,true,false,,false,false,,,,,,,referencia
 81a10ea8-fcc2-4159-8b4c-1ebdd1def5cc,Meningitis por varicela,infeccioso,grave,true,true,true,true,true,4,4,true,true,true,,false,false,true,,,,,,referencia
 8f1e16cd-457c-48eb-9ba6-e1e17b20f29a,Tuberculosis activa,infeccioso,leve,true,true,true,true,true,4,4,false,true,false,,false,false,,bajo,,,,,clinica
 fe8c08e8-aabc-49e1-a162-cb8b041cb3fc,Acné retencional,dermatologico,leve,true,true,true,true,true,4,4,false,true,false,,false,false,,,,,,,clinica
+114431AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Otitis externa,respiratorio,leve,true,true,true,true,true,10,10,false,true,false,verano,false,true,,,,,,,clinica
+133499AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Epistaxis (sangrado nasal),respiratorio,leve,true,true,true,true,true,8,6,false,false,false,seca,false,true,,,,,,,clinica
+530AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Tapón de cerumen,respiratorio,leve,true,true,true,true,true,10,10,false,false,false,,false,true,,,,,,,clinica
+138434AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Orzuelo,infeccioso,leve,true,true,true,true,true,8,8,false,true,false,,false,true,,,,,,,clinica
+145768AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Chalazión,dermatologico,leve,true,true,true,true,true,4,4,false,true,false,,false,false,,,,,,,clinica
+121102AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Blefaritis,dermatologico,leve,false,true,true,true,true,6,6,false,true,false,,false,false,,,,,,,clinica
+128184AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Pterigión,dermatologico,leve,false,false,true,true,true,6,4,false,false,false,verano,true,false,,,,,,,clinica
+120860AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Catarata senil,neurologico,moderado,false,false,false,true,true,8,8,false,false,false,,true,true,,,,,,,clinica
+158730AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Conjuntivitis alérgica,respiratorio,leve,true,true,true,true,true,8,10,false,true,false,seca,false,true,,,,,,,clinica
+117789AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Glaucoma,neurologico,moderado,false,false,false,true,true,5,5,false,true,false,,true,false,,,,,,,clinica
+127143AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Escarlatina,infeccioso,moderado,true,false,false,false,false,8,8,false,true,false,invierno,false,true,true,,,,,,clinica
+141204AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Enfermedad mano-pie-boca,infeccioso,leve,true,false,false,false,false,10,10,false,false,false,verano,false,true,true,,,,,,clinica
+141216AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Oxiuriasis (enterobiasis),infeccioso,leve,true,true,false,false,false,12,12,false,true,false,,false,true,,,,,,,clinica
+148353AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Ascariasis,infeccioso,leve,true,true,false,false,false,10,10,false,true,false,lluvia,false,true,,,,,,,clinica
+142423AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Dermatitis del pañal,dermatologico,leve,true,false,false,false,false,12,12,false,true,false,,false,true,,,,,,,clinica
+134133AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Miliaria (sarpullido por calor),dermatologico,leve,true,false,false,false,false,8,8,false,false,false,verano,false,true,,,,,,,clinica
+119661AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Talla baja para la edad,endocrino,leve,true,false,false,false,false,6,6,false,false,true,,false,false,,,,,,,clinica
+123354AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Varicocele,urologico,leve,false,true,true,false,false,6,0,false,false,false,,false,false,,,M,,,,clinica
+117474AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hidrocele,urologico,leve,true,false,false,true,true,5,0,false,false,false,,false,false,,,M,,,,clinica
+163831AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Fimosis,urologico,leve,true,true,false,false,false,6,0,false,false,false,,false,false,,,M,,,,clinica
+147991AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Balanitis,urologico,leve,true,true,true,true,false,6,0,false,true,false,,false,false,,,M,,,,clinica
+121110AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Vejiga hiperactiva,urologico,leve,false,false,false,true,true,4,8,false,true,false,,true,true,,,,,,,clinica
+149977AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Dedo en resorte,osteomuscular,leve,false,false,true,true,true,5,7,false,false,false,,false,false,,,,,,,clinica
+149393AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Capsulitis adhesiva (hombro congelado),osteomuscular,moderado,false,false,false,true,true,4,8,false,true,false,,false,true,,,,,,,clinica
+125154AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Quiste de Baker,osteomuscular,leve,false,false,false,true,true,5,5,false,false,false,,false,false,,,,,,,clinica
+117711AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hallux valgus (juanete),osteomuscular,leve,false,false,false,true,true,3,9,false,false,false,,true,true,,,,,,,clinica
+120696AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Síndrome patelofemoral,osteomuscular,leve,false,true,true,false,false,8,10,false,false,false,,false,true,,,,,,,clinica
+120777AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Radiculopatía cervical,osteomuscular,moderado,false,false,true,true,true,8,8,false,true,false,,false,true,,,,,,,clinica
+126309AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Fobia social,salud_mental,leve,false,true,true,false,false,5,7,false,false,false,,true,false,,,,,,,clinica
+159269AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Demencia vascular,neurologico,grave,false,false,false,false,true,8,8,false,true,true,,true,false,,,,,,,clinica
+120655AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Fatiga crónica,salud_mental,leve,false,true,true,true,true,10,12,true,false,false,,false,true,,,,,,,clinica
+148989AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Amenorrea,ginecoobstetrico,leve,false,true,true,false,false,0,12,true,false,false,,false,true,,,F,,,,clinica
+129204AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Síndrome premenstrual,ginecoobstetrico,leve,false,true,true,false,false,0,14,false,true,false,,false,true,,,F,,,,clinica
+148174AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Vaginitis atrófica,ginecoobstetrico,leve,false,false,false,true,true,0,8,false,true,false,,false,true,,,F,,,,clinica
+133952AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Obesidad mórbida,endocrino,moderado,false,false,true,true,true,6,8,false,false,true,,true,true,,alto,,,,,clinica
+142455AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Catarata diabética,diabetes,moderado,false,false,false,true,true,6,6,false,false,false,,true,false,,,,,,,clinica
+142449AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Gastroparesia diabética,diabetes,moderado,false,false,false,true,true,4,4,false,true,false,,true,false,,,,,,,clinica
+117829AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Herpes genital,infeccioso,leve,false,true,true,false,false,8,8,false,true,false,,false,true,,,,,,,clinica
+120146AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Condiloma acuminado,infeccioso,leve,false,true,true,false,false,8,8,false,false,false,,false,true,,,,,,,clinica
+1212AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Molusco contagioso,dermatologico,leve,true,true,false,false,false,8,6,false,false,false,,false,true,,,,,,,clinica
+127331AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Rosácea,dermatologico,leve,false,false,true,true,false,4,8,false,true,false,,true,true,,,,,,,clinica
+149062AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Alopecia areata,dermatologico,leve,false,true,true,false,false,5,5,false,false,false,,false,false,,,,,,,clinica
+113034AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Queratosis seborreica,dermatologico,leve,false,false,false,true,true,8,8,false,false,false,,true,true,,,,,,,clinica
+133632AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Dolor muscular,osteomuscular,leve,false,true,true,true,true,14,14,false,false,false,,false,true,,,,,,,clinica
+116130AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Malestar general,infeccioso,leve,true,true,true,true,true,12,12,false,false,false,,false,true,,,,,,,clinica
