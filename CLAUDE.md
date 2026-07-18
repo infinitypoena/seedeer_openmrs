@@ -305,6 +305,7 @@ These were confirmed via `GET /ws/rest/v1/concept?q=...` against this specific i
 ## Key Design Docs
 
 - `parametrizacion_archivos.md` — full parameter and CSV schema reference
+- `config-diagnostico.md` — cómo reformar la frecuencia de diagnósticos desde `appsettings.json` (sesgo común/raro, damping, estacionalidad, comorbilidad, seguimiento) **sin tocar catálogos**; incluye recetario y cómo verificar con una corrida corta
 - `correccion_fechas.md` — etapa 5/5: por qué `date_created` salía con la fecha de la corrida, la tabla de reglas de derivación de las 20 tablas, cómo se ejecuta/verifica/revierte
 - `manual_usuario.md` — user manual: capability tour with examples, setup, use cases, troubleshooting
 - `fases_implementacion.md` — implementation phases with deliverables and change log
