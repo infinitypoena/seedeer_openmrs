@@ -14,6 +14,10 @@
 --   docker exec -i <db> mariadb -uroot -p<pass> openmrs < querys/coherencia_confirmatorio.sql
 -- ============================================================================
 
+-- Las tablas de OpenMRS son utf8mb4_general_ci; un cliente que conecte en unicode_ci
+-- hace fallar el LIKE con "Illegal mix of collations". Se fija la sesion a la de las tablas.
+SET NAMES utf8mb4 COLLATE utf8mb4_general_ci;
+
 SET @prefijo = 'SIM-';
 
 -- ── 1. INVARIANTE: el dx confirmable lleva SIEMPRE la orden de su examen ─────
