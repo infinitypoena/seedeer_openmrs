@@ -84,7 +84,28 @@ WHERE pi.voided = 0 AND pi.identifier LIKE CONCAT(@prefijo, '%')
 GROUP BY pi.patient_id, pn.given_name, pn.family_name
 HAVING COUNT(DISTINCT pi.identifier) > 1;
 
--- ── 4. Resumen en un vistazo ─────────────────────────────────────────────────
+-- ── 4. General: TODOS los pacientes con su cantidad de visitas ───────────────
+-- El padrón completo, de más a menos visitas (a igualdad, por identificador).
+-- Útil para ver de un vistazo quiénes son los recurrentes de verdad y cuántos
+-- vinieron una sola vez.
+SELECT
+    pi.identifier                                           AS identificador,
+    CONCAT_WS(' ', pn.given_name, pn.middle_name,
+                   pn.family_name, pn.family_name2)          AS nombre_completo,
+    p.birthdate                                             AS nacimiento,
+    p.gender                                                AS sexo,
+    COUNT(v.visit_id)                                       AS visitas,
+    MIN(DATE(v.date_started))                               AS primera_visita,
+    MAX(DATE(v.date_started))                               AS ultima_visita
+FROM patient_identifier pi
+JOIN person p       ON p.person_id = pi.patient_id AND p.voided = 0
+JOIN person_name pn ON pn.person_id = pi.patient_id AND pn.voided = 0
+LEFT JOIN visit v   ON v.patient_id = pi.patient_id AND v.voided = 0
+WHERE pi.voided = 0 AND pi.identifier LIKE CONCAT(@prefijo, '%')
+GROUP BY pi.identifier, nombre_completo, p.birthdate, p.gender
+ORDER BY visitas DESC, pi.identifier;
+
+-- ── 5. Resumen en un vistazo ─────────────────────────────────────────────────
 SELECT
     (SELECT COUNT(*) FROM (
         SELECT 1 FROM person_name pn
