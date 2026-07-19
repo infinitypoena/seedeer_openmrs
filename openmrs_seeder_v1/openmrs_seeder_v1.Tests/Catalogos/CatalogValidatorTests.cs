@@ -498,6 +498,73 @@ public class CatalogValidatorTests
         Assert.Contains(avisos, a => a.Contains("motivos_consulta.csv") && a.Contains("'trauma'"));
     }
 
+    // ── res_trigger_dx y chequeo (mejoras de coherencia dx↔lab) ───────────────
+
+    [Fact]
+    public void ResTriggerDxAUnDxInexistente_EsError()
+    {
+        // El caso real: el NS1 de dengue arrastraba tres dx podados (142590/142591/142592) — la orden
+        // dirigida y el resultado anormal jamás dispararían para ellos, sin una sola queja.
+        var (errores, _) = Validar(f =>
+        {
+            var lab = Lab();
+            lab.ResTriggerDx = ["dx-podado"];
+            f.Laboratorios = [lab];
+        });
+        Assert.Contains(errores, e => e.Contains("res_trigger_dx='dx-podado'") && e.Contains("confirmación muerta"));
+    }
+
+    [Fact]
+    public void ResTriggerDxAUnDxExistente_SinError()
+    {
+        var (errores, _) = Validar(f =>
+        {
+            var lab = Lab();
+            lab.ResTriggerDx = ["dx-uuid"];   // el dx del fixture
+            f.Laboratorios = [lab];
+        });
+        Assert.Empty(errores);
+    }
+
+    [Fact]
+    public void PanelConResTriggerDxInexistente_EsError()
+    {
+        var (errores, _) = Validar(f =>
+        {
+            var lab = Lab();
+            lab.Datatype = "panel";
+            f.Laboratorios = [lab];
+            f.Paneles = [new()
+            {
+                PanelUuid = "lab-uuid", ComponenteUuid = "comp-hb", Nombre = "Hemoglobina",
+                ResMin = 12, ResMax = 16.5, ResTriggerDx = ["dx-fantasma"]
+            }];
+        });
+        Assert.Contains(errores, e => e.Contains("paneles.csv") && e.Contains("res_trigger_dx='dx-fantasma'"));
+    }
+
+    [Fact]
+    public void LabChequeoConDatatypeImagen_EsError()
+    {
+        var (errores, _) = Validar(f =>
+        {
+            var lab = Lab();
+            lab.Datatype = "imagen";
+            lab.ResMin = lab.ResMax = 0;
+            lab.EsChequeo = true;
+            f.Laboratorios = [lab];
+        });
+        Assert.Contains(errores, e => e.Contains("chequeo=true con datatype=imagen"));
+    }
+
+    [Fact]
+    public void MotivoDeConsultaCategoriaChequeo_EsValida()
+    {
+        var (errores, _) = Validar(f =>
+            f.Motivos.Add(new() { Categoria = "chequeo", Texto = "Vengo a un chequeo general" }));
+        Assert.Empty(errores);
+    }
+
     // ── Red de seguridad: los CSV reales del repo deben validar limpios ───────
 
     [Fact]

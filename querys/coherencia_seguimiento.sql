@@ -136,3 +136,51 @@ WHERE pa.voided = 0
   AND pa.status = 'Scheduled'
   AND DATE(pa.date_created) = @dia_corrida
   AND DATE(pa.start_date_time) < DATE_SUB(@hasta, INTERVAL @tolerancia DAY);
+
+-- ============================================================================
+-- 5) QA — la referencia se resuelve (ley L9): el control post-alta NO re-refiere
+--    El bug del bucle (jul 2026): la decisión de referir era sin estado y cada
+--    control re-emitía la remisión y re-agendaba el episodio → un paciente llegó
+--    a 47 encuentros de "Apendicitis aguda" y 6,8 remisiones por referido.
+-- ============================================================================
+
+-- 5a) Remisiones por paciente: la media debe rondar 1,0-1,2 (un episodio, una
+--     remisión; algún paciente con dos episodios distintos es normal).
+SELECT
+    COUNT(*)                                              AS remisiones_totales,
+    COUNT(DISTINCT ob.person_id)                          AS pacientes_referidos,
+    ROUND(COUNT(*) / COUNT(DISTINCT ob.person_id), 2)     AS remisiones_por_referido
+FROM obs ob
+JOIN concept c ON c.concept_id = ob.concept_id
+              AND c.uuid = '1272AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'   -- Remisiones solicitadas
+JOIN patient_identifier pi ON pi.patient_id = ob.person_id AND pi.voided = 0
+                          AND pi.identifier LIKE 'SIM-%'
+WHERE ob.voided = 0
+  AND DATE(ob.obs_datetime) BETWEEN @desde AND @hasta;
+
+-- 5b) Histograma: encuentros con el MISMO dx de referencia por paciente. Con el
+--     episodio cerrándose en su control, el máximo esperado es 2 (episodio +
+--     control post-alta); 3-4 solo si el mismo cuadro reaparece como episodio
+--     nuevo meses después. El 47 de la corrida rota no puede volver.
+SELECT veces_mismo_dx, COUNT(*) AS pacientes
+FROM (
+    SELECT ed.patient_id, ed.diagnosis_coded, COUNT(*) AS veces_mismo_dx
+    FROM encounter_diagnosis ed
+    JOIN encounter e ON e.encounter_id = ed.encounter_id AND e.voided = 0
+    JOIN patient_identifier pi ON pi.patient_id = ed.patient_id AND pi.voided = 0
+                              AND pi.identifier LIKE 'SIM-%'
+    WHERE ed.voided = 0
+      AND DATE(e.encounter_datetime) BETWEEN @desde AND @hasta
+      -- Solo los dx de referencia: los que alguna vez motivaron una remisión en
+      -- el mismo encuentro (aproximación sin catálogo dentro de la BD).
+      AND ed.diagnosis_coded IN (
+          SELECT DISTINCT ed2.diagnosis_coded
+          FROM encounter_diagnosis ed2
+          JOIN obs r ON r.encounter_id = ed2.encounter_id AND r.voided = 0
+          JOIN concept c2 ON c2.concept_id = r.concept_id
+                         AND c2.uuid = '1272AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+          WHERE ed2.voided = 0 AND ed2.dx_rank = 1)
+    GROUP BY ed.patient_id, ed.diagnosis_coded
+) t
+GROUP BY veces_mismo_dx
+ORDER BY veces_mismo_dx;

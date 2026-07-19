@@ -172,6 +172,13 @@ foreach (var (archivo, filas, opcional) in new (string, int, bool)[]
 }
 
 var (erroresCatalogo, avisosCatalogo) = CatalogValidator.Validate(catalogLoader);
+
+// Cruce config↔catálogo (solo aquí conviven los dos): el chequeo activado sin labs marcados
+// chequeo=true dejaría las visitas de chequeo sin un solo examen — que es su razón de ser.
+if (simSettings.Chequeo.Enabled && !catalogLoader.Laboratorios.Any(l => l.EsChequeo))
+    avisosCatalogo.Add("Chequeo.Enabled=true pero ningún laboratorio tiene chequeo=true en " +
+                       "laboratorios.csv — las visitas de chequeo no ordenarán ningún examen");
+
 foreach (var aviso in avisosCatalogo)
     logger.LogWarning("   ⚠ {Aviso}", aviso);
 

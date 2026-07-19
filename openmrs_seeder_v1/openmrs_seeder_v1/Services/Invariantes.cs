@@ -188,6 +188,21 @@ public static class Invariantes
             Pista:  "La calibración del boca a boca no está aterrizando en el objetivo. Comparar la " +
                     "proyección de la etapa 2/5 con la curva real de crecimiento_diario.csv."));
 
+        // ── L9 · La referencia se resuelve ────────────────────────────────────────────────────────
+        // El tripwire. Un dx de referencia (apendicitis, IAM…) se refiere UNA vez y se ve UNA vez en su
+        // control post-alta; el control no re-refiere ni re-agenda el mismo episodio. Sin esta ley, la
+        // corrida jul-2026 dejó un paciente con 47 encuentros de "Apendicitis aguda", 6,8 remisiones por
+        // referido y la apendicitis como 2º dx más frecuente de una consulta externa.
+        leyes.Add(new Ley(
+            "L9", "La referencia se resuelve (el control post-alta no re-refiere)",
+            Aplica: stats.RemisionesTotales > 0,
+            Cumple: stats.RemisionesEnControl == 0,
+            Medido: $"{stats.RemisionesEnControl} remisiones emitidas en visitas de control post-alta " +
+                    $"(umbral: 0) · {stats.RemisionesTotales} remisiones en total",
+            Pista:  "El control post-alta está re-refiriendo el mismo episodio. Mirar que el flag " +
+                    "EsControlPostReferencia llegue a ConsultaSeeder y excluya el dx resuelto de " +
+                    "DebeReferir/SeguimientoPolicy, y que FijarProximaVisita no transporte ese dx."));
+
         return leyes;
     }
 

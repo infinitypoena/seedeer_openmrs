@@ -28,6 +28,13 @@ public static class CatalogValidator
         "ginecoobstetrico", "trauma"
     };
 
+    /// <summary>
+    /// Pseudo-categoría de la visita de chequeo voluntario (paciente sano que pide exámenes). Solo es
+    /// válida en <c>motivos_consulta.csv</c> — no es una categoría clínica y ningún diagnóstico,
+    /// laboratorio o fármaco puede llevarla.
+    /// </summary>
+    public const string CategoriaChequeo = "chequeo";
+
     public static readonly IReadOnlySet<string> GruposEdad = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         { "0-14", "15-29", "30-44", "45-64", "65+" };
 
@@ -262,6 +269,12 @@ public static class CatalogValidator
 
     private static void ValidarLaboratorios(CatalogLoader c, List<string> errores, List<string> avisos)
     {
+        // res_trigger_dx apunta a diagnósticos del catálogo: un UUID que ya no existe (dx podado o
+        // errata) es una confirmación muerta — el lab jamás se ordenaría de forma dirigida ni daría
+        // anormal para ese cuadro, sin una sola queja. Se valida solo si hay diagnósticos cargados
+        // (los tests unitarios validan catálogos sueltos).
+        var dxConocidos = c.Diagnosticos.Select(d => d.CielUuid).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
         for (var i = 0; i < c.Laboratorios.Count; i++)
         {
             var l = c.Laboratorios[i];
@@ -275,6 +288,15 @@ public static class CatalogValidator
 
             foreach (var t in l.ResTrigger.Where(t => !EsCategoria(t)))
                 errores.Add($"{donde}: res_trigger='{t}' no es una de las 13 categorías del simulador");
+
+            if (c.Diagnosticos.Count > 0)
+                foreach (var dx in l.ResTriggerDx.Where(dx => !dxConocidos.Contains(dx)))
+                    errores.Add($"{donde}: res_trigger_dx='{dx}' no existe en diagnosticos.csv — " +
+                                $"confirmación muerta (el dx fue podado o el UUID tiene una errata)");
+
+            // Un chequeo voluntario pide sangre y orina, no una tomografía.
+            if (l.EsChequeo && l.Datatype.Equals("imagen", StringComparison.OrdinalIgnoreCase))
+                errores.Add($"{donde}: chequeo=true con datatype=imagen — un chequeo no ordena imágenes");
 
             if (l.Datatype.Equals("numeric", StringComparison.OrdinalIgnoreCase))
             {
@@ -334,6 +356,7 @@ public static class CatalogValidator
     private static void ValidarPaneles(CatalogLoader c, List<string> errores)
     {
         var labs = c.Laboratorios.Select(l => l.CielUuid).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var dxConocidos = c.Diagnosticos.Select(d => d.CielUuid).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         for (var i = 0; i < c.Paneles.Count; i++)
         {
@@ -350,6 +373,11 @@ public static class CatalogValidator
 
             foreach (var t in p.ResTrigger.Where(t => !EsCategoria(t)))
                 errores.Add($"{donde}: res_trigger='{t}' no es una de las 13 categorías del simulador");
+
+            if (c.Diagnosticos.Count > 0)
+                foreach (var dx in p.ResTriggerDx.Where(dx => !dxConocidos.Contains(dx)))
+                    errores.Add($"{donde}: res_trigger_dx='{dx}' no existe en diagnosticos.csv — " +
+                                $"confirmación muerta (el dx fue podado o el UUID tiene una errata)");
         }
     }
 
@@ -436,9 +464,12 @@ public static class CatalogValidator
         for (var i = 0; i < c.MotivosConsulta.Count; i++)
         {
             var m = c.MotivosConsulta[i];
-            if (!EsCategoria(m.Categoria))
+            // 'chequeo' es una pseudo-categoría solo de motivos: la visita de chequeo voluntario no es
+            // una enfermedad y no entra en las 13 categorías clínicas (whitelist explícita, no se
+            // relaja CategoriasValidas).
+            if (!EsCategoria(m.Categoria) && !m.Categoria.Equals(CategoriaChequeo, StringComparison.OrdinalIgnoreCase))
                 errores.Add($"{Fila("motivos_consulta.csv", i, m.Texto)}: categoria='{m.Categoria}' " +
-                            $"no es una de las 13 categorías del simulador");
+                            $"no es una de las 13 categorías del simulador (ni '{CategoriaChequeo}')");
         }
 
         // Una categoría sin frases deja la consulta sin obs de motivo, pero no rompe la corrida.

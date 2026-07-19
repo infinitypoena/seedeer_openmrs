@@ -66,10 +66,14 @@ public static class LabWorkflow
         MotivosRechazo[nextInt(MotivosRechazo.Count)];
 
     /// <summary>Instrucción que el médico deja al laboratorio (campo <c>commentToFulfiller</c> de la orden).</summary>
-    public static string ComentarioAlLaboratorio(LaboratorioEntry lab) =>
-        lab.SeRealizaEnClinica
+    public static string ComentarioAlLaboratorio(LaboratorioEntry lab, bool solicitadoPorPaciente = false)
+    {
+        var instruccion = lab.SeRealizaEnClinica
             ? "Procesar en el laboratorio de la clínica"
             : "Referir a laboratorio externo";
+        // Trazabilidad del chequeo voluntario: el examen no lo indicó el cuadro, lo pidió el paciente.
+        return solicitadoPorPaciente ? $"Solicitado por el paciente. {instruccion}" : instruccion;
+    }
 
     /// <summary>
     /// Nº de muestra (campo <c>accessionNumber</c>): identifica el tubo/la petición, y en los externos es

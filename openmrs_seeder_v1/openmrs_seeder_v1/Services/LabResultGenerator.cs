@@ -64,19 +64,23 @@ public static class LabResultGenerator
     /// Genera los componentes de un panel (p.ej. Hb/Hto/leucocitos/plaquetas del hemograma) como
     /// pares (conceptUuid, valor). Cada componente sortea SU banda de forma independiente: los
     /// disparados por una categoría del paciente caen en la anormal con <see cref="ProbAnormalSiTrigger"/>
-    /// (dengue/infeccioso → plaquetas bajas y leucocitos alterados; digestivo → anemia). Misma regla
-    /// de precisión que los numéricos simples (límites enteros → valor entero).
+    /// (dengue/infeccioso → plaquetas bajas y leucocitos alterados; digestivo → anemia). El disparo por
+    /// diagnóstico específico (<c>res_trigger_dx</c> de paneles.csv, p.ej. anemia → Hb/Hto bajos) usa
+    /// <paramref name="diagnosticosPaciente"/> — opcional y retrocompatible (null = solo categorías).
+    /// Misma regla de precisión que los numéricos simples (límites enteros → valor entero).
     /// </summary>
     public static List<(string ConceptUuid, double Valor)> GenerarComponentes(
         IEnumerable<PanelComponenteEntry> componentes,
         ISet<string> categoriasPaciente,
-        Random rng)
+        Random rng,
+        ISet<string>? diagnosticosPaciente = null)
     {
         var resultado = new List<(string, double)>();
         foreach (var c in componentes)
         {
-            var anormal = c.ResTrigger.Any(categoriasPaciente.Contains) &&
-                          rng.NextDouble() < ProbAnormalSiTrigger;
+            var disparado = c.ResTrigger.Any(categoriasPaciente.Contains)
+                || (diagnosticosPaciente is not null && c.ResTriggerDx.Any(diagnosticosPaciente.Contains));
+            var anormal = disparado && rng.NextDouble() < ProbAnormalSiTrigger;
             var (min, max) = anormal ? (c.ResMinAnormal, c.ResMaxAnormal) : (c.ResMin, c.ResMax);
             if (max < min) (min, max) = (max, min);
             if (max <= 0) continue; // fila sin banda utilizable

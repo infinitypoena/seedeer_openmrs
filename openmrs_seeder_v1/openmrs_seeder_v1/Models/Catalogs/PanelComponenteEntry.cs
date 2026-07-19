@@ -18,4 +18,9 @@ public class PanelComponenteEntry
     public double ResMaxAnormal { get; set; }
     /// <summary>Categorías que disparan la banda anormal de ESTE componente (separadas por '|').</summary>
     public List<string> ResTrigger { get; set; } = [];
+    /// <summary>
+    /// UUIDs de diagnósticos específicos que disparan la banda anormal de ESTE componente (separados
+    /// por '|') — p.ej. las anemias bajan la Hb del hemograma. Columna opcional (vacía = solo categorías).
+    /// </summary>
+    public List<string> ResTriggerDx { get; set; } = [];
 }

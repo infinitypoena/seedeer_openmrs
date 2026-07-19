@@ -121,6 +121,12 @@ Todo el comportamiento del simulador se controla desde aquí.
 | `Laboratorio.ProbResultadoLlega` | float (0-1) | Fracción de muestras tomadas cuyo resultado acaba llegando. El resto se pierde y su orden se queda en `IN_PROGRESS` (def. 0.95). ⚠️ Sustituye al viejo `ReferralProbabilities.LabResult`: **cuándo** llega el resultado ya no es una probabilidad, lo decide el catálogo (`se_realiza_en_clinica` / `dias_entrega_*`, §5) |
 | `Laboratorio.MinutosHastaTomaMin` / `Max` | int | Minutos entre la consulta y la toma de la muestra (el paciente pasa por el laboratorio). Def. 20–90 |
 | `MinMedicosPorDia` / `MaxMedicosPorDia` | int | Roster diario: cada día se activan aleatoriamente entre `Min` y `Max` médicos del pool de `consultorios.csv` (def. 2/3). Pool ≤ Min = todos disponibles. |
+| `Chequeo.Enabled` | bool | Chequeo voluntario: el paciente pide exámenes por su propia iniciativa (def. `true`). Tiradas en RNG propios (+21/+24) → con `false` el flujo histórico queda bit a bit intacto. No toca volumen/recurrencia/crecimiento (cambia el contenido de la visita, no cuántas hay). |
+| `Chequeo.ProbabilidadAlta` | float (0-1) | Fracción de pacientes **nuevos** que llegan SANOS a chequearse: visita sin diagnóstico (encuentro sin `diagnoses[]`), motivo de la pseudo-categoría `chequeo`, 2-4 labs del pool `chequeo=true` con resultado en banda normal, sin receta ni referencia (def. 0.04). |
+| `Chequeo.ProbabilidadRetornoEspontaneo` | float (0-1) | Ídem para el **retorno espontáneo** (sin cita ni motivo de control — jamás una cita agendada ni un control de crónica) (def. 0.02). |
+| `Chequeo.ProbExamenAdicional` | float (0-1) | Prob. de que un paciente ENFERMO pida además 1 examen común por su cuenta ("ya que estoy, chéquenme la sangre"): ROUTINE, `commentToFulfiller` = "Solicitado por el paciente", resultado coherente con SU cuadro (un diabético que pide glucemia sale alto) (def. 0.05). |
+| `Chequeo.FollowUp` | float (0-1) | Prob. de agendar control tras un chequeo — un sano casi nunca sale citado (def. 0.05). |
+| `Chequeo.MinLabs` / `MaxLabs` | int | Cuántos labs del pool `chequeo=true` ordena la visita de chequeo (def. 2/4). |
 | `Allergy.BaseProbabilityMin` / `BaseProbabilityMax` | float (0-1) | Banda de prevalencia de alergias: cada corrida sortea su valor en `[min,max]` (def. 0.15–0.25, fracción clínicamente documentada del ~25-30% poblacional) → el % de pacientes nuevos alérgicos varía entre corridas. |
 | `Allergy.SecondAllergyProbability` | float (0-1) | Dado que el paciente ya tiene 1 alergia, probabilidad de sumar una 2ª (decaída condicional). |
 | `Allergy.ThirdAllergyProbability` | float (0-1) | Dado que ya tiene 2, probabilidad de sumar una 3ª. |
@@ -354,9 +360,10 @@ ciel_uuid,nombre_es,aplica_respiratorio,...,aplica_trauma,datatype,res_min,res_m
 | `res_min_anormal` / `res_max_anormal` | Banda numérica **anormal** (cuando la enfermedad dispara el examen) |
 | `res_normal_uuid` / `res_anormal_uuid` | UUID de la respuesta normal/anormal para tests **codificados** (p.ej. Negativo/Positivo) |
 | `res_trigger` | Categorías (`\|`-separadas) que hacen anormal el resultado — típico de numéricos (p.ej. `diabetes\|endocrino`) |
-| `res_trigger_dx` | UUIDs de diagnósticos específicos que disparan el anormal — típico de codificados disease-specific (p.ej. dengue → NS1 Positivo) |
+| `res_trigger_dx` | UUIDs de diagnósticos específicos (`\|`-separados). Doble efecto (jul 2026): **hace que el examen SE ORDENE de forma dirigida** cuando la visita lleva ese dx (índice inverso `CatalogLoader.LabsConfirmatorios` → `LabOrderSelector`: el médico que sospecha dengue pide el NS1, no lo sortea) **y** dispara el resultado anormal. También gobierna la `certainty` del dx (`CertaintyPolicy`: confirmatorio interno → CONFIRMED, externo → PROVISIONAL). El validador **aborta** si un UUID no existe en `diagnosticos.csv` (confirmación muerta) |
 | `se_realiza_en_clinica` | `true` = la clínica toma y procesa el examen (resultado **el mismo día**, dentro de la visita) · `false` = se **refiere a un laboratorio externo** y el resultado vuelve días después. Columna ausente = `true` (retrocompatible) |
 | `dias_entrega_min` / `dias_entrega_max` | Días hasta que el resultado está disponible (banda inclusiva; `0` = mismo día). Interno `0-0`; externo p.ej. `2-5` |
+| `chequeo` | `true` = examen **de chequeo**: el propio paciente puede pedirlo sin estar enfermo (visita de chequeo voluntario y examen adicional a petición, sección `Simulation.Chequeo`). Hoy: hemograma, glucemia, orina, perfil lipídico, creatinina. Ausente = `false`. El validador prohíbe `chequeo=true` en imágenes |
 
 Con disparo presente, el resultado es anormal con prob. `LabResultGenerator.ProbAnormalSiTrigger` (0.80); si no, normal. Las **imágenes** quedan solo como orden; los **paneles** (`datatype=panel`) buscan sus componentes en `paneles.csv` (§5b) — si el panel no tiene filas ahí, la orden queda sola.
 
@@ -382,6 +389,7 @@ panel_uuid,componente_uuid,nombre,res_min,res_max,res_min_anormal,res_max_anorma
 | `res_min` / `res_max` | Banda numérica **normal** del componente |
 | `res_min_anormal` / `res_max_anormal` | Banda **anormal** cuando se dispara el trigger |
 | `res_trigger` | Categorías (`\|`-separadas) que disparan la banda anormal de **este** componente |
+| `res_trigger_dx` | UUIDs de dx (`\|`-separados) que disparan la banda anormal de **este** componente — p.ej. las anemias bajan Hb/Hto del hemograma y la dislipidemia sube los lípidos. Opcional (vacío = solo categorías); mismos cruces del validador que en `laboratorios.csv` |
 
 Cada componente sortea su banda **de forma independiente** (`LabResultGenerator.GenerarComponentes`, misma prob. 0.80): un paciente infeccioso (dengue) sale con plaquetas bajas y leucocitos alterados pero hemoglobina normal; uno digestivo (sangrado) con anemia. Misma regla de precisión que los numéricos simples (límites enteros → valor entero). ⚠️ datatype=panel **solo vale si el concepto es de verdad un LabSet con componentes**: el perfil lipídico apuntaba a *colesterol total* (un solo analito) y orina/urocultivo/VIH tampoco eran paneles — los cuatro se ordenaban y **nunca registraban resultado**. Corregido: hoy los paneles son el **hemograma** 1019… y el **perfil lipídico** 1010… (colesterol total, HDL, LDL, triglicéridos, VLDL); los otros tres pasaron a coded. Un panel sin filas aquí = orden sola, y el validador lo avisa.
 
@@ -490,7 +498,7 @@ digestivo,Dolor abdominal fuerte después de comer
 
 | Columna | Descripción |
 |---------|-------------|
-| `categoria` | Categoría diagnóstica — se filtra para elegir una frase coherente con el dx elegido |
+| `categoria` | Categoría diagnóstica — se filtra para elegir una frase coherente con el dx elegido. Admite además la **pseudo-categoría `chequeo`** (frases de la visita de chequeo voluntario: "Vengo a un chequeo general…"); es la única columna del proyecto donde `chequeo` es válida |
 | `texto` | Frase de texto libre en español que se registra en el encuentro ADULTINITIAL |
 
 ---
@@ -988,6 +996,9 @@ timestamp,componente,evento,tipo,mensaje
 | Qué exámenes hace la clínica y cuáles se mandan fuera (y cuánto tardan) | `catalogs/laboratorios.csv` → `se_realiza_en_clinica`, `dias_entrega_min/max` |
 | % de muestras rechazadas / de resultados que se pierden | `appsettings.json` → `Laboratorio.ProbRechazo`, `Laboratorio.ProbResultadoLlega` |
 | Quién toma la muestra y quién valida el resultado | `catalogs/personal_laboratorio.csv` |
+| Qué examen confirma cada enfermedad (y se ordena garantizado) | `laboratorios.csv` / `paneles.csv` → `res_trigger_dx` |
+| Cuántos pacientes vienen a chequearse sanos / piden un examen extra | `appsettings.json` → `Chequeo.ProbabilidadAlta` / `ProbabilidadRetornoEspontaneo` / `ProbExamenAdicional` |
+| Qué exámenes puede pedir el paciente por su cuenta | `laboratorios.csv` → columna `chequeo` |
 | Que el paciente lleve teléfono / estado civil | `appsettings.json` → `Defaults.TelephoneAttributeTypeUuid` / `CivilStatusAttributeTypeUuid` (vacío = off) |
 | UUIDs de OpenMRS (location, visita, encuentro) | `appsettings.json` → `OpenMRS.Defaults` |
 | Reproducibilidad | `appsettings.json` → `RandomSeed` |

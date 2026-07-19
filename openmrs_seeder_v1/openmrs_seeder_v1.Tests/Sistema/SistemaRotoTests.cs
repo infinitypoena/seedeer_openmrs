@@ -80,6 +80,21 @@ public class SistemaRotoTests
     }
 
     [Fact]
+    public void ElControlPostAltaQueReRefiere_EnciendeL9()
+    {
+        // El sabotaje del bucle de referencias (jul 2026): la decisión de referir vuelve a ser sin estado
+        // y el control post-alta re-emite la remisión y re-agenda el mismo episodio al 0,95. En la corrida
+        // real esto dejó a un paciente con 47 encuentros de "Apendicitis aguda", 5.039 remisiones sobre
+        // 737 referidos (6,8 por cabeza) y la apendicitis como 2º dx de una consulta externa.
+        var r = MiniClinica.Correr(
+            Escenarios.SimObjetivo(),
+            new OpcionesMiniClinica { ReferenciaSinEstado = true });
+
+        Assert.True(r.Rota("L9"), r.Ley("L9").Medido);
+        Assert.True(r.Stats.RemisionesEnControl > 0);
+    }
+
+    [Fact]
     public void UnaClinicaQueAtiendeMal_SeQuedaSinPanel()
     {
         // El churn como modo de fallo: notas hundidas → todo el mundo insatisfecho → no acuden a sus

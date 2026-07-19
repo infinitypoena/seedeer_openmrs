@@ -69,6 +69,19 @@ public class SistemaSanoTests
     }
 
     [Fact]
+    public void LaReferenciaSeResuelve_UnEpisodioYSuControl_SinReRemision()
+    {
+        // L9 en positivo: la clínica sana refiere (hay dx ambito=referencia en el catálogo sintético) pero
+        // NINGUNA remisión sale de una visita de control post-alta — el episodio se refiere una vez y se
+        // cierra en su control.
+        var l9 = Sano.Ley("L9");
+        Assert.True(l9.Aplica);                      // hubo remisiones que juzgar
+        Assert.True(l9.Cumple, l9.Medido);
+        Assert.Equal(0, Sano.Stats.RemisionesEnControl);
+        Assert.True(Sano.Stats.RemisionesTotales > 0);
+    }
+
+    [Fact]
     public void SinCitasReales_L2NoAplica_YNadaSeRompe()
     {
         // Con la feature de Appointments apagada no se postea ninguna cita → no hay citas que juzgar.

@@ -39,7 +39,7 @@ día.
 
 ---
 
-## Las ocho leyes
+## Las nueve leyes
 
 | # | Ley | Umbral | La corrida rota |
 |---|---|---|---|
@@ -51,6 +51,7 @@ día.
 | **L6** | **No se capta a más gente de la que vive en el área** | captados ≤ 50 % de `PoblacionCaptacion` | 105 % ❌ |
 | **L7** | **Un paciente no es un ticket** | media ≥ 2,0 visitas/paciente | 1,45 ❌ |
 | **L8** | **La clínica llega a donde se le pidió (y no más)** | meseta a ±20 % de `PacientesPorDiaObjetivo` | 45 contra 25 ❌ |
+| **L9** | **La referencia se resuelve** | `RemisionesEnControl` = 0 | 6,8 remisiones/referido (bucle jul-2026) ❌ |
 
 ### L1 · El crónico vuelve a su control
 Un hipertenso que pasa por la clínica y **no vuelve nunca** no es un paciente crónico: es una anécdota.
@@ -92,6 +93,18 @@ ETL o un estudio longitudinal pueda explotar. Es el síntoma agregado de L1.
 pidieron 25 significa que la calibración del boca a boca no aterriza — y que el usuario no tiene ningún
 mando real sobre el tamaño de su clínica.
 
+### L9 · La referencia se resuelve
+El segundo **tripwire** (como L3). Un dx `ambito=referencia` (apendicitis, IAM, eclampsia…) se refiere al
+hospital **una vez** y se ve **una vez** en su control post-alta; el control comprueba cómo salió — **no
+vuelve a mandarlo**. Se rompió en la corrida del 17-jul-2026: la decisión de referir era sin estado, la
+cita transportaba el dx al control, el control re-emitía la remisión y re-agendaba otro control al 0,95.
+Resultado: un paciente con **47 encuentros de "Apendicitis aguda"**, 5.039 remisiones sobre 737 referidos
+(**6,8 por cabeza**, el 21,7 % de las visitas) y la apendicitis como 2º dx más frecuente de una consulta
+externa. El contador `RunStats.RemisionesEnControl` solo puede subir si la remisión se emitió **por el dx
+ya resuelto** (`ConsultaSeeder.DxsEvaluables` lo excluye): con el arreglo es 0 por construcción, y si
+alguien quita la exclusión, la ley se enciende. Una comorbilidad de referencia *nueva* en un control sí
+refiere (es otro episodio) y no cuenta contra la ley.
+
 ---
 
 ## Cuándo se juzgan
@@ -99,7 +112,7 @@ mando real sobre el tamaño de su clínica.
 - **Antes de sembrar (etapa 2/5)** — `Invariantes.EvaluarProyeccion` comprueba **L5 y L6** sobre la
   proyección determinista. Vale más una advertencia aquí que descubrir a las seis horas que la clínica
   lleva dos años contra el techo.
-- **Al terminar (etapa 4/5)** — `Invariantes.Evaluar(stats, pool, sim)` mide **las ocho** sobre lo que de
+- **Al terminar (etapa 4/5)** — `Invariantes.Evaluar(stats, pool, sim)` mide **las nueve** sobre lo que de
   verdad se sembró (`RunStats` + el padrón de pacientes). Imprime ✓ / ✗ / — con el número medido y una
   pista de dónde mirar. **Una ley rota ⇒ exit code 3**: los datos están escritos (no se revierte nada),
   pero la corrida **no se declara buena**.

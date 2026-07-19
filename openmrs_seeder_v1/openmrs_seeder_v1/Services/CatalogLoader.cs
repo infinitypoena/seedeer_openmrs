@@ -21,6 +21,22 @@ public class CatalogLoader
     public IReadOnlyList<PanelComponenteEntry> Paneles { get; private set; } = [];
     public IReadOnlyList<PersonalLaboratorioEntry> PersonalLaboratorio { get; private set; } = [];
 
+    private IReadOnlyDictionary<string, IReadOnlyList<LaboratorioEntry>>? _labsConfirmatorios;
+
+    /// <summary>
+    /// Índice inverso dx → laboratorios que lo confirman, derivado de <c>res_trigger_dx</c> en
+    /// laboratorios.csv (una sola fuente de verdad: la misma fila que hace anormal el resultado hace
+    /// que la orden se pida de forma dirigida). Memoizado; se invalida al recargar los catálogos.
+    /// </summary>
+    public IReadOnlyDictionary<string, IReadOnlyList<LaboratorioEntry>> LabsConfirmatorios =>
+        _labsConfirmatorios ??= Laboratorios
+            .SelectMany(l => l.ResTriggerDx.Select(dx => (dx, l)))
+            .GroupBy(x => x.dx, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                g => g.Key,
+                g => (IReadOnlyList<LaboratorioEntry>)g.Select(x => x.l).ToList(),
+                StringComparer.OrdinalIgnoreCase);
+
     /// <summary>Carga directa desde listas — usado en tests unitarios.</summary>
     public void LoadFromLists(
         IEnumerable<Models.Catalogs.EpidemiologyEntry> epidemiology,
@@ -56,6 +72,7 @@ public class CatalogLoader
         Direcciones         = (direcciones ?? []).ToList().AsReadOnly();
         Paneles             = (paneles ?? []).ToList().AsReadOnly();
         PersonalLaboratorio = (personalLaboratorio ?? []).ToList().AsReadOnly();
+        _labsConfirmatorios = null;
     }
 
     public void Load(string catalogsPath)
@@ -77,6 +94,7 @@ public class CatalogLoader
         Direcciones         = LoadCsv(Path.Combine(catalogsPath, "direcciones.csv"),             ParseDireccion);
         Paneles             = LoadCsv(Path.Combine(catalogsPath, "paneles.csv"),                 ParsePanelComponente);
         PersonalLaboratorio = LoadCsv(Path.Combine(catalogsPath, "personal_laboratorio.csv"),    ParsePersonalLaboratorio);
+        _labsConfirmatorios = null;
     }
 
     private static IReadOnlyList<T> LoadCsv<T>(string path, Func<Dictionary<string, string>, T?> parser)
@@ -241,7 +259,9 @@ public class CatalogLoader
         // Dónde se procesa y cuánto tarda (columnas nuevas; ausentes = en la clínica, mismo día)
         SeRealizaEnClinica  = B(row, "se_realiza_en_clinica", porDefecto: true),
         DiasEntregaMin      = I(row, "dias_entrega_min"),
-        DiasEntregaMax      = I(row, "dias_entrega_max")
+        DiasEntregaMax      = I(row, "dias_entrega_max"),
+        // El paciente puede pedirlo por su cuenta (chequeo voluntario). Ausente = false.
+        EsChequeo           = B(row, "chequeo", porDefecto: false)
     };
 
     /// <summary>Lista separada por '|' (vacío = lista vacía).</summary>
@@ -343,7 +363,8 @@ public class CatalogLoader
             ResMax         = D(row, "res_max"),
             ResMinAnormal  = D(row, "res_min_anormal"),
             ResMaxAnormal  = D(row, "res_max_anormal"),
-            ResTrigger     = Pipe(row, "res_trigger")
+            ResTrigger     = Pipe(row, "res_trigger"),
+            ResTriggerDx   = Pipe(row, "res_trigger_dx")
         };
     }
 

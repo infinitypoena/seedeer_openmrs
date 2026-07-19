@@ -53,7 +53,7 @@ public class PatientSeeder
                     }
                 },
                 gender    = patient.Gender,
-                birthdate = patient.BirthDate.ToString("yyyy-MM-dd"),
+                birthdate = FormatearBirthdate(patient.BirthDate),
                 addresses = new[]
                 {
                     new
@@ -108,4 +108,13 @@ public class PatientSeeder
 
         return null;
     }
+
+    /// <summary>
+    /// Birthdate a <b>mediodía</b>, no a medianoche: OpenMRS parsea la fecha en la TZ del servidor y
+    /// algunas medianoches NO existen (transición DST de El Salvador 1987-88 — "1988-05-01" a las 00:00
+    /// es un instante ilegal → 400 y el paciente se pierde). Mediodía nunca cae en el hueco y OpenMRS
+    /// almacena solo la fecha, así que el dato queda idéntico. Seam puro (testeable).
+    /// </summary>
+    public static string FormatearBirthdate(DateOnly fecha) =>
+        VisitSeeder.FormatDatetime(fecha.ToDateTime(new TimeOnly(12, 0)));
 }

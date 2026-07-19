@@ -109,6 +109,9 @@ public class SeedOrchestrator
         // idéntica a las anteriores con la misma semilla.
         var rngSat      = new Random(_settings.RandomSeed + 19);
         var rngLlegadas = new Random(_settings.RandomSeed + 20);
+        // Tiradas del chequeo voluntario (¿esta alta/retorno espontáneo viene a chequearse?). RNG propio:
+        // con Chequeo.Enabled=false no se tira nunca y el flujo histórico queda bit a bit intacto.
+        var rngChequeo  = new Random(_settings.RandomSeed + 21);
 
         // Difusión de Bass. Los dos coeficientes se DERIVAN de los extremos de la curva, que son los dos
         // números que el usuario sí entiende: p del arranque (PacientesPorDiaMedio → el día 0, con el pool
@@ -250,12 +253,23 @@ public class SeedOrchestrator
 
                     patient.ClimaEstacion = estacion;
                     patient.TempAmbienteC = tempC;
-                    var preferCommon = _epiSelector.RollPreferCommon(runCommonP);
-                    patient.Categoria   = _epiSelector.SelectCategoria(patient.AgeGroup, patient.Gender, estacion, preferCommon);
-                    patient.Diagnostico = _epiSelector.SelectDiagnostico(patient.Categoria, patient.AgeGroup, patient.Gender, estacion, preferCommon);
-                    patient.Comorbilidades = patient.Diagnostico is null
-                        ? []
-                        : _epiSelector.SelectComorbilidades(patient.Diagnostico, patient.AgeGroup, patient.Gender, estacion);
+                    // Chequeo voluntario: una fracción de las altas llega SANA, a hacerse exámenes por su
+                    // cuenta — sin diagnóstico ni comorbilidades (el resto de la visita se adapta solo).
+                    if (_settings.Chequeo.Enabled &&
+                        rngChequeo.NextDouble() < _settings.Chequeo.ProbabilidadAlta)
+                    {
+                        patient.EsChequeo = true;
+                        patient.Categoria = Configuration.CatalogValidator.CategoriaChequeo;
+                    }
+                    else
+                    {
+                        var preferCommon = _epiSelector.RollPreferCommon(runCommonP);
+                        patient.Categoria   = _epiSelector.SelectCategoria(patient.AgeGroup, patient.Gender, estacion, preferCommon);
+                        patient.Diagnostico = _epiSelector.SelectDiagnostico(patient.Categoria, patient.AgeGroup, patient.Gender, estacion, preferCommon);
+                        patient.Comorbilidades = patient.Diagnostico is null
+                            ? []
+                            : _epiSelector.SelectComorbilidades(patient.Diagnostico, patient.AgeGroup, patient.Gender, estacion);
+                    }
                     patient.VisitDatetime = _schedule.GenerateVisitTime(day.Date);
 
                     await ProcesarVisitaAsync(patient, day.Date, tracker, runId, ct);
@@ -296,8 +310,19 @@ public class SeedOrchestrator
                         () => _epiSelector.RollSeguimientoAgudo(_settings.SeguimientoAgudoProb),
                         rng.Next);
 
+                    // Si el motivo del retorno es un dx de referencia, ESTA visita es su control post-alta:
+                    // el hospital ya resolvió el episodio y no debe re-referirse ni re-agendarse (ley L9).
+                    var esControlPostReferencia = dxSeguimiento?.EsReferencia == true;
+
                     var acudioACita = RecurrentSelector.TieneCitaHoy(
                         base_, day.Date, _settings.Appointments.ToleranciaDias);
+
+                    // Chequeo voluntario del recurrente: SOLO el retorno espontáneo sin cita ni motivo de
+                    // control puede serlo — a la cita agendada y al control de crónica/agudo se viene
+                    // por el cuadro, no a chequearse.
+                    var esChequeoRecurrente = _settings.Chequeo.Enabled
+                        && dxSeguimiento is null && !acudioACita
+                        && rngChequeo.NextDouble() < _settings.Chequeo.ProbabilidadRetornoEspontaneo;
 
                     // Si acude a su cita, lo atiende el médico con el que se agendó (no se re-sortea).
                     (string Location, string Provider)? citaRecursos =
@@ -324,6 +349,10 @@ public class SeedOrchestrator
                         StateProvince = base_.StateProvince,
                         Country       = base_.Country,
                         EsNuevo       = false,
+                        EsControlPostReferencia = esControlPostReferencia,
+                        // El motivo vino de DxDeControl (cita/crónica/agudo) → el cuadro ya se conoce y
+                        // su certeza no vuelve a sortearse (CertaintyPolicy).
+                        EsVisitaControl = dxSeguimiento is not null,
                         // Compartir historial de órdenes y lista de problemas con el paciente original
                         OrderedConcepts = base_.OrderedConcepts,
                         ProblemListConcepts = base_.ProblemListConcepts,
@@ -343,14 +372,20 @@ public class SeedOrchestrator
                         ImcBasal = base_.ImcBasal,
                         ClimaEstacion = estacion,
                         TempAmbienteC = tempC,
-                        // Control de crónica → misma categoría; si no, se elige una nueva (motivo agudo).
-                        Categoria     = dxSeguimiento?.Categoria
-                                        ?? _epiSelector.SelectCategoria(ageGroupVisita, base_.Gender, estacion, preferCommonRec),
+                        EsChequeo     = esChequeoRecurrente,
+                        // Control de crónica → misma categoría; chequeo → pseudo-categoría (motivos);
+                        // si no, se elige una nueva (motivo agudo).
+                        Categoria     = esChequeoRecurrente
+                                        ? Configuration.CatalogValidator.CategoriaChequeo
+                                        : dxSeguimiento?.Categoria
+                                          ?? _epiSelector.SelectCategoria(ageGroupVisita, base_.Gender, estacion, preferCommonRec),
                         VisitDatetime = _schedule.GenerateVisitTime(day.Date)
                     };
-                    recurrente.Diagnostico = dxSeguimiento
-                        ?? _epiSelector.SelectDiagnostico(
-                            recurrente.Categoria, ageGroupVisita, recurrente.Gender, estacion, preferCommonRec);
+                    recurrente.Diagnostico = esChequeoRecurrente
+                        ? null
+                        : dxSeguimiento
+                          ?? _epiSelector.SelectDiagnostico(
+                              recurrente.Categoria, ageGroupVisita, recurrente.Gender, estacion, preferCommonRec);
                     // En un control crónico, la lista de problemas es estable: se reutilizan las OTRAS crónicas
                     // ya conocidas del paciente en vez de sortear comorbilidades nuevas (que la hacían crecer
                     // sin fin visita a visita). En un motivo agudo, se sortean como antes.
@@ -568,7 +603,13 @@ public class SeedOrchestrator
             var cita = DateOnly.FromDateTime(fs);
             poolPatient.ProximaCita             = cita;
             poolPatient.ProximoElegibleDesde    = cita;
-            poolPatient.MotivoProximaCita       = visitPatient.Diagnostico;
+            // En el control post-alta el dx de referencia ya quedó resuelto: la próxima cita (si la hay)
+            // NO lo transporta — sin esto, el episodio se re-agendaba al 0,95 indefinidamente (ley L9).
+            // Con motivo null, DxDeControl cae a la continuidad probabilística (crónicas / sorteo).
+            poolPatient.MotivoProximaCita       =
+                visitPatient.EsControlPostReferencia && visitPatient.Diagnostico is { EsReferencia: true }
+                    ? null
+                    : visitPatient.Diagnostico;
             poolPatient.ProximaCitaProviderUuid = visitPatient.ProximaCitaProviderUuid;
             poolPatient.ProximaCitaLocationUuid = visitPatient.ProximaCitaLocationUuid;
         }

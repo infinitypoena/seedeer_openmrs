@@ -81,6 +81,18 @@ public class RunStats
     /// <summary>Altas que no se pudieron captar porque la consulta estaba llena (sano: es el freno del aforo).</summary>
     public int NuevosRechazadosPorAforo { get; private set; }
 
+    /// <summary>Remisiones al hospital emitidas en la corrida (obs "Remisiones solicitadas").</summary>
+    public int RemisionesTotales { get; private set; }
+
+    /// <summary>
+    /// <b>Tripwire de la ley L9.</b> Remisiones emitidas en una visita que era el CONTROL post-alta de ese
+    /// mismo episodio de referencia. Tiene que ser <b>siempre 0</b>: el control comprueba cómo salió del
+    /// hospital, no lo vuelve a mandar. Si deja de serlo, el episodio de referencia se está encadenando —
+    /// es el bug que dejó a un paciente con 47 encuentros de "Apendicitis aguda" y 6,8 remisiones por
+    /// referido (corrida jul-2026).
+    /// </summary>
+    public int RemisionesEnControl { get; private set; }
+
     /// <summary>Días en los que la clínica topó con el techo DURO de seguridad (<c>PacientesPorDiaMax</c>).</summary>
     public int DiasEnElTecho { get; private set; }
     /// <summary>Días con atención simulados (denominador de <see cref="DiasEnElTecho"/>).</summary>
@@ -113,6 +125,15 @@ public class RunStats
         RetornosDesplazadosPorAforo = 0;
         NuevosRechazadosPorAforo = 0;
         DiasEnElTecho = 0;
+        RemisionesTotales = 0;
+        RemisionesEnControl = 0;
+    }
+
+    /// <summary>Se emitió una remisión al hospital; <paramref name="enControl"/> = la visita era el control post-alta.</summary>
+    public void RegistrarRemision(bool enControl)
+    {
+        RemisionesTotales++;
+        if (enControl) RemisionesEnControl++;
     }
 
     /// <summary>Una cita de control se resolvió: el paciente acudió (<c>Completed</c>) o no (<c>Missed</c>).</summary>

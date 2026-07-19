@@ -74,6 +74,7 @@ public class SimulationSettings
     public OrdersSettings Orders { get; set; } = new();
     public LaboratorioSettings Laboratorio { get; set; } = new();
     public SatisfaccionSettings Satisfaccion { get; set; } = new();
+    public ChequeoSettings Chequeo { get; set; } = new();
     public CrecimientoSettings Crecimiento { get; set; } = new();
     public SalidaSettings Salida { get; set; } = new();
 }
@@ -349,6 +350,34 @@ public class RecurrenceSettings
     /// </para>
     /// </summary>
     public double VisitasEspontaneasPorPacienteAno { get; set; } = 0.5;
+}
+
+/// <summary>
+/// El paciente que pide exámenes <b>por su propia iniciativa</b>. Dos escenarios: la visita de
+/// <b>chequeo puro</b> (viene sano, "a ver si no hay nada mal": sin diagnóstico, solo labs comunes del
+/// pool <c>chequeo=true</c> de laboratorios.csv) y el <b>examen adicional a petición</b> (un enfermo que
+/// aprovecha su consulta para pedir un examen común extra). Todas las tiradas usan un RNG propio
+/// (<c>RandomSeed + 21</c> en el orquestador, <c>+24</c> en LabOrderSeeder): con <c>Enabled=false</c>
+/// el flujo aleatorio histórico queda intacto.
+/// No toca volumen/recurrencia/crecimiento (cambia el CONTENIDO de la visita, no su existencia).
+/// </summary>
+public class ChequeoSettings
+{
+    public bool Enabled { get; set; } = true;
+    /// <summary>Prob. de que un paciente NUEVO (alta del día) venga a chequeo en vez de enfermo. Def. 0,04.</summary>
+    public double ProbabilidadAlta { get; set; } = 0.04;
+    /// <summary>
+    /// Prob. de que un retorno ESPONTÁNEO (sin cita ni motivo de control) sea un chequeo. Nunca aplica
+    /// a una cita agendada ni a un control de crónica/episodio agudo. Def. 0,02.
+    /// </summary>
+    public double ProbabilidadRetornoEspontaneo { get; set; } = 0.02;
+    /// <summary>Prob. de que un paciente ENFERMO pida además un examen común por su cuenta. Def. 0,05.</summary>
+    public double ProbExamenAdicional { get; set; } = 0.05;
+    /// <summary>Prob. de agendar seguimiento tras un chequeo (un sano casi nunca sale citado). Def. 0,05.</summary>
+    public double FollowUp { get; set; } = 0.05;
+    /// <summary>Cuántos labs del pool <c>chequeo=true</c> ordena la visita de chequeo (banda inclusiva).</summary>
+    public int MinLabs { get; set; } = 2;
+    public int MaxLabs { get; set; } = 4;
 }
 
 public class AllergySettings

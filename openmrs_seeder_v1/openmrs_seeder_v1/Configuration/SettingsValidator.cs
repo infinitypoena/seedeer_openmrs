@@ -115,6 +115,16 @@ public static class SettingsValidator
         // Variedad
         NoNegativo(sim.Variedad.RepeticionDamping, "Variedad.RepeticionDamping");
 
+        // Chequeo voluntario (paciente que pide exámenes por su cuenta)
+        var ch = sim.Chequeo;
+        Prob(ch.ProbabilidadAlta, "Chequeo.ProbabilidadAlta");
+        Prob(ch.ProbabilidadRetornoEspontaneo, "Chequeo.ProbabilidadRetornoEspontaneo");
+        Prob(ch.ProbExamenAdicional, "Chequeo.ProbExamenAdicional");
+        Prob(ch.FollowUp, "Chequeo.FollowUp");
+        if (ch.MinLabs < 1)
+            violaciones.Add($"Chequeo.MinLabs debe ser al menos 1 (valor: {ch.MinLabs})");
+        Banda(ch.MinLabs, ch.MaxLabs, "Chequeo.MinLabs", "Chequeo.MaxLabs");
+
         // Satisfacción (la nota 1-5 de cada visita)
         var sa = sim.Satisfaccion;
         if (sa.MediaBase is < 1 or > 5)

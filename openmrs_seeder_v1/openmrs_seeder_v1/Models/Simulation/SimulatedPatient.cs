@@ -115,6 +115,33 @@ public class SimulatedPatient
     public bool Referido { get; set; }
 
     /// <summary>
+    /// ESTA visita es el <b>control post-alta</b> de un episodio de referencia: el motivo del retorno
+    /// (la cita o el seguimiento del episodio agudo) es un dx <c>ambito=referencia</c> que el hospital ya
+    /// resolvió. Lo fija el orquestador al elegir el motivo (<c>DxDeControl</c>); <c>ConsultaSeeder</c>
+    /// excluye ese dx de la decisión de referir y del seguimiento (máximo 1 control por episodio — ley
+    /// L9), y la visita prescribe y ordena labs con normalidad (el paciente ya viene de vuelta).
+    /// Estado <b>por visita</b>: no se copia de vuelta al pool (a diferencia de las colecciones compartidas).
+    /// </summary>
+    public bool EsControlPostReferencia { get; set; }
+
+    /// <summary>
+    /// ESTA visita es un <b>control de un cuadro ya conocido</b> (acudió a su cita, control de crónica o
+    /// seguimiento del episodio agudo — <c>DxDeControl</c> devolvió el dx sin sortear uno nuevo). La
+    /// consume <see cref="Services.CertaintyPolicy"/>: un cuadro ya estudiado sale CONFIRMED, no vuelve
+    /// a ser una sospecha. Estado <b>por visita</b> (no se copia de vuelta al pool).
+    /// </summary>
+    public bool EsVisitaControl { get; set; }
+
+    /// <summary>
+    /// ESTA visita es un <b>chequeo voluntario</b>: el paciente viene sano, por su propia iniciativa, a
+    /// hacerse exámenes comunes ("para ver si no hay nada mal"). Sin diagnóstico (<c>Diagnostico=null</c>,
+    /// el encuentro va sin <c>diagnoses[]</c>), motivo de la pseudo-categoría <c>chequeo</c>, labs del
+    /// pool <c>chequeo=true</c> con resultados en banda normal, sin prescripción ni referencia y
+    /// seguimiento mínimo. Estado <b>por visita</b> (no se copia de vuelta al pool).
+    /// </summary>
+    public bool EsChequeo { get; set; }
+
+    /// <summary>
     /// Fecha de retorno decidida en la consulta de ESTA visita (obs "Return visit date").
     /// La consume <c>AppointmentSeeder</c> para agendar la cita real. Null = sin seguimiento.
     /// </summary>

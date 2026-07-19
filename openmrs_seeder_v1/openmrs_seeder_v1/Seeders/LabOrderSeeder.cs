@@ -20,7 +20,11 @@ public class LabOrderSeeder
     private readonly double _labOrderProb;
     private readonly double _urgentProb;
     private readonly int _labVigenciaDias;
+    private readonly ChequeoSettings _chequeo;
     private readonly Random _rng;
+    // Tiradas del examen a petición del paciente. RNG propio (+24): con Chequeo.Enabled=false no se
+    // tira nunca y el flujo del seeder (+14) queda intacto.
+    private readonly Random _rngChequeo;
     private readonly ILogger<LabOrderSeeder> _logger;
 
     public LabOrderSeeder(
@@ -38,7 +42,9 @@ public class LabOrderSeeder
         _labOrderProb  = simSettings.ReferralProbabilities.LabOrder;
         _urgentProb    = simSettings.ReferralProbabilities.Urgent;
         _labVigenciaDias = simSettings.Orders.LabVigenciaDias;
+        _chequeo       = simSettings.Chequeo;
         _rng = new Random(simSettings.RandomSeed + 14);
+        _rngChequeo = new Random(simSettings.RandomSeed + 24);
         _logger        = logger;
     }
 
@@ -50,22 +56,41 @@ public class LabOrderSeeder
             return;
         }
 
-        var debeOrden = patient.TodosDiagnosticos.Any(d => d.RequiereLab)
-            ? _rng.NextDouble() < 0.80
-            : _rng.NextDouble() < _labOrderProb;
-
-        if (!debeOrden) return;
-
         var fechaVisita = DateOnly.FromDateTime(patient.VisitDatetime);
-        var candidatos = _catalogs.Laboratorios
-            .Where(l => patient.Categorias.Any(c => AplicaCategoria(l, c)))
-            .Where(l => !OrderVigencia.EstaActivo(patient.OrderedConcepts, l.CielUuid, fechaVisita)) // solo si no hay una orden aún vigente
-            .ToList();
 
-        if (candidatos.Count == 0) return;
+        List<Models.Catalogs.LaboratorioEntry> elegidos;
+        Models.Catalogs.LaboratorioEntry? pedidoPorPaciente = null;
 
-        var cantidad = _rng.NextDouble() < 0.40 ? 2 : 1;
-        var elegidos = candidatos.OrderBy(_ => _rng.Next()).Take(cantidad).ToList();
+        if (patient.EsChequeo)
+        {
+            // Visita de chequeo voluntario: el paciente vino expresamente a hacerse exámenes comunes.
+            elegidos = LabOrderSelector.SeleccionarChequeo(
+                _catalogs.Laboratorios, patient.OrderedConcepts, fechaVisita,
+                _chequeo.MinLabs, _chequeo.MaxLabs, _rng);
+        }
+        else
+        {
+            // Selección en el seam puro. Los confirmatorios se fuerzan sobre los dxs EVALUABLES (en un
+            // control post-alta, el episodio que el hospital ya resolvió no re-ordena su examen — ley L9).
+            var dxConfirmables = ConsultaSeeder.DxsEvaluables(patient).Select(d => d.CielUuid).ToList();
+            elegidos = LabOrderSelector.Seleccionar(
+                _catalogs.Laboratorios, _catalogs.LabsConfirmatorios,
+                patient.Categorias, dxConfirmables,
+                requiereLab: patient.TodosDiagnosticos.Any(d => d.RequiereLab),
+                probBase: _labOrderProb,
+                patient.OrderedConcepts, fechaVisita, _rng);
+
+            // El enfermo que "aprovecha" la consulta y pide además un examen común por su cuenta.
+            if (_chequeo.Enabled && _rngChequeo.NextDouble() < _chequeo.ProbExamenAdicional)
+            {
+                pedidoPorPaciente = LabOrderSelector.ExamenAPeticion(
+                    _catalogs.Laboratorios, elegidos.Select(l => l.CielUuid).ToList(),
+                    patient.OrderedConcepts, fechaVisita, _rngChequeo);
+                if (pedidoPorPaciente is not null) elegidos.Add(pedidoPorPaciente);
+            }
+        }
+
+        if (elegidos.Count == 0) return;
 
         // Sets para el generador de resultados (categorías + diagnósticos del paciente)
         var categorias = patient.Categorias as ISet<string> ?? new HashSet<string>(patient.Categorias);
@@ -74,15 +99,20 @@ public class LabOrderSeeder
         int ordenesOk = 0;
         foreach (var lab in elegidos)
         {
+            // El examen que pidió el propio paciente (chequeo o "ya que estoy") nunca es urgente.
+            var solicitadoPorPaciente = patient.EsChequeo || ReferenceEquals(lab, pedidoPorPaciente);
+
             // Al paciente que se va al hospital, los labs son de ESTABILIZACIÓN: siempre urgentes, no la
             // mitad de las veces. Un cuadro grave que se queda en la clínica, la mitad; el resto, la
             // probabilidad base.
-            var esUrgente = patient.Referido
-                || (patient.TodosDiagnosticos.Any(d => d.Severidad == "grave")
-                    ? _rng.NextDouble() < 0.50
-                    : _rng.NextDouble() < _urgentProb);
+            var esUrgente = !solicitadoPorPaciente &&
+                (patient.Referido
+                 || (patient.TodosDiagnosticos.Any(d => d.Severidad == "grave")
+                     ? _rng.NextDouble() < 0.50
+                     : _rng.NextDouble() < _urgentProb));
 
-            var orderUuid = await PostOrderAsync(patient, lab, esUrgente ? "STAT" : "ROUTINE", fechaVisita, ct);
+            var orderUuid = await PostOrderAsync(
+                patient, lab, esUrgente ? "STAT" : "ROUTINE", fechaVisita, solicitadoPorPaciente, ct);
             if (orderUuid is null) continue;
 
             ordenesOk++;
@@ -95,7 +125,7 @@ public class LabOrderSeeder
             var result = LabResultGenerator.Generar(lab, categorias, dxUuids, _rng);
             var componentes = lab.Datatype == "panel"
                 ? LabResultGenerator.GenerarComponentes(
-                    _catalogs.Paneles.Where(p => p.PanelUuid == lab.CielUuid), categorias, _rng)
+                    _catalogs.Paneles.Where(p => p.PanelUuid == lab.CielUuid), categorias, _rng, dxUuids)
                 : null;
 
             await _workflow.ProcesarOrdenAsync(patient, lab, orderUuid, result, componentes, ct);
@@ -108,7 +138,7 @@ public class LabOrderSeeder
     /// <summary>Crea la orden y devuelve su UUID (o null si falla).</summary>
     private async Task<string?> PostOrderAsync(
         SimulatedPatient patient, Models.Catalogs.LaboratorioEntry lab, string urgency,
-        DateOnly fechaVisita, CancellationToken ct)
+        DateOnly fechaVisita, bool solicitadoPorPaciente, CancellationToken ct)
     {
         var payload = new
         {
@@ -130,7 +160,7 @@ public class LabOrderSeeder
             // Nº de muestra e instrucción al laboratorio: el que sale del catálogo decide si el examen
             // se procesa aquí o se refiere a un laboratorio externo.
             accessionNumber    = _workflow.SiguienteNumeroMuestra(fechaVisita),
-            commentToFulfiller = LabWorkflow.ComentarioAlLaboratorio(lab)
+            commentToFulfiller = LabWorkflow.ComentarioAlLaboratorio(lab, solicitadoPorPaciente)
         };
 
         try
@@ -146,21 +176,4 @@ public class LabOrderSeeder
         }
     }
 
-    private static bool AplicaCategoria(Models.Catalogs.LaboratorioEntry l, string cat) => cat switch
-    {
-        "respiratorio"   => l.AplicaRespiratorio,
-        "cardiovascular" => l.AplicaCardiovascular,
-        "diabetes"       => l.AplicaDiabetes,
-        "digestivo"      => l.AplicaDigestivo,
-        "osteomuscular"  => l.AplicaOsteomuscular,
-        "urologico"      => l.AplicaUrologico,
-        "infeccioso"     => l.AplicaInfeccioso,
-        "endocrino"      => l.AplicaEndocrino,
-        "neurologico"     => l.AplicaNeurologico,
-        "dermatologico"   => l.AplicaDermatologico,
-        "salud_mental"    => l.AplicaSaludMental,
-        "ginecoobstetrico"=> l.AplicaGinecoobstetrico,
-        "trauma"          => l.AplicaTrauma,
-        _ => false
-    };
 }

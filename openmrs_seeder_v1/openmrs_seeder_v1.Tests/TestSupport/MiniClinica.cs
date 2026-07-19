@@ -15,6 +15,20 @@ public sealed class OpcionesMiniClinica
     /// <summary>Fracción de diagnósticos con severidad "grave".</summary>
     public double FraccionGrave { get; init; } = 0.10;
 
+    /// <summary>
+    /// Fracción de diagnósticos agudos con <c>ambito=referencia</c> (apendicitis, IAM… — la clínica los
+    /// estabiliza y los manda al hospital). En el catálogo real son 64 de 407 filas, con pesos bajos.
+    /// </summary>
+    public double FraccionReferencia { get; init; } = 0.05;
+
+    /// <summary>
+    /// <b>SABOTAJE — el bucle de referencias (jul 2026).</b> Si es <c>true</c>, el control post-alta se
+    /// trata como un episodio nuevo (la decisión de referir vuelve a ser sin estado): re-emite la
+    /// remisión y re-agenda otro control al 0,95 — la cadena que dejó a un paciente con 47 encuentros de
+    /// "Apendicitis aguda" y 6,8 remisiones por referido. Debe encender la ley L9.
+    /// </summary>
+    public bool ReferenciaSinEstado { get; init; }
+
     /// <summary>Prob. de que a un recurrente lo atienda su médico de cabecera (media de la banda real 0,70-0,90).</summary>
     public double ProbCabecera { get; init; } = 0.80;
 
@@ -56,28 +70,35 @@ public sealed record ResultadoMiniClinica(
 /// <code>
 /// Paso del día                          SeedOrchestrator.cs          Seam de producción reusado
 /// ─────────────────────────────────     ─────────────────────        ─────────────────────────────────
-/// ¿día abierto?                         Abierta() (129-131)          DailyScheduleGenerator.PesoDelDia
-/// estado del pool (A, S, peso, λ)       174-177                      BassGrowthModel.PacientesActivos /
+/// ¿día abierto?                         Abierta() (132-134)          DailyScheduleGenerator.PesoDelDia
+/// estado del pool (A, S, peso, λ)       177-180                      BassGrowthModel.PacientesActivos /
 ///                                                                    RecurrentesActivosSatisfechos / Lambda
-/// retornos PRIMERO (sin cupo)           182-189                      RecurrentSelector.Seleccionar
-/// altas con lo que quede de aforo       193-199                      BassGrowthModel.NuevosDelDia /
+/// retornos PRIMERO (sin cupo)           185-192                      RecurrentSelector.Seleccionar
+/// altas con lo que quede de aforo       196-202                      BassGrowthModel.NuevosDelDia /
 ///                                                                    CapacidadDelDia (recorta SOLO altas)
-/// total y techo                         201-202                      —
-/// motivo del recurrente                 292-297                      SeedOrchestrator.DxDeControl
+/// total y techo                         204-205                      —
+/// motivo del recurrente                 306-311                      SeedOrchestrator.DxDeControl
+/// control post-alta (flag L9)           313-315 + ConsultaSeeder     ConsultaSeeder.DxsEvaluables +
+///   sin re-remisión, motivo null        80-107, FijarProximaVisita   SeguimientoPolicy.Probabilidad +
+///                                       (motivo null si resuelto)    RunStats.RegistrarRemision
 /// resolver citas del que vuelve         (ProcesarVisitaAsync)        AppointmentSeeder.ClasificarCitas
-/// crónicas / episodio agudo             RegistrarCronicas (478),     réplica fiel (~15 líneas)
-///                                       RegistrarEpisodioAgudo (493)
-/// agendar control y próxima elegib.     FijarProximaVisita (553)     SeguimientoPolicy.Probabilidad +
+/// crónicas / episodio agudo             RegistrarCronicas (513),     réplica fiel (~15 líneas)
+///                                       RegistrarEpisodioAgudo (528)
+/// agendar control y próxima elegib.     FijarProximaVisita (588)     SeguimientoPolicy.Probabilidad +
 ///                                                                    RecurrenceScheduler.ProximaFechaElegible
-/// calificación de la visita             RegistrarCalificacion (529)  SatisfaccionPolicy.Calificar/EsInsatisfecho
-/// cierre del día                        377-383                      RunStats.RegistrarDiaSimulado
-/// barrido final de la agenda            SweepMissedAsync (415)       AppointmentSeeder.CitasVencidas
+/// calificación de la visita             RegistrarCalificacion (564)  SatisfaccionPolicy.Calificar/EsInsatisfecho
+/// cierre del día                        412-418                      RunStats.RegistrarDiaSimulado
+/// barrido final de la agenda            SweepMissedAsync (450)       AppointmentSeeder.CitasVencidas
 /// veredicto                             Program.cs etapa 4/5         Invariantes.Evaluar / Rotas
 /// </code>
 ///
 /// <para>Lo único que NO se replica son los POST a OpenMRS (aquí <c>VisitUuid</c> se marca sintético) y
 /// los seeders clínicos internos de la visita (vitals, labs, prescripciones), que no afectan al volumen
 /// ni a la recurrencia — el terreno que las leyes vigilan.</para>
+///
+/// <para>El <b>chequeo voluntario</b> (jul 2026) tampoco se replica, a propósito: cambia el CONTENIDO de
+/// algunas visitas (sin dx, labs de chequeo), no cuántas hay ni quién vuelve — sus tiradas van en RNG
+/// propios (+21/+24) para que <c>Chequeo.Enabled=false</c> reproduzca el flujo histórico bit a bit.</para>
 /// </summary>
 public static class MiniClinica
 {
@@ -114,12 +135,15 @@ public static class MiniClinica
         {
             var esCronico = rngDx.NextDouble() < op.FraccionCronicos;
             var esGrave   = rngDx.NextDouble() < op.FraccionGrave;
+            // Solo un agudo puede ser de referencia (el catálogo real avisa si es referencia + crónica).
+            var esReferencia = !esCronico && rngDx.NextDouble() < op.FraccionReferencia;
             var n         = rngDx.Next(esCronico ? 8 : 40);   // 8 crónicas y 40 agudas distintas
             return Factorias.Dx(
-                uuid:      (esCronico ? "cronica-" : "aguda-") + n,
+                uuid:      (esCronico ? "cronica-" : esReferencia ? "referencia-" : "aguda-") + n,
                 cronica:   esCronico,
                 severidad: esGrave ? "grave" : "moderado",
-                categoria: esCronico ? "cardiovascular" : "respiratorio");
+                categoria: esCronico ? "cardiovascular" : "respiratorio",
+                ambito:    esReferencia ? "referencia" : "");
         }
 
         // ── Réplicas fieles de la contabilidad post-visita del orquestador ─────────────────────────
@@ -145,19 +169,40 @@ public static class MiniClinica
             poolPatient.FechaUltimoDxAgudo = visita;
         }
 
-        void FijarProximaVisita(SimulatedPatient poolPatient, DiagnosticoEntry dx, DateOnly visita)
+        // ConsultaSeeder: ¿esta visita refiere al hospital? El control post-alta NO re-refiere (su dx ya
+        // lo resolvió el hospital: ConsultaSeeder.DxsEvaluables lo excluye) — salvo con el sabotaje, que
+        // reproduce la decisión sin estado del bug del bucle. Emite la remisión al tripwire de L9.
+        bool Referir(DiagnosticoEntry dx, bool esControlPostReferencia)
+        {
+            var episodioResueltoCuenta = op.ReferenciaSinEstado || !esControlPostReferencia;
+            var referido = dx.EsReferencia && episodioResueltoCuenta;
+            if (referido)
+                stats.RegistrarRemision(enControl: esControlPostReferencia);
+            return referido;
+        }
+
+        void FijarProximaVisita(
+            SimulatedPatient poolPatient, DiagnosticoEntry dx, DateOnly visita,
+            bool referido, bool esControlPostReferencia)
         {
             poolPatient.UltimaVisita = visita;
             poolPatient.Visitas++;
 
-            // ConsultaSeeder: ¿se agenda control? La probabilidad depende del cuadro (crónico > grave > resto)
-            var probSeguimiento = SeguimientoPolicy.Probabilidad([dx], sim.ReferralProbabilities);
+            // ConsultaSeeder: ¿se agenda control? La probabilidad depende del cuadro (referido ≫ crónico >
+            // grave > resto). En el control post-alta el dx resuelto queda fuera de la decisión
+            // (ConsultaSeeder.DxsEvaluables) y, si aun así se cita, la cita ya no transporta ese dx.
+            var episodioResuelto = esControlPostReferencia && dx.EsReferencia && !op.ReferenciaSinEstado;
+            var dxsEvaluables    = episodioResuelto ? Array.Empty<DiagnosticoEntry>() : [dx];
+            var probSeguimiento  = SeguimientoPolicy.Probabilidad(dxsEvaluables, sim.ReferralProbabilities, referido);
             if (rng.NextDouble() < probSeguimiento)
             {
-                var cita = RecurrenceScheduler.ProximaFechaElegible(visita, dx.EsCronica, rng, re);
+                // El referido vuelve tras el alta hospitalaria (banda 15-30 d), no dentro de una semana.
+                var cita = referido
+                    ? RecurrenceScheduler.ProximaFechaPostReferencia(visita, rng, re)
+                    : RecurrenceScheduler.ProximaFechaElegible(visita, dx.EsCronica, rng, re);
                 poolPatient.ProximaCita          = cita;
                 poolPatient.ProximoElegibleDesde = cita;
-                poolPatient.MotivoProximaCita    = dx;
+                poolPatient.MotivoProximaCita    = episodioResuelto ? null : dx;
                 if (op.CitasActivas)
                     poolPatient.CitasPendientes.Add(new CitaPendiente(
                         $"cita-{poolPatient.OpenMrsUuid}-{poolPatient.Visitas}",
@@ -249,9 +294,10 @@ public static class MiniClinica
                     Diagnostico = dx,
                 };
                 stats.RegistrarVisita(nuevo, day.Date);
+                var referidoNuevo = Referir(dx, esControlPostReferencia: false);
                 RegistrarCronicas(nuevo, dx);
                 RegistrarEpisodioAgudo(nuevo, dx, day.Date, fueControlAgudo: false);
-                FijarProximaVisita(nuevo, dx, day.Date);
+                FijarProximaVisita(nuevo, dx, day.Date, referidoNuevo, esControlPostReferencia: false);
                 RegistrarCalificacion(nuevo, dx, esNuevo: true, acudioACita: false, totalDelDia);
                 pool.Add(nuevo);
             }
@@ -281,6 +327,9 @@ public static class MiniClinica
                 }
 
                 var dx = dxSeguimiento ?? SortearDx();
+                // SeedOrchestrator: si el motivo del retorno es un dx de referencia, esta visita es su
+                // control post-alta (el hospital ya resolvió el episodio) — ley L9.
+                var esControlPostReferencia = dxSeguimiento?.EsReferencia == true;
                 var visita = new SimulatedPatient
                 {
                     OpenMrsUuid = base_.OpenMrsUuid,
@@ -289,9 +338,10 @@ public static class MiniClinica
                     Diagnostico = dx,
                 };
                 stats.RegistrarVisita(visita, day.Date);
+                var referido = Referir(dx, esControlPostReferencia);
                 RegistrarCronicas(base_, dx);
                 RegistrarEpisodioAgudo(base_, dx, day.Date, esControlAgudo);
-                FijarProximaVisita(base_, dx, day.Date);
+                FijarProximaVisita(base_, dx, day.Date, referido, esControlPostReferencia);
                 RegistrarCalificacion(base_, dx, esNuevo: false, acudioACita, totalDelDia);
             }
 

@@ -46,4 +46,11 @@ public class LaboratorioEntry
     /// <summary>Días hasta que el resultado está disponible (0 = mismo día). Banda inclusiva.</summary>
     public int DiasEntregaMin { get; set; }
     public int DiasEntregaMax { get; set; }
+
+    /// <summary>
+    /// Examen "de chequeo": lo puede pedir el propio paciente sin estar enfermo (hemograma, glucemia,
+    /// orina…). Alimenta la visita de chequeo voluntario y el examen adicional a petición.
+    /// Columna ausente → <c>false</c> (retrocompatible).
+    /// </summary>
+    public bool EsChequeo { get; set; }
 }

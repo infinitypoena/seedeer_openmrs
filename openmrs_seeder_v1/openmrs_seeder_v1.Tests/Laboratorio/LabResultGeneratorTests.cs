@@ -218,6 +218,43 @@ public class LabResultGeneratorTests
     }
 
     [Fact]
+    public void Componentes_TriggerPorDx_AnemiaBajaLaHemoglobina()
+    {
+        // res_trigger_dx de paneles.csv: el dx de anemia baja Hb aunque su categoría (endocrino)
+        // no dispare ningún trigger de categoría del hemograma.
+        var componentes = Hemograma();
+        componentes[0].ResTriggerDx = ["anemia-uuid"];
+
+        var dx = new HashSet<string> { "anemia-uuid" };
+        var rng = new Random(14);
+        int hbAnormales = 0;
+        const int N = 2000;
+        for (int i = 0; i < N; i++)
+        {
+            var comps = GenerarComponentes(componentes, SinCategorias, rng, dx);
+            if (comps.Single(c => c.ConceptUuid == "hb").Valor <= 10.9) hbAnormales++;
+            // Las plaquetas (trigger solo por categoría) siguen normales.
+            Assert.InRange(comps.Single(c => c.ConceptUuid == "plt").Valor, 150, 450);
+        }
+        Assert.InRange(hbAnormales / (double)N, 0.72, 0.88);
+    }
+
+    [Fact]
+    public void Componentes_SinDxParam_ComportamientoHistorico()
+    {
+        // Retrocompatibilidad: sin el parámetro de dx, un res_trigger_dx poblado no dispara.
+        var componentes = Hemograma();
+        componentes[0].ResTriggerDx = ["anemia-uuid"];
+
+        var rng = new Random(15);
+        for (int i = 0; i < 300; i++)
+        {
+            var comps = GenerarComponentes(componentes, SinCategorias, rng);
+            Assert.InRange(comps.Single(c => c.ConceptUuid == "hb").Valor, 12.0, 16.5);
+        }
+    }
+
+    [Fact]
     public void Componentes_FilaSinBanda_SeOmite()
     {
         var comps = GenerarComponentes(

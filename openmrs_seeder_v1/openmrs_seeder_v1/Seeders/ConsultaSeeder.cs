@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using OpenmrsSeeder.Clients;
 using OpenmrsSeeder.Configuration;
+using OpenmrsSeeder.Models.Catalogs;
 using OpenmrsSeeder.Models.Simulation;
 using OpenmrsSeeder.Services;
 
@@ -20,7 +21,9 @@ public class ConsultaSeeder
     private readonly double _clinicalExamProb;
     private readonly ReferralProbabilitiesSettings _referral;
     private readonly RecurrenceSettings _recurrence;
+    private readonly ChequeoSettings _chequeo;
     private readonly Random _rng;
+    private readonly RunStats _stats;
     private readonly ILogger<ConsultaSeeder> _logger;
 
     public ConsultaSeeder(
@@ -28,6 +31,7 @@ public class ConsultaSeeder
         OpenMrsSettings settings,
         CatalogLoader catalogs,
         SimulationSettings simSettings,
+        RunStats stats,
         ILogger<ConsultaSeeder> logger)
     {
         _client           = client;
@@ -37,6 +41,8 @@ public class ConsultaSeeder
         _rng = new Random(simSettings.RandomSeed + 13);
         _referral         = simSettings.ReferralProbabilities;
         _recurrence       = simSettings.Recurrence;
+        _chequeo          = simSettings.Chequeo;
+        _stats            = stats;
         _logger           = logger;
     }
 
@@ -68,18 +74,37 @@ public class ConsultaSeeder
         // ── Referencia al hospital ────────────────────────────────────────────────────────────────
         // La clínica es de primer nivel: si el cuadro se le sale de las manos (apendicitis, IAM, sepsis,
         // eclampsia…) no lo trata — lo estabiliza y lo refiere. Es determinista: lo dice la columna
-        // 'ambito' del catálogo, no una tirada de dados.
-        patient.Referido = ReferenciaPolicy.DebeReferir(patient.TodosDiagnosticos);
+        // 'ambito' del catálogo, no una tirada de dados. En el CONTROL post-alta el dx del episodio ya lo
+        // resolvió el hospital: se excluye de la decisión (DxsEvaluables) para no re-referirlo (ley L9) —
+        // una comorbilidad fresca de referencia en esa misma visita sí refiere (es un episodio nuevo).
+        var dxsEvaluables = DxsEvaluables(patient);
+        patient.Referido = ReferenciaPolicy.DebeReferir(dxsEvaluables);
         if (patient.Referido)
-            await SeedReferenciaAsync(patient, encounterUuid, fechaConsulta, ct);
+        {
+            await SeedReferenciaAsync(patient, dxsEvaluables, encounterUuid, fechaConsulta, ct);
+            // Tripwire de la ley L9: cuenta como "remisión en control" solo si la causa incluye el dx ya
+            // resuelto — estructuralmente imposible con la exclusión de arriba; si alguien la quita, el
+            // contador se enciende y la corrida termina con L9 rota.
+            _stats.RegistrarRemision(enControl:
+                patient.EsControlPostReferencia
+                && patient.Diagnostico is { } primario
+                && dxsEvaluables.Any(d => d.EsReferencia && d.CielUuid == primario.CielUuid));
+        }
 
         // Nota de seguimiento: la probabilidad se condiciona al cuadro (referido ≫ crónico ≫ grave ≫
         // resto) y la fecha sale de la banda clínica que le toca — control post-alta (15–30 d) al
         // referido, banda de recurrencia (crónico mensual/trimestral, agudo 1–3 semanas) al resto. NO un
         // 7–30 días plano. Así la cita coincide con la próxima elegibilidad del paciente y
         // AppointmentSeeder puede agendar la cita real que después gobierna su retorno.
-        var esCronico = patient.TodosDiagnosticos.Any(d => d.EsCronica);
-        if (_rng.NextDouble() < SeguimientoPolicy.Probabilidad(patient.TodosDiagnosticos, _referral, patient.Referido))
+        // El seguimiento se decide sobre los mismos dxs evaluables: el episodio de referencia resuelto no
+        // vuelve a disparar FollowUpGrave por un cuadro que ya no está activo.
+        var esCronico = dxsEvaluables.Any(d => d.EsCronica);
+        // Un chequeo sin hallazgos no genera control: probabilidad propia (mínima) en vez de la política
+        // por cuadro (que a una visita sin dxs le daría el FollowUp base del 30 %).
+        var probSeguimiento = patient.EsChequeo
+            ? _chequeo.FollowUp
+            : SeguimientoPolicy.Probabilidad(dxsEvaluables, _referral, patient.Referido);
+        if (_rng.NextDouble() < probSeguimiento)
         {
             // El referido vuelve a la clínica tras el alta hospitalaria, no dentro de una semana.
             var fechaCita = patient.Referido
@@ -100,15 +125,29 @@ public class ConsultaSeeder
     }
 
     /// <summary>
+    /// Diagnósticos sobre los que se decide la referencia y el seguimiento de ESTA visita. En un control
+    /// post-alta (<see cref="SimulatedPatient.EsControlPostReferencia"/>) el dx primario es el episodio
+    /// que el hospital ya resolvió: se excluye para no re-referirlo ni re-agendar su control (ley L9).
+    /// Una comorbilidad de referencia distinta en esa misma visita sí cuenta — es un episodio nuevo.
+    /// Seam puro estático (sin red ni RNG) → testeable de forma determinista.
+    /// </summary>
+    public static IReadOnlyList<DiagnosticoEntry> DxsEvaluables(SimulatedPatient patient) =>
+        patient.EsControlPostReferencia && patient.Diagnostico is { EsReferencia: true } resuelto
+            ? patient.TodosDiagnosticos.Where(d => d.CielUuid != resuelto.CielUuid).ToList()
+            : patient.TodosDiagnosticos.ToList();
+
+    /// <summary>
     /// Registra la referencia al hospital de segundo nivel: qué se solicita (remisión a Hospital), el sí
     /// explícito, con qué prisa (Emergencia si el cuadro es grave, Urgente si no) y por qué.
     /// Las cuatro obs cuelgan del encuentro de consulta — en esta instancia no hay encounter type ni
     /// location de referencia (los "Transfer" que existen son traslados internos de cama, ADT).
+    /// La prioridad y el motivo salen de los <paramref name="dxs"/> evaluables de la visita (en un
+    /// control post-alta, el episodio resuelto no puede figurar como causa del traslado).
     /// </summary>
     private async Task SeedReferenciaAsync(
-        SimulatedPatient patient, string encounterUuid, DateTime fechaConsulta, CancellationToken ct)
+        SimulatedPatient patient, IReadOnlyList<DiagnosticoEntry> dxs,
+        string encounterUuid, DateTime fechaConsulta, CancellationToken ct)
     {
-        var dxs = patient.TodosDiagnosticos.ToList();
 
         await PostObsCodedAsync(patient.Identifier, patient.OpenMrsUuid, encounterUuid,
             ReferenciaPolicy.RemisionesSolicitadasUuid, ReferenciaPolicy.HospitalUuid, fechaConsulta, ct);
@@ -134,12 +173,14 @@ public class ConsultaSeeder
 
     private async Task<string?> CreateEncounterAsync(SimulatedPatient patient, CancellationToken ct)
     {
-        // Primario rank=1, comorbilidades rank=2; cada Dx con su propia certeza.
+        // Primario rank=1, comorbilidades rank=2; la certeza la decide CertaintyPolicy (confirmatorio
+        // interno → CONFIRMED, externo → PROVISIONAL, control de cuadro conocido → CONFIRMED).
         var diagnoses = patient.TodosDiagnosticos
             .Select((dx, i) => (object)new
             {
                 rank      = i == 0 ? 1 : 2,
-                certainty = _rng.NextDouble() < 0.70 ? "CONFIRMED" : "PROVISIONAL",
+                certainty = CertaintyPolicy.Certainty(
+                    dx, _catalogs.LabsConfirmatorios, patient.EsVisitaControl, _rng),
                 diagnosis = new { coded = dx.CielUuid }
             })
             .ToArray();

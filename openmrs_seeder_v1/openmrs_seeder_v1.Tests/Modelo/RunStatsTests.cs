@@ -112,4 +112,23 @@ public class RunStatsTests
         Assert.Empty(s.PorSemana());
         Assert.Empty(s.TopDiagnosticos(5));
     }
+
+    [Fact]
+    public void RegistrarRemision_SeparaEpisodiosNuevosDeControles()
+    {
+        // El tripwire de L9: las remisiones de episodios nuevos son sanas; una emitida en el control
+        // post-alta es el bucle de referencias re-refiriendo el mismo episodio.
+        var s = new RunStats();
+        s.RegistrarRemision(enControl: false);
+        s.RegistrarRemision(enControl: false);
+        s.RegistrarRemision(enControl: true);
+
+        Assert.Equal(3, s.RemisionesTotales);
+        Assert.Equal(1, s.RemisionesEnControl);
+
+        s.Reset();
+
+        Assert.Equal(0, s.RemisionesTotales);
+        Assert.Equal(0, s.RemisionesEnControl);
+    }
 }

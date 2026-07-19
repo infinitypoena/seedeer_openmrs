@@ -276,6 +276,94 @@ public class CatalogLoaderTests
     }
 
     [Fact]
+    public void Load_LaboratorioChequeo_ParseaYAusenteEsFalse()
+    {
+        var dir = CreateTempDir(new()
+        {
+            ["laboratorios.csv"] =
+                "ciel_uuid,nombre_es,aplica_respiratorio,datatype,chequeo\n" +
+                "uuid-hemograma,Hemograma,true,panel,true\n" +
+                "uuid-ast,AST,true,numeric,false\n" +
+                "uuid-viejo,Sin columna vacia,true,numeric,\n",
+        });
+
+        try
+        {
+            var loader = new CatalogLoader();
+            loader.Load(dir);
+
+            Assert.True(loader.Laboratorios[0].EsChequeo);
+            Assert.False(loader.Laboratorios[1].EsChequeo);
+            Assert.False(loader.Laboratorios[2].EsChequeo); // vacía = false (retrocompatible)
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [Fact]
+    public void Load_PanelResTriggerDx_ParseaYAusenteEsVacio()
+    {
+        var dir = CreateTempDir(new()
+        {
+            ["paneles.csv"] =
+                "panel_uuid,componente_uuid,nombre,res_min,res_max,res_min_anormal,res_max_anormal,res_trigger,res_trigger_dx\n" +
+                "uuid-panel,uuid-hb,Hemoglobina,12,16.5,7.5,10.9,digestivo,uuid-anemia|uuid-anemia-ferro\n" +
+                "uuid-panel,uuid-leuco,Leucocitos,4.5,10.9,11.5,18,infeccioso,\n",
+        });
+
+        try
+        {
+            var loader = new CatalogLoader();
+            loader.Load(dir);
+
+            Assert.Equal(new[] { "uuid-anemia", "uuid-anemia-ferro" }, loader.Paneles[0].ResTriggerDx);
+            Assert.Empty(loader.Paneles[1].ResTriggerDx);
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [Fact]
+    public void LabsConfirmatorios_IndiceInversoDesdeResTriggerDx()
+    {
+        var dir = CreateTempDir(new()
+        {
+            ["laboratorios.csv"] =
+                "ciel_uuid,nombre_es,aplica_urologico,aplica_infeccioso,datatype,res_normal_uuid,res_anormal_uuid,res_trigger_dx\n" +
+                "uuid-orina,Orina completa,true,false,coded,uuid-n,uuid-a,uuid-itu|uuid-pielo\n" +
+                "uuid-urocultivo,Urocultivo,true,false,coded,uuid-n,uuid-a,uuid-itu\n" +
+                "uuid-bun,BUN,true,false,numeric,,,\n",
+        });
+
+        try
+        {
+            var loader = new CatalogLoader();
+            loader.Load(dir);
+
+            // El mismo dx puede tener varios confirmatorios; un lab sin res_trigger_dx no indexa.
+            Assert.Equal(2, loader.LabsConfirmatorios["uuid-itu"].Count);
+            Assert.Single(loader.LabsConfirmatorios["uuid-pielo"]);
+            Assert.Equal("uuid-orina", loader.LabsConfirmatorios["uuid-pielo"][0].CielUuid);
+            Assert.False(loader.LabsConfirmatorios.ContainsKey("uuid-bun"));
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [Fact]
+    public void LabsConfirmatorios_SeInvalidaAlRecargar()
+    {
+        var loader = new CatalogLoader();
+        loader.LoadFromLists([], [], [],
+            [new OpenmrsSeeder.Models.Catalogs.LaboratorioEntry { CielUuid = "lab1", ResTriggerDx = ["dx1"] }],
+            [], [], []);
+        Assert.True(loader.LabsConfirmatorios.ContainsKey("dx1"));
+
+        loader.LoadFromLists([], [], [],
+            [new OpenmrsSeeder.Models.Catalogs.LaboratorioEntry { CielUuid = "lab2", ResTriggerDx = ["dx2"] }],
+            [], [], []);
+        Assert.False(loader.LabsConfirmatorios.ContainsKey("dx1"));
+        Assert.True(loader.LabsConfirmatorios.ContainsKey("dx2"));
+    }
+
+    [Fact]
     public void Load_AfinidadesParteAfinesPorPipe()
     {
         var dir = CreateTempDir(new()

@@ -46,6 +46,43 @@ public class SettingsValidatorTests
     }
 
     [Fact]
+    public void Validate_ChequeoProbFueraDeRango_ReportaElCampo()
+    {
+        var sim = SimValida();
+        sim.Chequeo.ProbabilidadAlta = 1.2;
+
+        var violaciones = SettingsValidator.Validate(sim, OmrsValido());
+
+        var v = Assert.Single(violaciones);
+        Assert.Contains("Chequeo.ProbabilidadAlta", v);
+    }
+
+    [Fact]
+    public void Validate_ChequeoMinLabsInvalido_ReportaViolacion()
+    {
+        var sim = SimValida();
+        sim.Chequeo.MinLabs = 0;
+
+        var violaciones = SettingsValidator.Validate(sim, OmrsValido());
+
+        var v = Assert.Single(violaciones);
+        Assert.Contains("Chequeo.MinLabs", v);
+    }
+
+    [Fact]
+    public void Validate_ChequeoMinLabsMayorQueMax_ReportaViolacion()
+    {
+        var sim = SimValida();
+        sim.Chequeo.MinLabs = 5;
+        sim.Chequeo.MaxLabs = 3;
+
+        var violaciones = SettingsValidator.Validate(sim, OmrsValido());
+
+        var v = Assert.Single(violaciones);
+        Assert.Contains("Chequeo.MinLabs", v);
+    }
+
+    [Fact]
     public void Validate_StartDatePosteriorAEndDate_ReportaViolacion()
     {
         var sim = SimValida();

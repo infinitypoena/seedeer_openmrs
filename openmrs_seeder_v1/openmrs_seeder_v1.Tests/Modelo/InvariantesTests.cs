@@ -232,6 +232,47 @@ public class InvariantesTests
         Assert.False(Buscar(leyes, "L8").Aplica);
     }
 
+    // ══ L9 · La referencia se resuelve ═══════════════════════════════════════════════════════════
+
+    [Fact]
+    public void L9_UnControlPostAltaQueReRefiere_RompeLaLey()
+    {
+        // Una sola remisión emitida en un control post-alta enciende el tripwire (como L3): el episodio
+        // se está encadenando — es el bug de los 47 encuentros de "Apendicitis aguda".
+        var sim   = Escenarios.SimObjetivo();
+        var stats = Estadisticas.Sembrar([(2023, 100, 100)]);
+        for (var i = 0; i < 20; i++) stats.RegistrarRemision(enControl: false);
+        stats.RegistrarRemision(enControl: true);
+
+        var ley = Buscar(Invariantes.Evaluar(stats, [], sim), "L9");
+
+        Assert.True(ley.Aplica);
+        Assert.False(ley.Cumple);
+    }
+
+    [Fact]
+    public void L9_SoloRemisionesDeEpisodiosNuevos_PasaLaLey()
+    {
+        var sim   = Escenarios.SimObjetivo();
+        var stats = Estadisticas.Sembrar([(2023, 100, 100)]);
+        for (var i = 0; i < 20; i++) stats.RegistrarRemision(enControl: false);
+
+        var ley = Buscar(Invariantes.Evaluar(stats, [], sim), "L9");
+
+        Assert.True(ley.Aplica);
+        Assert.True(ley.Cumple);
+    }
+
+    [Fact]
+    public void L9_SinNingunaRemision_NoProcede()
+    {
+        // Una corrida sin dx de referencia (catálogo sin filas ambito=referencia) no da para juzgarla.
+        var sim = Escenarios.SimObjetivo();
+        var ley = Buscar(Invariantes.Evaluar(Estadisticas.Sembrar([(2023, 100, 100)]), [], sim), "L9");
+
+        Assert.False(ley.Aplica);
+    }
+
     // ══ Las leyes que se juzgan ANTES de sembrar (proyección de la etapa 2/5) ════════════════════
 
     [Fact]
