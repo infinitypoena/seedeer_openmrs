@@ -282,8 +282,12 @@ public static class CatalogValidator
 
             if (string.IsNullOrWhiteSpace(l.CielUuid))
                 errores.Add($"{donde}: ciel_uuid vacío");
-            if (!AplicaAlgunaCategoria(l))
-                errores.Add($"{donde}: no aplica a ninguna categoría — el laboratorio nunca podría ordenarse");
+            // Sin categoría el lab no entra al sorteo, pero con res_trigger_dx sigue siendo ordenable
+            // de forma DIRIGIDA (índice inverso de confirmatorios) — ese es el modo "solo bajo
+            // indicación" de un examen caro (p.ej. la TAC de cráneo).
+            if (!AplicaAlgunaCategoria(l) && l.ResTriggerDx.Count == 0)
+                errores.Add($"{donde}: no aplica a ninguna categoría ni tiene res_trigger_dx — " +
+                            $"el laboratorio nunca podría ordenarse");
             Enum_(l.Datatype, Datatypes, donde, "datatype", errores);
 
             foreach (var t in l.ResTrigger.Where(t => !EsCategoria(t)))

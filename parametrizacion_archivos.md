@@ -354,7 +354,7 @@ ciel_uuid,nombre_es,aplica_respiratorio,...,aplica_trauma,datatype,res_min,res_m
 |---------|-------------|
 | `ciel_uuid` | UUID del concept — se usa en `POST /order` tipo testorder |
 | `nombre_es` | Nombre del examen en español (documental: no lo lee la simulación, pero identifica la fila en los errores de `CatalogValidator`) |
-| `aplica_CATEGORIA` | `true`/`false` — si este lab es coherente para esa categoría diagnóstica |
+| `aplica_CATEGORIA` | `true`/`false` — si este lab es coherente para esa categoría diagnóstica. **Todas en `false` + `res_trigger_dx` poblado = modo "solo bajo indicación"** (jul 2026): el examen no entra al sorteo aleatorio y solo se ordena de forma dirigida por sus dx — p.ej. la TAC de cráneo, que como única fila neurológica era el 2º examen más pedido de la clínica |
 | `datatype` | `numeric` \| `coded` \| `panel` \| `imagen` (vacío = sin resultado; solo numeric/coded generan valor) |
 | `res_min` / `res_max` | Banda numérica **normal** (inclusive) |
 | `res_min_anormal` / `res_max_anormal` | Banda numérica **anormal** (cuando la enfermedad dispara el examen) |

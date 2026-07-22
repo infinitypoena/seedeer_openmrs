@@ -406,3 +406,200 @@ fe8c08e8-aabc-49e1-a162-cb8b041cb3fc,Acné retencional,dermatologico,leve,true,t
 113034AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Queratosis seborreica,dermatologico,leve,false,false,false,true,true,8,8,false,false,false,,true,true,,,,,,,clinica
 133632AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Dolor muscular,osteomuscular,leve,false,true,true,true,true,14,14,false,false,false,,false,true,,,,,,,clinica
 116130AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Malestar general,infeccioso,leve,true,true,true,true,true,12,12,false,false,false,,false,true,,,,,,,clinica
+113119AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Rinitis alérgica estacional,respiratorio,leve,true,true,true,true,true,20,22,false,false,false,"invierno,seca",false,true,false,,,,,,clinica
+139094AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Rinitis alérgica perenne,respiratorio,leve,true,true,true,true,true,16,18,false,false,false,,false,true,false,,,,,,clinica
+145276AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Rinofaringitis aguda,respiratorio,leve,true,true,true,true,true,24,26,false,false,false,invierno,false,true,true,,,,,,clinica
+152599AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Amigdalitis purulenta,respiratorio,moderado,true,true,true,true,true,10,12,true,false,true,invierno,false,false,true,,,,,,clinica
+149885AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Bronquiolitis aguda,respiratorio,moderado,true,true,false,false,false,16,14,true,true,false,"invierno,lluvia",false,true,true,,,,,baja,clinica
+1463AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Neumonía adquirida en la comunidad,respiratorio,grave,true,true,true,true,true,14,14,true,true,true,invierno,false,false,true,,,,,baja,clinica
+157789AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,EPOC exacerbada,respiratorio,grave,false,false,true,true,true,10,8,true,true,true,invierno,true,false,false,,,,,baja,clinica
+157788AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Asma persistente,respiratorio,moderado,true,true,true,true,true,10,12,false,false,true,invierno,true,true,false,,,,,baja,clinica
+125816AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Faringitis estreptocócica,respiratorio,moderado,true,true,true,true,false,12,12,true,false,true,invierno,false,true,true,,,,,,clinica
+120669AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Bronquitis crónica,respiratorio,moderado,false,false,true,true,true,8,6,false,true,false,invierno,true,false,false,,,,,baja,clinica
+119692AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Fibrosis quística,respiratorio,grave,true,true,true,true,true,2,2,true,true,true,,true,false,false,bajo,,,,baja,clinica
+126071AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Neumotórax espontáneo,respiratorio,grave,false,true,true,true,true,3,3,false,true,false,,false,false,false,,,,,baja,referencia
+123280AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Rinitis vasomotora,respiratorio,leve,false,true,true,true,true,6,8,false,false,false,,false,true,false,,,,,,clinica
+123123AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Conjuntivitis viral,infeccioso,leve,true,true,true,true,true,12,12,false,false,false,,false,true,false,,,,,,clinica
+148026AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Conjuntivitis bacteriana,infeccioso,leve,true,true,true,true,true,10,10,true,false,false,,false,true,true,,,,,,clinica
+133660AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Parotiditis urliana (paperas),infeccioso,moderado,true,true,false,false,false,10,8,false,false,false,,false,false,true,,,,,,clinica
+141064AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Erisipela,infeccioso,moderado,true,true,true,true,true,8,8,true,false,false,,false,false,true,,,,,,clinica
+155391AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Infección del tracto urinario,infeccioso,moderado,true,true,true,true,true,16,24,true,false,false,,false,true,true,,,,,,clinica
+123114AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Gastroenteritis viral,infeccioso,leve,true,true,true,true,true,18,18,false,false,false,"verano,lluvia",false,true,true,,,,,,clinica
+130459AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Celulitis periorbitaria,infeccioso,moderado,true,true,true,true,false,6,6,true,false,false,,false,false,true,,,,,,referencia
+120742AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Fiebre por chikungunya,infeccioso,moderado,true,true,true,true,true,8,8,true,false,false,"verano,lluvia",false,false,true,,,,,,clinica
+124654AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Tiña de la cabeza,dermatologico,leve,true,true,false,false,false,12,10,true,false,false,,false,true,false,,,,,,clinica
+124649AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Tiña del cuerpo,dermatologico,leve,true,true,true,true,true,10,10,true,false,false,,false,true,false,,,,,,clinica
+118731AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Eccema atópico,dermatologico,leve,true,true,true,true,true,12,14,false,false,false,,true,true,false,,,,,,clinica
+135813AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Liquen plano,dermatologico,moderado,false,true,true,true,true,6,6,false,false,false,,false,false,false,,,,,,clinica
+151939AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Psoriasis en gotas,dermatologico,moderado,true,true,true,true,true,6,6,false,false,false,,true,false,false,,,,,,clinica
+140164AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Verruga vulgar,dermatologico,leve,true,true,true,true,true,10,8,false,false,false,,false,true,false,,,,,,clinica
+155561AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Foliculitis,dermatologico,leve,true,true,true,true,true,10,8,false,false,false,"verano,lluvia",false,true,false,,,,,,clinica
+139693AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Forúnculo,dermatologico,moderado,true,true,true,true,true,8,8,true,false,false,,false,true,true,,,,,,clinica
+130794AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Paroniquia,dermatologico,leve,true,true,true,true,true,8,10,false,false,false,,false,true,false,,,,,,clinica
+130187AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Pinguécula,dermatologico,leve,false,false,true,true,true,6,4,false,false,false,,false,false,false,,,,,,clinica
+136713AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Intertrigo,dermatologico,leve,true,true,true,true,true,6,8,true,false,false,"verano,lluvia",false,true,false,,,,,,clinica
+136308AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Cicatriz queloide,dermatologico,leve,true,true,true,true,true,4,4,false,false,false,,false,false,false,,,,,,clinica
+135811AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Liquen simple crónico,dermatologico,leve,false,true,true,true,true,6,6,false,false,false,,false,false,false,,,,,,clinica
+158357AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Urticaria aguda,dermatologico,moderado,true,true,true,true,true,10,12,false,false,false,,false,true,false,,,,,,clinica
+145298AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Lumbalgia crónica,osteomuscular,leve,false,false,true,true,true,16,14,false,true,false,,true,true,false,,,,,,clinica
+127112AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Ciática,osteomuscular,moderado,false,true,true,true,true,10,8,false,true,false,,false,true,false,,,,,,clinica
+166614AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Tendinopatía,osteomuscular,leve,false,true,true,true,true,8,8,false,true,false,,false,true,false,,,,,,clinica
+131651AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Artrosis de rodilla,osteomuscular,moderado,false,false,true,true,true,14,16,false,true,false,,true,true,false,,,,,,clinica
+158521AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Artrosis de cadera,osteomuscular,moderado,false,false,false,true,true,8,10,false,true,false,,true,false,false,,,,,,clinica
+156455AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Quiste ganglionar,osteomuscular,leve,true,true,true,true,true,6,6,false,false,false,,false,false,false,,,,,,clinica
+112754AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Esguince de muñeca,osteomuscular,leve,true,true,true,true,true,8,8,false,true,false,,false,true,false,,,,,,clinica
+155986AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Luxación de hombro,osteomuscular,moderado,true,true,true,true,true,6,4,false,true,false,,false,false,false,,,,,,referencia
+135678AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Condromalacia rotuliana,osteomuscular,leve,false,true,true,true,false,8,10,false,false,true,,false,true,false,,,,,,clinica
+111146AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Capsulitis adhesiva,osteomuscular,moderado,false,true,true,true,true,6,8,false,false,true,,false,false,false,,,,,,clinica
+133628AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Distensión muscular,osteomuscular,leve,true,true,true,true,true,10,8,false,false,false,,false,true,false,,,,,,clinica
+157787AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Migraña con aura,neurologico,moderado,false,true,true,true,true,8,16,false,false,false,,true,true,false,,,,,,clinica
+115773AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Migraña sin aura,neurologico,moderado,false,true,true,true,true,10,18,false,false,false,,true,true,false,,,,,,clinica
+141831AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Mareo,neurologico,leve,true,true,true,true,true,12,12,false,false,false,,false,true,false,,,,,,clinica
+156107AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Demencia tipo Alzheimer,neurologico,grave,false,false,false,true,true,6,8,false,false,true,,true,false,false,,,,,,clinica
+114320AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Epilepsia idiopática generalizada,neurologico,moderado,true,true,true,true,true,6,6,false,false,true,,true,false,false,,,,,,clinica
+158818AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Convulsiones febriles,neurologico,moderado,true,false,false,false,false,10,8,false,false,true,,false,false,true,,,,,,clinica
+84AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Accidente isquémico transitorio,neurologico,grave,false,false,true,true,true,6,4,false,true,false,,false,false,false,,,,,,referencia
+133123AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Síncope,neurologico,moderado,true,true,true,true,true,6,6,false,false,true,,false,false,false,,,,baja,,referencia
+145830AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Enfermedad cerebrovascular,neurologico,grave,false,false,true,true,true,6,4,false,true,false,,true,false,false,,,,,,clinica
+152230AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Ciatalgia,neurologico,leve,false,true,true,true,true,8,8,false,true,false,,false,true,false,,,,,,clinica
+156555AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Parestesias,neurologico,leve,true,true,true,true,true,8,8,false,false,false,,false,false,false,,,,,,clinica
+125073AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hipertensión sistólica aislada,cardiovascular,moderado,false,false,false,true,true,8,10,true,false,true,,true,false,false,,,alta,,,clinica
+139071AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Cardiopatía isquémica crónica,cardiovascular,grave,false,false,true,true,true,10,6,true,true,true,,true,false,false,,,,,baja,clinica
+119910AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Insuficiencia cardíaca congestiva,cardiovascular,grave,false,false,true,true,true,8,8,true,true,true,,true,false,false,,,,,baja,clinica
+140927AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Angina de esfuerzo estable,cardiovascular,moderado,false,false,true,true,true,6,4,true,true,true,,true,false,false,,,,,baja,clinica
+165256AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Angina inestable,cardiovascular,grave,false,false,true,true,true,4,2,true,true,true,,false,false,false,,,,,baja,referencia
+130403AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Insuficiencia venosa crónica,cardiovascular,leve,false,false,true,true,true,6,10,false,false,true,,true,true,false,,,,,,clinica
+126424AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Taquicardia sinusal,cardiovascular,leve,true,true,true,true,true,6,6,false,false,true,,false,false,false,,,,alta,,clinica
+126428AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Bradicardia sinusal,cardiovascular,leve,false,false,true,true,true,4,4,false,false,true,,false,false,false,,,,baja,,clinica
+116214AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hipotensión arterial,cardiovascular,leve,true,true,true,true,true,6,6,false,false,true,,false,true,false,,,,baja,,clinica
+145388AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Gastritis crónica,digestivo,leve,false,true,true,true,true,12,14,false,false,false,,true,true,false,,,,,,clinica
+114264AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Reflujo gastroesofágico (ERGE),digestivo,leve,false,true,true,true,true,14,14,false,false,false,,true,true,false,alto,,,,,clinica
+160164AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Colitis aguda,digestivo,moderado,true,true,true,true,true,10,10,false,false,false,,false,true,true,,,,,,clinica
+120950AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Litiasis biliar,digestivo,moderado,false,true,true,true,true,8,12,true,true,false,,false,false,false,,,,,,clinica
+120637AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hepatitis crónica,digestivo,moderado,false,true,true,true,true,6,4,true,false,false,,true,false,false,,,,,,clinica
+141850AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Enfermedad diverticular,digestivo,moderado,false,false,true,true,true,6,6,false,false,false,,false,false,false,,,,,,clinica
+149860AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Cistitis aguda,urologico,leve,true,true,true,true,true,10,24,true,false,false,,false,true,true,,,,,,clinica
+111628AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Litiasis urinaria,urologico,moderado,false,true,true,true,true,12,8,true,true,false,,true,false,false,,,,,,clinica
+149563AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Prostatitis aguda,urologico,moderado,false,true,true,true,true,10,0,true,false,false,,false,false,true,,,,,,clinica
+121914AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Orquiepididimitis,urologico,moderado,false,true,true,true,true,6,0,true,true,false,,false,false,true,,,,,,clinica
+120576AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Enfermedad renal crónica,urologico,grave,false,false,true,true,true,6,4,true,false,false,,true,false,false,,,alta,,,clinica
+128340AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Proteinuria,urologico,leve,true,true,true,true,true,4,4,true,false,false,,false,false,false,,,,,,clinica
+126622AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hipotiroidismo primario,endocrino,moderado,false,true,true,true,true,6,16,true,false,false,,true,true,false,alto,,,baja,,clinica
+158025AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Bocio simple,endocrino,leve,true,true,true,true,true,8,16,true,false,false,,false,true,false,,,,,,clinica
+115591AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Bocio multinodular,endocrino,leve,false,true,true,true,true,4,10,true,false,false,,false,false,false,,,,,,clinica
+114413AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Sobrepeso,endocrino,leve,false,true,true,true,true,10,12,false,false,true,,false,true,false,alto,,,,,clinica
+134725AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Desnutrición,endocrino,moderado,true,true,false,false,false,8,8,true,false,true,,false,false,false,bajo,,,,,clinica
+117355AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hipocalcemia,endocrino,moderado,true,true,true,true,true,4,4,true,false,false,,false,false,false,,,,,,clinica
+138253AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hipernatremia,endocrino,moderado,true,true,true,true,true,3,3,true,false,false,,false,false,false,,,,,,referencia
+138039AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hiponatremia,endocrino,moderado,true,true,true,true,true,4,4,true,false,false,,false,false,false,,,,,,referencia
+112952AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Episodio depresivo mayor,salud_mental,moderado,false,true,true,true,true,6,12,false,false,true,,true,false,false,,,,baja,,clinica
+129286AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Trastorno de estrés postraumático,salud_mental,moderado,true,true,true,true,true,4,6,false,false,true,,true,false,false,,,,,,clinica
+149380AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Trastorno adaptativo,salud_mental,leve,true,true,true,true,true,8,10,false,false,true,,false,true,false,,,,,,clinica
+121725AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Consumo nocivo de alcohol,salud_mental,moderado,false,true,true,true,true,10,2,false,false,true,,false,false,false,,,,,,clinica
+155286AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Duelo,salud_mental,leve,true,true,true,true,true,4,6,false,false,true,,false,false,false,,,,,,clinica
+126727AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Ansiedad por separación,salud_mental,leve,true,false,false,false,false,6,6,false,false,true,,false,false,false,,,,,,clinica
+145695AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Trastorno por déficit de atención,salud_mental,leve,true,true,false,false,false,10,4,false,false,true,,false,false,false,,,,,,clinica
+149466AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Vulvovaginitis por Cándida,ginecoobstetrico,leve,false,true,true,true,true,0,18,true,false,false,"verano,lluvia",false,true,false,,,,,,clinica
+129135AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Dismenorrea primaria,ginecoobstetrico,leve,false,true,true,true,true,0,18,false,false,true,,false,true,false,,,,,,clinica
+116369AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Sífilis latente,ginecoobstetrico,moderado,false,true,true,true,true,6,6,true,false,false,,false,false,false,,,,,,clinica
+145668AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Infección por clamidia,ginecoobstetrico,leve,false,true,true,true,true,6,10,true,false,false,,false,true,false,,,,,,clinica
+130229AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Amenorrea secundaria,ginecoobstetrico,leve,false,true,true,true,true,0,8,false,false,true,,false,false,false,,,,,,clinica
+46AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Embarazo ectópico,ginecoobstetrico,grave,false,true,true,true,true,0,4,true,true,false,,false,false,false,,,,,,referencia
+144924AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Fractura cerrada,trauma,moderado,true,true,true,true,true,8,6,false,true,false,,false,false,false,,,,,,clinica
+140116AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Quemadura leve,trauma,leve,true,true,true,true,true,8,8,false,false,true,"verano,seca",false,true,false,,,,,,clinica
+146112AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Mordedura de animal,trauma,moderado,true,true,true,true,true,6,6,false,false,true,,false,true,true,,,,,,clinica
+126038AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Esguince de rodilla,trauma,leve,true,true,true,true,true,8,6,false,true,false,,false,true,false,,,,,,clinica
+128083AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Herida punzante,trauma,leve,true,true,true,true,true,8,6,false,false,true,,false,true,false,,,,,,clinica
+124193AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Traumatismo craneal leve,trauma,leve,true,true,true,true,true,10,8,false,true,true,,false,true,false,,,,,,clinica
+150586AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Absceso pulmonar,respiratorio,grave,false,true,true,true,true,4,4,true,true,false,,false,false,true,,,,,baja,referencia
+121392AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Neumonía por aspiración,respiratorio,grave,true,true,true,true,true,4,4,true,true,false,,false,false,true,,,,,baja,referencia
+122659AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Atelectasia,respiratorio,moderado,true,true,true,true,true,6,6,false,true,false,,false,false,false,,,,,baja,clinica
+128125AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hipertensión pulmonar,cardiovascular,grave,false,false,true,true,true,4,4,false,false,true,,true,false,false,,,,,baja,clinica
+130002AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Neumonitis,respiratorio,moderado,true,true,true,true,true,6,6,true,true,false,,false,false,true,,,,,baja,clinica
+122863AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Sibilancias,respiratorio,leve,true,true,true,true,true,8,8,false,false,false,,false,true,false,,,,,,clinica
+122496AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Disnea,respiratorio,moderado,false,true,true,true,true,8,8,false,false,true,,false,true,false,,,,,,clinica
+141040AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Eritrasma,infeccioso,leve,true,true,true,true,true,6,6,true,false,false,"verano,lluvia",false,true,false,,,,,,clinica
+133414AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Conjuntivitis neonatal,infeccioso,moderado,true,false,false,false,false,4,4,true,false,false,,false,false,true,,,,,,clinica
+130811AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Fiebre paratifoidea,infeccioso,moderado,true,true,true,true,true,4,4,true,false,false,,false,false,true,,,,,,referencia
+116188AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Linfangitis,infeccioso,moderado,true,true,true,true,true,6,6,true,false,false,,false,false,true,,,,,,clinica
+141056AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Eritema infeccioso,infeccioso,leve,true,true,false,false,false,6,6,false,false,false,,false,false,true,,,,,,clinica
+143595AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Conjuntivitis por adenovirus,infeccioso,leve,true,true,true,true,true,8,8,false,false,false,,false,true,false,,,,,,clinica
+138681AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Panadizo,infeccioso,leve,true,true,true,true,true,8,8,false,false,false,,false,true,false,,,,,,clinica
+124646AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Tiña de la ingle,dermatologico,leve,false,true,true,true,true,8,6,true,false,false,"verano,lluvia",false,true,false,,,,,,clinica
+128321AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Prúrigo nodular,dermatologico,leve,false,true,true,true,true,6,6,false,false,false,,false,true,false,,,,,,clinica
+143597AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Xerosis cutánea,dermatologico,leve,true,true,true,true,true,8,8,false,false,false,seca,false,true,false,,,,,,clinica
+130152AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Pitiriasis rosada,dermatologico,leve,true,true,true,true,true,6,6,false,false,false,,false,true,false,,,,,,clinica
+116317AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Liquen escleroso,dermatologico,moderado,false,true,true,true,true,4,6,false,false,false,,true,false,false,,,,,,clinica
+149949AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Queratosis actínica,dermatologico,leve,false,false,true,true,true,6,4,false,false,true,,false,false,false,,,,,,clinica
+163032AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Melanoma,dermatologico,grave,true,true,true,true,true,3,3,false,false,true,,true,false,false,,,,,,referencia
+123229AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Verruga plantar,dermatologico,leve,true,true,true,true,true,8,6,false,false,false,,false,true,false,,,,,,clinica
+128294AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Pseudofoliculitis de la barba,dermatologico,leve,false,true,true,true,true,6,0,false,false,false,,false,true,false,,,,,,clinica
+138660AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hidrosadenitis supurativa,dermatologico,moderado,false,true,true,true,true,4,4,true,false,false,,true,false,false,,,,,,clinica
+123353AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Úlcera varicosa,dermatologico,moderado,false,false,true,true,true,4,6,false,false,true,,true,false,false,,,,,,clinica
+125946AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Dermatitis por estásis,dermatologico,leve,false,false,true,true,true,4,6,false,false,true,,true,false,false,,,,,,clinica
+137944AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Ictiosis,dermatologico,leve,true,true,true,true,true,4,4,false,false,false,seca,true,false,false,,,,,,clinica
+125014AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Telangiectasias,dermatologico,leve,false,true,true,true,true,4,6,false,false,false,,false,false,false,,,,,,clinica
+141656AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Enfermedad de Dupuytren,osteomuscular,leve,false,false,true,true,true,6,2,false,false,true,,true,false,false,,,,,,clinica
+148722AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Espondilitis anquilosante,osteomuscular,moderado,false,true,true,true,true,6,2,false,true,true,,true,false,false,,,,,,clinica
+126144AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Espondilolistesis,osteomuscular,moderado,false,true,true,true,true,6,6,false,true,false,,true,false,false,,,,,,clinica
+114675AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Osteomielitis,osteomuscular,grave,true,true,true,true,true,4,4,true,true,true,,true,false,true,,,,,,referencia
+158128AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Enfermedad de Osgood-Schlatter,osteomuscular,leve,true,true,false,false,false,6,4,false,true,false,,false,true,false,,,,,,clinica
+127289AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Ruptura del ligamento cruzado,osteomuscular,grave,false,true,true,true,true,4,2,false,true,false,,false,false,false,,,,,,referencia
+156745AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Síndrome de la banda iliotibial,osteomuscular,leve,false,true,true,true,true,6,4,false,false,true,,false,true,false,,,,,,clinica
+125614AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Subluxación articular,osteomuscular,leve,true,true,true,true,true,6,6,false,true,false,,false,true,false,,,,,,clinica
+152219AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Artritis psoriásica,osteomuscular,moderado,false,true,true,true,true,4,4,false,false,true,,true,false,false,,,,,,clinica
+146589AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Enfermedad de Sever,osteomuscular,leve,true,true,false,false,false,6,4,false,false,true,,false,true,false,,,,,,clinica
+123588AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Acúfenos,neurologico,leve,false,true,true,true,true,6,8,false,false,true,,false,true,false,,,,,,clinica
+133126AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Neuralgia postherpética,neurologico,moderado,false,true,true,true,true,4,4,false,false,true,,true,false,false,,,,,,clinica
+115461AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Miastenia gravis,neurologico,grave,false,true,true,true,true,2,4,false,false,true,,true,false,false,,,,,,clinica
+113971AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Polineuropatía,neurologico,moderado,false,true,true,true,true,6,6,false,false,true,,true,false,false,,,,,,clinica
+123104AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Laberintitis,neurologico,leve,true,true,true,true,true,8,8,false,false,true,,false,true,false,,,,,,clinica
+116149AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Enfermedad de Menière,neurologico,moderado,false,true,true,true,true,4,4,false,false,true,,true,false,false,,,,,,clinica
+112304AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Encefalopatía,neurologico,grave,true,true,true,true,true,3,3,false,false,true,,false,false,false,,,,,,referencia
+135536AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Radiculopatía lumbar,neurologico,moderado,false,true,true,true,true,8,6,false,true,false,,false,true,false,,,,,,clinica
+127455AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Estenosis aórtica,cardiovascular,moderado,false,false,true,true,true,6,4,true,false,true,,true,false,false,,,,,,clinica
+134090AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Insuficiencia aórtica,cardiovascular,moderado,false,false,true,true,true,6,4,true,false,true,,true,false,false,,,,,,clinica
+149655AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Insuficiencia mitral,cardiovascular,moderado,false,false,true,true,true,6,4,true,false,true,,true,false,false,,,,,,clinica
+134083AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Prolapso de la válvula mitral,cardiovascular,leve,false,true,true,true,true,4,6,false,false,true,,false,false,false,,,,,,clinica
+115428AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Miocarditis,cardiovascular,grave,true,true,true,true,true,3,3,true,true,false,,false,false,true,,,,,baja,referencia
+127249AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Aneurisma aórtico abdominal,cardiovascular,grave,false,false,true,true,true,4,2,true,true,false,,false,false,false,,,,,,referencia
+112397AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Tromboflebitis superficial,cardiovascular,leve,false,true,true,true,true,6,6,false,false,true,,false,true,false,,,,,,clinica
+113506AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Edema agudo de pulmón,cardiovascular,grave,false,true,true,true,true,3,3,true,true,false,,false,false,false,,,,,baja,referencia
+119956AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Cardiopatía congénita,cardiovascular,grave,true,true,true,true,true,3,3,true,true,true,,true,false,false,,,,,baja,clinica
+118510AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Esofagitis péptica,digestivo,leve,false,true,true,true,true,8,8,false,false,false,,false,true,false,,,,,,clinica
+128451AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Proctitis,digestivo,moderado,false,true,true,true,true,4,4,false,false,true,,false,false,false,,,,,,clinica
+145406AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Gastritis erosiva,digestivo,moderado,true,true,true,true,true,8,8,false,false,false,,false,false,false,,,,,,clinica
+149850AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Úlcera duodenal,digestivo,moderado,false,true,true,true,true,8,6,false,false,false,,true,false,false,,,,,,clinica
+119761AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Enfermedad de Crohn,digestivo,grave,false,true,true,true,true,4,6,true,false,false,,true,false,false,,,,,,clinica
+111712AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Colitis ulcerosa,digestivo,grave,false,true,true,true,true,4,4,true,false,false,,true,false,false,,,,,,clinica
+116131AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Síndrome de malabsorción,digestivo,moderado,true,true,true,true,true,4,4,true,false,false,,false,false,false,bajo,,,,,clinica
+147330AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Acalasia,digestivo,moderado,false,true,true,true,true,4,4,false,false,true,,true,false,false,,,,,,clinica
+127850AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Prolapso rectal,digestivo,moderado,true,true,true,true,true,4,4,false,false,true,,false,false,false,,,,,,clinica
+143934AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Hepatomegalia,digestivo,moderado,true,true,true,true,true,4,4,false,false,false,,false,false,false,,,,,,clinica
+145443AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Diarrea crónica,digestivo,moderado,false,true,true,true,true,6,6,true,false,false,,true,false,false,,,,,,clinica
+147987AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Balanopostitis,urologico,leve,true,true,true,true,true,8,0,true,false,false,,false,true,false,,,,,,clinica
+130845AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Parafimosis,urologico,grave,true,true,true,true,true,4,0,false,false,true,,false,false,false,,,,,,referencia
+123813AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Criptorquidia,urologico,moderado,true,true,false,false,false,6,0,false,false,true,,false,false,false,,,,,,clinica
+142974AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Cistocele,urologico,leve,false,false,true,true,true,0,8,false,false,true,,true,false,false,,,,,,clinica
+134286AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Acidosis metabólica,endocrino,grave,true,true,true,true,true,3,3,true,false,false,,false,false,false,,,,,,referencia
+139223AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Ginecomastia,endocrino,leve,false,true,true,true,true,4,2,false,false,true,,false,true,false,,,,,,clinica
+129259AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Pubertad precoz,endocrino,moderado,true,false,false,false,false,4,4,true,false,false,,false,false,false,,,,,,clinica
+127394AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Raquitismo,endocrino,moderado,true,true,false,false,false,4,4,true,false,true,,false,false,false,bajo,,,,,clinica
+142454AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Coma diabético,diabetes,grave,false,true,true,true,true,2,2,true,false,false,,false,false,false,,,,,,referencia
+123919AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Úlcera del pie diabético,diabetes,grave,false,false,true,true,true,6,4,true,false,true,,true,false,false,,,,,,clinica
+148649AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Anorexia nerviosa,salud_mental,grave,false,true,true,true,true,1,6,false,false,true,,true,false,false,bajo,,,,,clinica
+146847AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Bulimia nerviosa,salud_mental,moderado,false,true,true,true,true,2,6,false,false,true,,true,false,false,,,,,,clinica
+149209AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Agorafobia,salud_mental,moderado,false,true,true,true,true,4,8,false,false,true,,true,false,false,,,,,,clinica
+114193AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Trastorno de personalidad,salud_mental,moderado,false,true,true,true,true,6,6,false,false,true,,true,false,false,,,,,,clinica
+131765AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Trastorno oposicionista desafiante,salud_mental,moderado,true,true,false,false,false,8,4,false,false,true,,false,false,false,,,,,,clinica
+149873AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Cervicitis,ginecoobstetrico,leve,false,true,true,true,true,4,10,true,false,false,,false,true,false,,,,,,clinica
+122953AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Vulvitis,ginecoobstetrico,leve,false,true,true,true,true,2,10,true,false,false,,false,true,false,,,,,,clinica
+117935AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Galactorrea,ginecoobstetrico,leve,false,true,true,true,true,0,6,true,false,false,,false,false,false,,,,,,clinica
+123452AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Prolapso uterino,ginecoobstetrico,moderado,false,false,true,true,true,0,8,false,false,true,,true,false,false,,,,,,clinica
+118293AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Infertilidad,ginecoobstetrico,leve,false,true,true,true,true,0,8,true,true,false,,true,false,false,,,,,,clinica
+150737AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Abrasión cutánea,trauma,leve,true,true,true,true,true,10,8,false,false,true,,false,true,false,,,,,,clinica
+159113AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Amputación traumática,trauma,grave,true,true,true,true,true,3,3,false,false,true,,false,false,false,,,,,,referencia
+144943AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Fractura de clavícula,trauma,moderado,true,true,true,true,true,6,4,false,true,false,,false,false,false,,,,,,clinica
+156369AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Fractura de radio distal,trauma,moderado,true,true,true,true,true,6,4,false,true,false,,false,false,false,,,,,,clinica
+120320AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Lesión por aplastamiento,trauma,moderado,true,true,true,true,true,6,4,false,false,true,,false,true,false,,,,,,clinica
+117484AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Mordedura humana,trauma,moderado,true,true,true,true,true,4,4,false,false,true,,false,true,true,,,,,,clinica

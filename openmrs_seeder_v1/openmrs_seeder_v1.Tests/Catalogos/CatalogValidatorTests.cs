@@ -386,6 +386,21 @@ public class CatalogValidatorTests
     }
 
     [Fact]
+    public void LabSinCategoriaPeroConTriggerDx_NoEsError_SeOrdenaDirigido()
+    {
+        // El modo "solo bajo indicación": sin aplica_* no entra al sorteo, pero el índice inverso
+        // de confirmatorios (res_trigger_dx) sí lo ordena — p.ej. la TAC de cráneo.
+        var (errores, _) = Validar(f =>
+        {
+            var lab = Lab();
+            lab.AplicaRespiratorio = false;
+            lab.ResTriggerDx = ["dx-1"];
+            f.Laboratorios = [lab];
+        });
+        Assert.DoesNotContain(errores, e => e.Contains("nunca podría ordenarse"));
+    }
+
+    [Fact]
     public void PanelColgado_SinLaboratorioQueLoRespalde_EsError()
     {
         var (errores, _) = Validar(f => f.Paneles =
