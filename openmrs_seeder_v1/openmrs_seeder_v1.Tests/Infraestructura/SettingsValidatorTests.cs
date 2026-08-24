@@ -96,6 +96,21 @@ public class SettingsValidatorTests
     }
 
     [Fact]
+    public void Validate_EndDateEnOConMAsDeHoy_ReportaViolacion()
+    {
+        // OpenMRS rechaza encuentros con fecha futura (400 Encounter.datetimeShouldBeBeforeCurrent):
+        // la ventana no puede extenderse más allá del reloj real del servidor.
+        var sim = SimValida();
+        sim.StartDate = new DateTime(2026, 1, 1);
+        sim.EndDate = DateTime.Today.AddDays(5);
+
+        var violaciones = SettingsValidator.Validate(sim, OmrsValido());
+
+        var v = Assert.Single(violaciones);
+        Assert.Contains("EndDate", v);
+    }
+
+    [Fact]
     public void Validate_CorregirFechasSinCadenaDeConexion_ReportaViolacion()
     {
         // Activar la corrección sin conexión dejaría la etapa 5/5 muerta en silencio

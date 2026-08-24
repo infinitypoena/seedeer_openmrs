@@ -40,6 +40,18 @@ public static class SettingsValidator
         // Ventana y volumen
         if (sim.StartDate > sim.EndDate)
             violaciones.Add($"StartDate ({sim.StartDate:yyyy-MM-dd}) no puede ser posterior a EndDate ({sim.EndDate:yyyy-MM-dd})");
+        // ⚠️ OpenMRS rechaza encuentros en el futuro con 400 Encounter.datetimeShouldBeBeforeCurrent
+        // ("la fecha del encuentro debería ser anterior a la fecha actual"). Si la ventana simulada se
+        // extiende más allá del reloj real del servidor, TODOS los encuentros (vitals/consulta/lab) de
+        // esos días se pierden en silencio. StartDate SÍ puede ser pasado (retro-siembra de historia
+        // clínica), por eso solo se acota EndDate: debe ser estrictamente anterior a hoy (un EndDate == hoy
+        // aún podría generar una hora futura según la hora de llegada sorteada).
+        var hoyVentana = DateOnly.FromDateTime(DateTime.Today);
+        if (DateOnly.FromDateTime(sim.EndDate) >= hoyVentana)
+            violaciones.Add(
+                $"EndDate ({sim.EndDate:yyyy-MM-dd}) debe ser anterior a hoy ({hoyVentana:yyyy-MM-dd}): " +
+                "OpenMRS rechaza encuentros con fecha futura (Encounter.datetimeShouldBeBeforeCurrent) y " +
+                "toda la cola de la corrida se perdería en silencio");
         if (sim.PacientesPorDiaMedio <= 0)
             violaciones.Add($"PacientesPorDiaMedio debe ser mayor que 0 (valor: {sim.PacientesPorDiaMedio})");
 
