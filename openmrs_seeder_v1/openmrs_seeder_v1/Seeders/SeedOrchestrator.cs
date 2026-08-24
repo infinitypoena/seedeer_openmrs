@@ -353,6 +353,13 @@ public class SeedOrchestrator
                         // El motivo vino de DxDeControl (cita/crónica/agudo) → el cuadro ya se conoce y
                         // su certeza no vuelve a sortearse (CertaintyPolicy).
                         EsVisitaControl = dxSeguimiento is not null,
+                        TipoRetorno = acudioACita
+                            ? SimulatedPatient.RetornoControlCita
+                            : esControlCronico
+                                ? SimulatedPatient.RetornoControlCronico
+                                : esControlAgudo
+                                    ? SimulatedPatient.RetornoControlAgudo
+                                    : SimulatedPatient.RetornoNuevo,
                         // Compartir historial de órdenes y lista de problemas con el paciente original
                         OrderedConcepts = base_.OrderedConcepts,
                         ProblemListConcepts = base_.ProblemListConcepts,

@@ -152,6 +152,7 @@ foreach (var (archivo, filas, opcional) in new (string, int, bool)[]
     ("epidemiology-profile.csv",     catalogLoader.EpidemiologyProfile.Count, false),
     ("diagnosticos.csv",             catalogLoader.Diagnosticos.Count,        false),
     ("medicamentos.csv",             catalogLoader.Medicamentos.Count,        false),
+    ("tratamientos.csv",             catalogLoader.Tratamientos.Count,        false),
     ("laboratorios.csv",             catalogLoader.Laboratorios.Count,        false),
     ("paneles.csv",                  catalogLoader.Paneles.Count,             true),
     ("examenes_clinicos.csv",        catalogLoader.ExamenesClinicos.Count,    false),

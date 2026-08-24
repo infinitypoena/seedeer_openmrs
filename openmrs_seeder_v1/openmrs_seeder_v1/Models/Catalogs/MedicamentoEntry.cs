@@ -7,6 +7,10 @@ public class MedicamentoEntry
     public string NombreGenerico { get; set; } = "";
     public string Strength { get; set; } = "";
     public string ViaUuid { get; set; } = "";
+    /// <summary>Grupo terapéutico para evitar duplicidades en una misma consulta.</summary>
+    public string GrupoTerapeutico { get; set; } = "";
+    /// <summary>Indica que la pauta requiere una regla diagnóstico-terapia revisada.</summary>
+    public bool RequiereContexto { get; set; }
     /// <summary>Dosis por toma (p.ej. 1, 0.5, 5). 0 = sin especificar → 1 (comportamiento histórico).</summary>
     public double Dosis { get; set; }
     /// <summary>UUID de la unidad de dosis (tableta, mL, mg). Vacío = tableta por defecto.</summary>

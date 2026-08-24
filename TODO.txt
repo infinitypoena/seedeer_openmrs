@@ -1,0 +1,2 @@
+-Las condiciones medicas se mantienen con el tiempo en el mismo paciente, si vuelve a hacer consultas pero el problema surge de eso mismo no debería, es posible que 2 visitas puedan tener la misma condición por ser de seguimiento, pero debería cancelar y si regresa el paciente puede ser a raíz de una enfermedad común o diferentes, y un posibilidad que si vuelva con la misma.
+-El tema de las medicinas es muy poco no tiene un catalogo correcto de medicinas o solo receta las mismas se debe mejorar para que vayan de acorde a los tratamientos por lo menos

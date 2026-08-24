@@ -48,6 +48,9 @@ public static class CatalogValidator
     private static readonly IReadOnlySet<string> Ambitos = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         { "clinica", "referencia" };
 
+    private static readonly IReadOnlySet<string> AccionesTratamiento = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        { "sin_receta", "manejo_sintomatico", "tratamiento_especifico", "tratamiento_condicionado", "seguimiento", "referencia" };
+
     private static readonly IReadOnlySet<string> TiposAlergeno = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         { "DRUG", "FOOD", "ENVIRONMENT" };
 
@@ -91,6 +94,8 @@ public static class CatalogValidator
         ValidarPaneles(c, errores);
         ValidarExamenes(c, errores);
         ValidarMedicamentos(c, errores);
+        if (c.Tratamientos.Count > 0)
+            ValidarTratamientos(c, errores);
         ValidarAlergenos(c, errores);
         ValidarProgramas(c, errores);
         ValidarCategoriasSimples(c, errores, avisos);
@@ -128,7 +133,7 @@ public static class CatalogValidator
 
         SinRepetir(c.Diagnosticos,  d => d.CielUuid,    d => d.NombreEs,       "diagnosticos.csv");
         SinRepetir(c.Laboratorios,  l => l.CielUuid,    l => l.NombreEs,       "laboratorios.csv");
-        SinRepetir(c.Medicamentos,  m => m.ConceptUuid, m => m.NombreGenerico, "medicamentos.csv");
+        SinRepetir(c.Medicamentos,  m => m.DrugUuid,    m => m.NombreGenerico, "medicamentos.csv");
         SinRepetir(c.Alergenos,     a => a.ConceptUuid, a => a.NombreEs,       "alergenos.csv");
         SinRepetir(c.ExamenesClinicos, e => e.CielUuid, e => e.NombreEs,       "examenes_clinicos.csv");
     }
@@ -415,6 +420,7 @@ public static class CatalogValidator
 
     private static void ValidarMedicamentos(CatalogLoader c, List<string> errores)
     {
+        var exigeGrupo = c.Medicamentos.Any(m => !string.IsNullOrWhiteSpace(m.GrupoTerapeutico));
         for (var i = 0; i < c.Medicamentos.Count; i++)
         {
             var m = c.Medicamentos[i];
@@ -424,6 +430,8 @@ public static class CatalogValidator
                 errores.Add($"{donde}: drug_uuid vacío");
             if (string.IsNullOrWhiteSpace(m.ConceptUuid))
                 errores.Add($"{donde}: concept_uuid vacío");
+            if (exigeGrupo && string.IsNullOrWhiteSpace(m.GrupoTerapeutico))
+                errores.Add($"{donde}: grupo_terapeutico vacío");
             if (!AplicaAlgunaCategoria(m))
                 errores.Add($"{donde}: no aplica a ninguna categoría — el fármaco nunca podría recetarse");
             if (m.Dosis < 0)
@@ -431,6 +439,47 @@ public static class CatalogValidator
             if (m.DiasTratamiento < 0)
                 errores.Add($"{donde}: dias_tratamiento no puede ser negativo (valor: {m.DiasTratamiento})");
         }
+    }
+
+    private static void ValidarTratamientos(CatalogLoader c, List<string> errores)
+    {
+        var diagnosticos = c.Diagnosticos
+            .Select(d => d.CielUuid)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var medicamentos = c.Medicamentos
+            .SelectMany(m => new[] { m.ConceptUuid, m.DrugUuid })
+            .Where(uuid => !string.IsNullOrWhiteSpace(uuid))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var categorias = c.Tratamientos
+            .Where(r => string.IsNullOrEmpty(r.DiagnosticoUuid))
+            .Select(r => r.Categoria)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var categoria in CategoriasValidas.Where(cat => !categorias.Contains(cat)))
+            errores.Add($"tratamientos.csv: falta política de categoría '{categoria}' — algún diagnóstico quedaría sin clasificar");
+
+        for (var i = 0; i < c.Tratamientos.Count; i++)
+        {
+            var r = c.Tratamientos[i];
+            var donde = Fila("tratamientos.csv", i, r.DiagnosticoUuid);
+            if (string.IsNullOrWhiteSpace(r.DiagnosticoUuid) && !EsCategoria(r.Categoria))
+                errores.Add($"{donde}: categoria='{r.Categoria}' no es válida");
+            if (!string.IsNullOrWhiteSpace(r.DiagnosticoUuid) && !diagnosticos.Contains(r.DiagnosticoUuid))
+                errores.Add($"{donde}: diagnostico_uuid='{r.DiagnosticoUuid}' no existe en diagnosticos.csv");
+            Enum_(r.Accion, AccionesTratamiento, donde, "accion", errores, permiteVacio: false);
+            if (r.MaxMedicamentos < 1)
+                errores.Add($"{donde}: max_medicamentos debe ser >= 1");
+            foreach (var uuid in r.MedicamentoUuids.Where(uuid => !medicamentos.Contains(uuid)))
+                errores.Add($"{donde}: medicamento_uuid='{uuid}' no existe en medicamentos.csv");
+            if (r.MedicamentoUuids.Count > 0 && !AccionesTratamiento.Contains(r.Accion))
+                errores.Add($"{donde}: una regla con medicamentos debe tener una acción válida");
+        }
+
+        foreach (var grupo in c.Tratamientos
+            .Where(r => !string.IsNullOrWhiteSpace(r.DiagnosticoUuid))
+            .GroupBy(r => r.DiagnosticoUuid, StringComparer.OrdinalIgnoreCase)
+            .Where(g => g.Count() > 1))
+            errores.Add($"tratamientos.csv: el diagnóstico '{grupo.Key}' tiene varias reglas específicas");
     }
 
     private static void ValidarAlergenos(CatalogLoader c, List<string> errores)

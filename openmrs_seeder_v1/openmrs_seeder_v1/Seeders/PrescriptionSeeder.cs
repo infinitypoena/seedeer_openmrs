@@ -56,15 +56,12 @@ public class PrescriptionSeeder
         if (!debeRx) return;
 
         var fechaVisita = DateOnly.FromDateTime(patient.VisitDatetime);
-        var candidatos = _catalogs.Medicamentos
-            .Where(m => patient.Categorias.Any(c => AplicaCategoria(m, c)))
-            .Where(m => !OrderVigencia.EstaActivo(patient.OrderedConcepts, m.ConceptUuid, fechaVisita)) // solo si no hay una receta aún vigente
-            .ToList();
+        var candidatos = TreatmentSelector.Seleccionar(
+            patient, _catalogs.Tratamientos, _catalogs.Medicamentos, fechaVisita, _rng);
 
         if (candidatos.Count == 0) return;
 
-        var cantidad = _rng.Next(1, Math.Min(4, candidatos.Count + 1));
-        var elegidos = candidatos.OrderBy(_ => _rng.Next()).Take(cantidad).ToList();
+        var elegidos = candidatos.Take(3).ToList();
 
         int rxOk = 0;
         foreach (var med in elegidos)
@@ -129,21 +126,4 @@ public class PrescriptionSeeder
         }
     }
 
-    private static bool AplicaCategoria(Models.Catalogs.MedicamentoEntry m, string cat) => cat switch
-    {
-        "respiratorio"   => m.AplicaRespiratorio,
-        "cardiovascular" => m.AplicaCardiovascular,
-        "diabetes"       => m.AplicaDiabetes,
-        "digestivo"      => m.AplicaDigestivo,
-        "osteomuscular"  => m.AplicaOsteomuscular,
-        "urologico"      => m.AplicaUrologico,
-        "infeccioso"     => m.AplicaInfeccioso,
-        "endocrino"      => m.AplicaEndocrino,
-        "neurologico"     => m.AplicaNeurologico,
-        "dermatologico"   => m.AplicaDermatologico,
-        "salud_mental"    => m.AplicaSaludMental,
-        "ginecoobstetrico"=> m.AplicaGinecoobstetrico,
-        "trauma"          => m.AplicaTrauma,
-        _ => false
-    };
 }

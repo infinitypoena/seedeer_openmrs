@@ -22,7 +22,7 @@ public class ConditionSeeder
     public async Task SeedAsync(SimulatedPatient patient, CancellationToken ct)
     {
         var cronicos = patient.TodosDiagnosticos
-            .Where(d => d.EsCronica && patient.ProblemListConcepts.Add(d.CielUuid))
+            .Where(d => d.EsCronica && !patient.ProblemListConcepts.Contains(d.CielUuid))
             .ToList();
 
         foreach (var dx in cronicos)
@@ -39,6 +39,7 @@ public class ConditionSeeder
             try
             {
                 await _client.PostAsync("condition", payload, ct);
+                patient.ProblemListConcepts.Add(dx.CielUuid);
                 _logger.LogInformation("[Condition] {Dx} agregado a lista de problemas de {Id}",
                     dx.NombreEs, patient.Identifier);
             }

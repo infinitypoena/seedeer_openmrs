@@ -7,6 +7,7 @@ public class CatalogLoader
     public IReadOnlyList<EpidemiologyEntry> EpidemiologyProfile { get; private set; } = [];
     public IReadOnlyList<DiagnosticoEntry> Diagnosticos { get; private set; } = [];
     public IReadOnlyList<MedicamentoEntry> Medicamentos { get; private set; } = [];
+    public IReadOnlyList<TratamientoEntry> Tratamientos { get; private set; } = [];
     public IReadOnlyList<LaboratorioEntry> Laboratorios { get; private set; } = [];
     public IReadOnlyList<ExamenClinicoEntry> ExamenesClinicos { get; private set; } = [];
     public IReadOnlyList<AlergenoEntry> Alergenos { get; private set; } = [];
@@ -54,11 +55,13 @@ public class CatalogLoader
         IEnumerable<Models.Catalogs.ProgramaEntry>? programas = null,
         IEnumerable<Models.Catalogs.DireccionEntry>? direcciones = null,
         IEnumerable<Models.Catalogs.PanelComponenteEntry>? paneles = null,
-        IEnumerable<Models.Catalogs.PersonalLaboratorioEntry>? personalLaboratorio = null)
+        IEnumerable<Models.Catalogs.PersonalLaboratorioEntry>? personalLaboratorio = null,
+        IEnumerable<Models.Catalogs.TratamientoEntry>? tratamientos = null)
     {
         EpidemiologyProfile = epidemiology.ToList().AsReadOnly();
         Diagnosticos        = diagnosticos.ToList().AsReadOnly();
         Medicamentos        = medicamentos.ToList().AsReadOnly();
+        Tratamientos        = (tratamientos ?? []).ToList().AsReadOnly();
         Laboratorios        = laboratorios.ToList().AsReadOnly();
         ExamenesClinicos    = examenesClinicos.ToList().AsReadOnly();
         Alergenos           = alergenos.ToList().AsReadOnly();
@@ -80,6 +83,7 @@ public class CatalogLoader
         EpidemiologyProfile = LoadCsv(Path.Combine(catalogsPath, "epidemiology-profile.csv"), ParseEpidemiology);
         Diagnosticos        = LoadCsv(Path.Combine(catalogsPath, "diagnosticos.csv"),          ParseDiagnostico);
         Medicamentos        = LoadCsv(Path.Combine(catalogsPath, "medicamentos.csv"),           ParseMedicamento);
+        Tratamientos        = LoadCsv(Path.Combine(catalogsPath, "tratamientos.csv"),           ParseTratamiento);
         Laboratorios        = LoadCsv(Path.Combine(catalogsPath, "laboratorios.csv"),           ParseLaboratorio);
         ExamenesClinicos    = LoadCsv(Path.Combine(catalogsPath, "examenes_clinicos.csv"),      ParseExamenClinico);
         Alergenos           = LoadCsv(Path.Combine(catalogsPath, "alergenos.csv"),              ParseAlergeno);
@@ -210,6 +214,8 @@ public class CatalogLoader
         NombreGenerico      = S(row, "nombre_generico"),
         Strength            = S(row, "strength"),
         ViaUuid             = S(row, "via_uuid"),
+        GrupoTerapeutico    = S(row, "grupo_terapeutico"),
+        RequiereContexto    = B(row, "requiere_contexto", porDefecto: true),
         Dosis               = D(row, "dosis"),
         UnidadDosisUuid     = S(row, "unidad_dosis_uuid"),
         FrecuenciaUuid      = S(row, "frecuencia_uuid"),
@@ -227,6 +233,17 @@ public class CatalogLoader
         AplicaSaludMental     = B(row, "aplica_salud_mental"),
         AplicaGinecoobstetrico= B(row, "aplica_ginecoobstetrico"),
         AplicaTrauma          = B(row, "aplica_trauma")
+    };
+
+    private static TratamientoEntry ParseTratamiento(Dictionary<string, string> row) => new()
+    {
+        DiagnosticoUuid = S(row, "diagnostico_uuid"),
+        Categoria = S(row, "categoria").ToLowerInvariant(),
+        Accion = S(row, "accion").ToLowerInvariant(),
+        MedicamentoUuids = Pipe(row, "medicamento_uuid"),
+        MaxMedicamentos = I(row, "max_medicamentos") is var max && max > 0 ? max : 1,
+        Fuente = S(row, "fuente"),
+        VersionGuia = S(row, "version_guia")
     };
 
     private static LaboratorioEntry ParseLaboratorio(Dictionary<string, string> row) => new()

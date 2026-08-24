@@ -28,6 +28,11 @@ public sealed record ResultadoPendiente(
 
 public class SimulatedPatient
 {
+    public const string RetornoNuevo = "nuevo";
+    public const string RetornoControlCronico = "control_cronico";
+    public const string RetornoControlAgudo = "control_agudo";
+    public const string RetornoControlCita = "control_cita";
+
     public string Identifier { get; set; } = "";
     public string OpenMrsUuid { get; set; } = "";
     public string GivenName { get; set; } = "";
@@ -131,6 +136,11 @@ public class SimulatedPatient
     /// a ser una sospecha. Estado <b>por visita</b> (no se copia de vuelta al pool).
     /// </summary>
     public bool EsVisitaControl { get; set; }
+    /// <summary>
+    /// Motivo clínico de ESTA visita. Es estado por visita: no se copia al paciente del pool. Permite
+    /// que consulta, tratamiento y reportes distingan una consulta nueva de un control conocido.
+    /// </summary>
+    public string TipoRetorno { get; set; } = RetornoNuevo;
 
     /// <summary>
     /// ESTA visita es un <b>chequeo voluntario</b>: el paciente viene sano, por su propia iniciativa, a

@@ -310,7 +310,35 @@ el conteo por categoría: **ninguna puede quedar en 0** o el validador aborta el
 
 ---
 
-## 4. catalogs/medicamentos.csv — Catálogo de fármacos con booleanos por categoría
+## 4. catalogs/tratamientos.csv — Reglas diagnóstico-terapia
+
+Este catálogo clasifica **todos los diagnósticos** por categoría y declara qué acción clínica es
+válida. La categoría es el fallback; una fila con `diagnostico_uuid` tiene prioridad para ese diagnóstico
+concreto. El seeder no selecciona medicamentos por los booleanos de categoría de `medicamentos.csv` si
+no existe una regla investigada.
+
+```csv
+diagnostico_uuid,categoria,accion,medicamento_uuid,max_medicamentos,fuente,version_guia
+,respiratorio,manejo_sintomatico,,1,WHO EML 2023 / PAHO respiratory care,baseline
+117398AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,cardiovascular,tratamiento_especifico,<drug-uuid>,1,WHO PEN primary care,2020
+```
+
+| Columna | Descripción |
+|---------|-------------|
+| `diagnostico_uuid` | UUID de `diagnosticos.csv`; vacío = política fallback de toda la categoría |
+| `categoria` | Una de las 13 categorías clínicas |
+| `accion` | `sin_receta`, `manejo_sintomatico`, `tratamiento_especifico`, `tratamiento_condicionado`, `seguimiento` o `referencia` |
+| `medicamento_uuid` | UUID de `drug` o `concept` en `medicamentos.csv`, separado por `\|` |
+| `max_medicamentos` | Máximo de productos que puede aportar esa regla |
+| `fuente` / `version_guia` | Trazabilidad de la guía usada; no sustituye la revisión clínica local |
+
+Las políticas de categoría actuales son deliberadamente conservadoras: clasifican el manejo, pero no
+recetan automáticamente. Solo las enfermedades con una regla específica y fuente declarada emiten una
+orden. Esto evita convertir síntomas, cuadros virales, emergencias o enfermedades de referencia en
+tratamientos aleatorios. Las dosis y frecuencias deben permanecer vacías hasta verificarse contra la
+guía aplicable y la instancia OpenMRS.
+
+## 5. catalogs/medicamentos.csv — Catálogo de fármacos con booleanos por categoría
 
 Extraído de la tabla `drug` de OpenMRS + columnas booleanas por categoría diagnóstica.
 
@@ -327,6 +355,8 @@ SAMPLE_metformina,Metformina,850mg,SAMPLE_oral,false,false,true,false,false,fals
 | `nombre_generico` | Nombre genérico del medicamento |
 | `strength` | Concentración (ej: `500mg`, `10mg`, `100mcg`) |
 | `via_uuid` | UUID CIEL de la vía de administración (oral, inhalado, IV, IM) |
+| `grupo_terapeutico` | Grupo usado para impedir duplicidades en una misma consulta (por ejemplo, dos AINEs) |
+| `requiere_contexto` | `true` indica que el producto solo debe salir desde una regla investigada de `tratamientos.csv`; no autoriza selección aleatoria |
 | `aplica_CATEGORIA` | `true`/`false` — si este medicamento es coherente para esa categoría diagnóstica |
 | `dosis` | *(opcional)* Dosis por toma (`1`, `0.5`, `5`). Vacío = `1` |
 | `unidad_dosis_uuid` | *(opcional)* UUID de la unidad de dosis (tableta, mL, mg). Vacío = tableta (`Defaults.TabletConceptUuid`) |
