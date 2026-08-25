@@ -330,7 +330,8 @@ These were confirmed via `GET /ws/rest/v1/concept?q=...` against this specific i
 
 ## Key Design Docs
 
-- `plan-homologacion.md` — **plan en curso (planteado, sin implementar)**: homologar las leyes (L1) + de-parametrizar `appsettings.json` + catálogos oblig/opc. Leer antes de tocar config o leyes.
+- `flujo-ejecucion.md` — **la mecánica del proceso, paso a paso** (arranque → día → visita → post-visita → cierre).
+- `plan-homologacion.md` — **registro del plan de homologación** (leyes L1 + de-parametrización + catálogos oblig/opc) — **completado** (fases A–D).
 - `parametrizacion_archivos.md` — full parameter and CSV schema reference
 - `config-diagnostico.md` — cómo reformar la frecuencia de diagnósticos desde `appsettings.json` (sesgo común/raro, damping, estacionalidad, comorbilidad, seguimiento) **sin tocar catálogos**; incluye recetario y cómo verificar con una corrida corta
 - `correccion_fechas.md` — etapa 5/5: por qué `date_created` salía con la fecha de la corrida, la tabla de reglas de derivación de las 20 tablas, cómo se ejecuta/verifica/revierte
