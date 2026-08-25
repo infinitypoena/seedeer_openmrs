@@ -142,17 +142,17 @@ funcional (fija `q` a mano) con tests dedicados en `BassGrowthModelTests`. Se qu
 - ~~Eliminar `Crecimiento.RecurrentesPorPacienteExtra`~~ → se conserva (override funcional, ver nota arriba).
 - Mantener `SettingsValidator.FindUnknownKeys` para avisar de claves JSON huérfanas tras cada recorte.
 
-## Fase C — Catálogos obligatorios vs opcionales
+## Fase C — Catálogos obligatorios vs opcionales — `[x]` DONE (commit a93df70)
 
-1. Codificar el contrato en `CatalogLoader`/`CatalogValidator` con una lista explícita:
-   - **Obligatorios** (9, abortan si vacíos): epidemiology-profile, diagnosticos, tratamientos,
-     medicamentos, laboratorios, examenes_clinicos, alergenos, motivos_consulta, nombres+apellidos.
-   - **Opcionales** (8, con estándar interno si faltan): clima, consultorios, programas, direcciones,
-     paneles, comorbilidad_afinidades, personal_laboratorio, (apellidos si nombres presente).
-2. **"Catálogo presente → se aplica"**: eliminar los toggles `Enabled` que apagan un catálogo que existe
-   (`Climate.Enabled`). La presencia del archivo es el interruptor.
-3. Cada opcional documenta su comportamiento sin archivo (feature apagada o estándar interno) en
-   `parametrizacion_archivos.md`.
+1. `[x]` Contrato codificado en `CatalogValidator` con comentario explícito: **10 obligatorios**
+   (epidemiology-profile, diagnosticos, **tratamientos**, medicamentos, laboratorios, examenes_clinicos,
+   alergenos, motivos_consulta, nombres, apellidos) y **7 opcionales** (clima, consultorios, programas,
+   direcciones, paneles, comorbilidad_afinidades, personal_laboratorio). ⚠️ `tratamientos.csv` antes era
+   opcional de facto (solo se validaba si existía) → ahora aborta si está vacío.
+2. `[x]` "Catálogo presente → se aplica": el toggle `Climate.Enabled` ya se quitó en B2.
+3. `[x]` Tabla oblig/opc con el comportamiento sin archivo añadida a `parametrizacion_archivos.md` §1.
+4. `[x]` Test `TratamientosVacio_EsError` + fixture actualizada; 524 tests en verde; `dotnet run` de
+   humo exit 0 con "tratamientos.csv 617 filas".
 
 ## Fase D — Sincronizar documentación
 
