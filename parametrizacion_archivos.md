@@ -15,72 +15,49 @@ Todo el comportamiento del simulador se controla desde aquí.
 > una versión anterior) generan un **warning** en el log — el binding de .NET las ignoraría en
 > silencio.
 
+> **Tres niveles de configuración.** Solo el **núcleo** vive en `appsettings.json`. El resto ya no se
+> configura: tiene **defaults internos estándar** en el código (`Configuration/SimulationSettings.cs`).
+>
+> - **Núcleo** (imprescindible / instance-specific): conexión a OpenMRS, UUIDs de `Defaults`, la ventana
+>   (`StartDate`/`EndDate`), `AltasPorDiaArranque`, los mandos de crecimiento (`Crecimiento.*`), el offset
+>   de zona horaria y la salida.
+> - **Diales clínicos** (opcionales — si se omiten, valen los defaults de abajo): sesgo común↔raro
+>   (`CommonProbMin/Max`), variedad (`Variedad.RepeticionDamping`), estacionalidad (`Climate.SeasonalBoost`),
+>   multimorbilidad (`Comorbidity.*`), repetición en retornos (`Seguimiento*`), cuándo vuelve
+>   (`Recurrence.*`) y cuándo se cita control (`ReferralProbabilities.FollowUp*`).
+> - **Constantes internas** (ya no se configuran): satisfacción, alergias, laboratorio, pesos de día de
+>   semana, horario, demografía, roster de médicos, citas, órdenes y chequeo voluntario.
+
 ```json
 {
   "OpenMRS": {
-    "RestApi": {
-      "BaseUrl": "http://localhost/openmrs/ws/rest/v1",
-      "Username": "admin",
-      "Password": "Prueba01$$xD"
-    },
-    "Defaults": {
-      "PatientIdentifierTypeUuid": "05a29f94-c0ed-11e2-94be-8c13b969e334",
-      "LocationUuid": "44c3efb0-2583-4c80-a79e-1f756a03c0a1",
-      "RegistrationLocationUuid": "c1000000-0000-0000-0000-000000000002",
-      "VisitTypeUuid": "287463d3-2233-4c69-9851-5841a1f5e109",
-      "VitalsEncounterTypeUuid": "67a71486-1a54-468f-ac3e-7091a9a79584",
-      "ConsultaEncounterTypeUuid": "92a52cce-c614-4046-b5f2-07f32f0bcf91",
-      "ProviderUuid": "f9badd80-ab76-11e2-9e96-0800200c9a66"
-    }
+    "RestApi": { "BaseUrl": "http://localhost/openmrs/ws/rest/v1", "Username": "admin", "Password": "…" },
+    "Database": { "CorregirFechas": false, "ConnectionString": "…", "PrefijoPaciente": "SIM-", "TamanoLote": 20000, "PedirConfirmacion": true },
+    "Defaults": { "VisitTypeUuid": "…", "VitalsEncounterTypeUuid": "…", "…": "los 19 UUIDs de la instancia" }
   },
   "Simulation": {
     "StartDate": "2023-01-01",
     "EndDate": "2024-12-31",
     "AltasPorDiaArranque": 6,
-    "Locale": "es",
-    "RandomSeed": 42,
+    "UtcOffset": "-06:00",
     "HorarioAtencion": {
       "PicoAM": { "Inicio": "08:00", "Fin": "10:00", "Peso": 40 },
       "PicoPM": { "Inicio": "14:00", "Fin": "16:00", "Peso": 30 }
     },
-    "DemographicProfile": {
-      "AgeGroups": [
-        { "Label": "0-14",  "Weight": 20 },
-        { "Label": "15-29", "Weight": 18 },
-        { "Label": "30-44", "Weight": 25 },
-        { "Label": "45-64", "Weight": 25 },
-        { "Label": "65+",   "Weight": 12 }
-      ],
-      "GenderRatio": { "M": 48, "F": 52 }
+    "Crecimiento": {
+      "VisitasPorDiaMeseta": 25,
+      "PoblacionCaptacion": 60000,
+      "PacientesPorDiaMax": 45,
+      "MinVisitasRecurrente": 2
     },
-    "ReferralProbabilities": {
-      "LabOrder": 0.40,
-      "ClinicalExam": 0.35,
-      "DrugOrder": 0.65,
-      "Urgent": 0.20,
-      "FollowUp": 0.30
-    },
-    "Allergy": {
-      "BaseProbabilityMin": 0.15,
-      "BaseProbabilityMax": 0.25,
-      "SecondAllergyProbability": 0.30,
-      "ThirdAllergyProbability": 0.25,
-      "MaxAllergies": 3
-    },
-    "WeekdayWeights": {
-      "Monday": 1.20, "Tuesday": 1.20, "Wednesday": 1.00,
-      "Thursday": 1.00, "Friday": 0.90, "Saturday": 0.50, "Sunday": 0.00
-    },
-    "Comorbidity": {
-      "BaseProbability": 0.20,
-      "MaxAdditional": 2,
-      "SecondExtraProbability": 0.25,
-      "AffinityBoost": 4.0,
-      "AgeScaling": { "0-14": 0.3, "15-29": 0.5, "30-44": 0.8, "45-64": 1.3, "65+": 1.8 }
-    }
+    "Salida": { "Carpeta": "output" }
   }
 }
 ```
+
+> Los **diales clínicos** son claves opcionales de `Simulation` con default en el código. Si quieres
+> ajustarlos, añádelos a `Simulation`; si no, valen los defaults listados en la tabla de abajo. El
+> `appsettings.example.json` versionado muestra solo el núcleo.
 
 ### Referencia de parámetros — sección Simulation
 
