@@ -59,6 +59,18 @@ Todo el comportamiento del simulador se controla desde aquí.
 > ajustarlos, añádelos a `Simulation`; si no, valen los defaults listados en la tabla de abajo. El
 > `appsettings.example.json` versionado muestra solo el núcleo.
 
+### Catálogos: obligatorios vs opcionales
+
+El contrato lo aplica `CatalogValidator` al arrancar (etapa 1/5):
+
+| Tipo | Catálogos | Si falta o está vacío |
+|------|-----------|-----------------------|
+| **Obligatorios** (10) | epidemiology-profile · diagnosticos · **tratamientos** · medicamentos · laboratorios · examenes_clinicos · alergenos · motivos_consulta · nombres · apellidos | **Aborta el arranque** (exit 2) — sin ellos no hay clínica que simular |
+| **Opcionales** (7) | clima · consultorios · programas · direcciones · paneles · comorbilidad_afinidades · personal_laboratorio | **Estándar interno**: neutro · un solo médico · sin inscripciones · fallback Bogus · orden sin obs-group · sin boost · firma el médico |
+
+> **Regla: "catálogo presente → se aplica".** No hay toggles de apagado (p.ej. el antiguo
+> `Climate.Enabled`): la presencia del archivo es el interruptor.
+
 ### Referencia de parámetros — sección Simulation
 
 | Parámetro | Tipo | Descripción |

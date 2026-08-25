@@ -66,9 +66,14 @@ public static class CatalogValidator
         var errores = new List<string>();
         var avisos  = new List<string>();
 
-        // ── Presencia: los obligatorios no pueden estar vacíos ────────────────────
-        // Los opcionales (clima, consultorios, afinidades, programas, direcciones, paneles) sí:
-        // vacío = feature desactivada, que es un modo de uso legítimo.
+        // ── Presencia: el contrato obligatorio / opcional ────────────────────────
+        // Obligatorios (10): si falta o está vacío uno de estos, no hay clínica que simular → error.
+        //   epidemiology-profile · diagnosticos · tratamientos · medicamentos · laboratorios ·
+        //   examenes_clinicos · alergenos · motivos_consulta · nombres · apellidos
+        // Opcionales (7): vacío = feature apagada o estándar interno (uso legítimo, no es error).
+        //   clima (neutro) · consultorios (un solo médico) · comorbilidad_afinidades (sin boost de afinidad) ·
+        //   programas (sin inscripciones) · direcciones (fallback Bogus) · paneles (orden sin obs-group) ·
+        //   personal_laboratorio (firma el médico)
         void Obligatorio(int n, string archivo)
         {
             if (n == 0)
@@ -77,6 +82,7 @@ public static class CatalogValidator
 
         Obligatorio(c.EpidemiologyProfile.Count, "epidemiology-profile.csv");
         Obligatorio(c.Diagnosticos.Count,        "diagnosticos.csv");
+        Obligatorio(c.Tratamientos.Count,        "tratamientos.csv");
         Obligatorio(c.Medicamentos.Count,        "medicamentos.csv");
         Obligatorio(c.Laboratorios.Count,        "laboratorios.csv");
         Obligatorio(c.ExamenesClinicos.Count,    "examenes_clinicos.csv");

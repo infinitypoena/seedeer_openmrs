@@ -53,7 +53,7 @@ public class CatalogValidatorTests
             clima: f.Clima, consultorios: f.Consultorios, afinidades: f.Afinidades,
             nombres: f.Nombres, apellidos: f.Apellidos, programas: f.Programas,
             direcciones: f.Direcciones, paneles: f.Paneles,
-            personalLaboratorio: f.PersonalLaboratorio);
+            personalLaboratorio: f.PersonalLaboratorio, tratamientos: f.Tratamientos);
 
         return CatalogValidator.Validate(loader);
     }
@@ -74,6 +74,10 @@ public class CatalogValidatorTests
         public List<NombreEntry> Nombres { get; set; } =
             [new() { Nombre = "José", Genero = "M" }, new() { Nombre = "María", Genero = "F" }];
         public List<string> Apellidos { get; set; } = ["Martínez"];
+        // Obligatorio: una política de categoría por cada una de las 13 (sin receta).
+        public List<TratamientoEntry> Tratamientos { get; set; } =
+            [.. CatalogValidator.CategoriasValidas.Select(c => new TratamientoEntry
+                { Categoria = c, Accion = "seguimiento" })];
 
         // Opcionales: vacíos por defecto (feature desactivada = uso legítimo).
         public List<ClimaEntry> Clima { get; set; } = [];
@@ -192,6 +196,15 @@ public class CatalogValidatorTests
     {
         var (errores, _) = Validar(f => f.Medicamentos = []);
         Assert.Contains(errores, e => e.Contains("medicamentos.csv") && e.Contains("obligatorio"));
+    }
+
+    [Fact]
+    public void TratamientosVacio_EsError()
+    {
+        // Sin reglas de tratamiento, PrescriptionSeeder recetaría CERO fármacos en silencio: es un
+        // catálogo obligatorio, no opcional.
+        var (errores, _) = Validar(f => f.Tratamientos = []);
+        Assert.Contains(errores, e => e.Contains("tratamientos.csv") && e.Contains("obligatorio"));
     }
 
     // ── Diagnósticos ──────────────────────────────────────────────────────────
