@@ -7,18 +7,17 @@ namespace openmrs_seeder_v1.Tests.Catalogos;
 
 public class ClimateResolverTests
 {
-    private static ClimateResolver Crear(bool enabled, params ClimaEntry[] clima)
+    private static ClimateResolver Crear(params ClimaEntry[] clima)
     {
         var catalogs = new CatalogLoader();
         catalogs.LoadFromLists([], [], [], [], [], [], [], clima);
-        var settings = new SimulationSettings { Climate = new ClimateSettings { Enabled = enabled } };
-        return new ClimateResolver(catalogs, settings);
+        return new ClimateResolver(catalogs);
     }
 
     [Fact]
     public void Resolve_DevuelveEstacionYTemp_SegunSemanaISO()
     {
-        var resolver = Crear(true,
+        var resolver = Crear(
             new ClimaEntry { Semana = 1,  Estacion = "invierno", TempPromedioC = 14.0 },
             new ClimaEntry { Semana = 23, Estacion = "verano",   TempPromedioC = 30.0 });
 
@@ -36,7 +35,7 @@ public class ClimateResolverTests
     [Fact]
     public void Resolve_SemanaNoListada_DevuelveNull()
     {
-        var resolver = Crear(true,
+        var resolver = Crear(
             new ClimaEntry { Semana = 1, Estacion = "invierno", TempPromedioC = 14.0 });
 
         // 2023-06-05 = semana 23, no está en el catálogo
@@ -46,21 +45,10 @@ public class ClimateResolverTests
     }
 
     [Fact]
-    public void Resolve_Deshabilitado_DevuelveNull()
-    {
-        var resolver = Crear(false,
-            new ClimaEntry { Semana = 1, Estacion = "invierno", TempPromedioC = 14.0 });
-
-        Assert.False(resolver.Activo);
-        var (e, t) = resolver.Resolve(new DateOnly(2023, 1, 2));
-        Assert.Null(e);
-        Assert.Null(t);
-    }
-
-    [Fact]
     public void Resolve_SinCatalogo_DevuelveNull()
     {
-        var resolver = Crear(true); // sin filas de clima
+        // La PRESENCIA del catálogo es el interruptor: sin clima.csv la simulación es neutra.
+        var resolver = Crear(); // sin filas de clima
         Assert.False(resolver.Activo);
         var (e, _) = resolver.Resolve(new DateOnly(2023, 1, 2));
         Assert.Null(e);

@@ -118,7 +118,7 @@ Todo el comportamiento del simulador se controla desde aquí.
 
 > **Comorbilidad en una sola visita:** el primario se elige como antes; luego, con probabilidad `BaseProbability × AgeScaling[grupo]`, se añaden 1..`MaxAdditional` diagnósticos de **otras** categorías (priorizando las afines). Todos se registran en el mismo encounter (`rank=1` primario, `rank=2` secundarios) y las órdenes de laboratorio y prescripciones cubren las categorías de **todas** las enfermedades del paciente.
 
-| `Climate.Enabled` | bool | Activa el efecto estacional (requiere `catalogs/clima.csv`). Si `false`, se ignora el clima. |
+| ~~`Climate.Enabled`~~ | — | **ELIMINADO.** El interruptor es la presencia de `clima.csv`: si el catálogo existe, se aplica; si no, neutro. |
 | `Climate.SeasonalBoost` | float | Multiplicador de peso de enfermedades y categorías favorecidas por la estación activa. |
 | `Climate.ComfortTempC` | float | Temperatura ambiente de confort; por encima sube la temperatura corporal registrada. |
 | `Climate.TempVitalsFactorC` | float | °C de temperatura corporal por cada °C ambiente sobre el confort. |

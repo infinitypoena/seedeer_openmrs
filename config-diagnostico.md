@@ -97,16 +97,16 @@ cuadros comunes al tope del ranking conservando 262 dx distintos de 604.
 
 ---
 
-## C. Estacionalidad — `Climate.SeasonalBoost` / `Climate.Enabled`
+## C. Estacionalidad — `Climate.SeasonalBoost`
 
 ```json
 "Climate": {
-  "Enabled": true,
   "SeasonalBoost": 2.5
 }
 ```
 
-**Qué hace.** Si `clima.csv` existe, cada visita cae en una estación (por semana ISO). Las categorías
+**Qué hace.** Si `clima.csv` existe, cada visita cae en una estación (por semana ISO) y se aplica el
+boost; si el archivo no existe, la simulación es **neutra** (sin picos estacionales). Las categorías
 y diagnósticos etiquetados con esa estación (columna `clima` en `diagnosticos.csv`: gripe→invierno,
 dengue/EDA→verano,lluvia) **multiplican su peso** por `SeasonalBoost`.
 
@@ -114,7 +114,7 @@ dengue/EDA→verano,lluvia) **multiplican su peso** por `SeasonalBoost`.
 |---|---|
 | `SeasonalBoost` **alto** (p.ej. `4.0`) | Picos estacionales marcados: mucha gripe en invierno, mucho dengue/EDA en verano |
 | `SeasonalBoost` = `1.0` | Neutro aunque el clima esté activo (sin picos) |
-| `Enabled: false` | Ignora la estación por completo; distribución plana todo el año |
+| sin `clima.csv` | Distribución plana todo el año (neutro) |
 
 Útil si el objetivo es **mostrar temporadas** (curva de dengue en la época lluviosa). No cambia la
 mezcla anual promedio, solo **cuándo** se concentra.

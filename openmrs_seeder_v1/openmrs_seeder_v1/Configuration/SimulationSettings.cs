@@ -393,8 +393,6 @@ public class AllergySettings
 
 public class ClimateSettings
 {
-    /// <summary>Si es false, el catálogo clima.csv se ignora aunque exista.</summary>
-    public bool Enabled { get; set; } = true;
     /// <summary>Multiplicador de peso para enfermedades/categorías favorecidas por el clima activo.</summary>
     public double SeasonalBoost { get; set; } = 2.5;
     /// <summary>Temperatura de confort (°C) de referencia para el ajuste de signos vitales.</summary>
