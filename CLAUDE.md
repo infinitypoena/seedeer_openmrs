@@ -38,7 +38,8 @@ pronuncian) y mira `output/crecimiento_diario.csv` → la columna `pct_recurrent
 **Rama de trabajo**: `develop6` (la Web API vieja vive en `develop1`). El trabajo en curso es **continuidad
 clínica y terapias**: que los retornos tengan motivo clínico explícito, que las condiciones no se confundan
 con episodios agudos y que los tratamientos salgan de reglas investigadas en vez de sorteo aleatorio por
-categoría. Hay cambios **sin commitear** sobre la rama.
+categoría. La homologación de las leyes + la de-parametrización de `appsettings.json` está **completada**
+(ver `plan-homologacion.md`).
 
 ### Estable (terminado y protegido por las 9 leyes)
 El modelo de **volumen / recurrencia / crecimiento** (Bass + `RecurrentSelector` + `SatisfaccionPolicy`) está
@@ -56,7 +57,7 @@ lo juzgan en cada corrida (exit code 3 si una ley se rompe).
 - `ConditionSeeder`: solo marca `ProblemListConcepts` tras `POST /condition` exitoso (con test de reintento);
   antes un fallo REST marcaba la condición como creada y no se reintentaba.
 
-### Pendiente (`TODO.txt` + plan de continuidad)
+### Pendiente (`TODO.txt`)
 1. **Ciclo de vida de condiciones** (`TODO.txt` #1): `ConditionSeeder` solo crea condiciones
    `clinicalStatus=ACTIVE` — **no existe cierre/inactivación** (`INACTIVE`/`HISTORY_OF`) cuando un episodio
    se resuelve. Falta separar episodios agudos / crónicas / comorbilidades agudas.
@@ -71,7 +72,7 @@ lo juzgan en cada corrida (exit code 3 si una ley se rompe).
 - `diagnosticos.csv`: **604 dx** (208 crónicos, 308 `comun`, 82 `ambito=referencia`; severidad 265 leve /
   195 moderado / 144 grave). ⚠️ Varias secciones de esta misma doc decían "407" o "875": **604** es el actual.
 - `medicamentos.csv`: **67 fármacos**. `tratamientos.csv`: **617 reglas**. `laboratorios.csv`: 27.
-- Tests: **~523 casos** (`462 [Fact]` + `61 [InlineData]`) en **59 archivos**.
+- Tests: **~524 casos** (`462 [Fact]` + `61 [InlineData]`) en **59 archivos**.
 - Leyes: **9** (L1–L9; L9 = la referencia, añadida jul-2026).
 
 ## Project Purpose
