@@ -14,8 +14,7 @@ public class VentanasCortasTests
     [Fact]
     public void DosMesesDeCorrida_LasLeyesLentasNoProceden_YNadaSaleEnRojo()
     {
-        // 60 días: por debajo del umbral de L1 (90 d), de L7 (365 d), de L8 (VentanaActividadDias) y con
-        // un solo año natural (L4 necesita dos).
+        // 60 días: por debajo del umbral de continuidad (365 d) — L1, L7, L8 calladas; L4 necesita dos años.
         var sim = Escenarios.SimObjetivo();
         sim.EndDate = sim.StartDate.AddDays(60);
 
@@ -29,16 +28,33 @@ public class VentanasCortasTests
     }
 
     [Fact]
-    public void CientoVeinteDias_L1YaSeJuzga_PeroL7yL8TodaviaNo()
+    public void CientoVeinteDias_LasLeyesDeContinuidadSiguenCalladas()
     {
-        // El borde: a los 120 días la ley del crónico ya procede (umbral 90 d) y las anuales siguen calladas.
+        // 120 días: aún por debajo del año. L1 no se juzga porque el control crónico se cita a 30-120 días
+        // — a esta altura la mayoría de los crónicos ni ha tenido su cita. Antes L1 se juzgaba a los 90 d
+        // y falseaba: toda corrida de 3 meses rompía la ley sin estar rota.
         var sim = Escenarios.SimObjetivo();
         sim.EndDate = sim.StartDate.AddDays(120);
 
         var r = MiniClinica.Correr(sim);
 
-        Assert.True(r.Ley("L1").Aplica);
+        Assert.False(r.Ley("L1").Aplica);
         Assert.False(r.Ley("L7").Aplica);
         Assert.False(r.Ley("L8").Aplica);
+        Assert.Empty(r.Rotas);
+    }
+
+    [Fact]
+    public void UnAno_L1SeJuzga_YElCronicoVuelve()
+    {
+        // Un año: L1 cruza el umbral de continuidad y, con la configuración sana, da verde (medido en la
+        // MiniClinica: ~65 % de los crónicos vuelve a los 365 días). L4 sigue callada (dos años naturales).
+        var sim = Escenarios.SimObjetivo();
+        sim.EndDate = sim.StartDate.AddDays(365);
+
+        var r = MiniClinica.Correr(sim);
+
+        Assert.True(r.Ley("L1").Aplica);
+        Assert.True(r.Ley("L1").Cumple, r.Ley("L1").Medido);
     }
 }

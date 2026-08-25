@@ -563,7 +563,7 @@ Agregar una categoría (p. ej. `oftalmologico`) requiere tocar código además d
 
 ~30 pacientes nuevos en 6 días hábiles. Al terminar, en OpenMRS: buscar `SIM-`, abrir un paciente y verificar visita → vitales → diagnóstico → labs con resultado → medicación. El resumen debe decir 0 errores de proceso y 0 de operación.
 
-> ⚠️ **Una ventana corta NO verifica el modelo de simulación.** Las leyes L1 (el crónico vuelve), L4 (el panel madura) y L7 (visitas por paciente) necesitan ≥90 días, 2 años naturales y ≥365 días respectivamente; con menos salen como *"no procede"*. Para validar un cambio en el volumen/recurrencia/crecimiento hay que correr **≥18 meses** — ver `leyes_simulacion.md`.
+> ⚠️ **Una ventana corta NO verifica el modelo de simulación.** Las leyes L1 (el crónico vuelve) y L7 (visitas por paciente) necesitan ≥365 días, y L4 (el panel madura) dos años naturales; con menos salen como *"no procede"*. Para validar un cambio en el volumen/recurrencia/crecimiento hay que correr **≥18 meses** — ver `leyes_simulacion.md`.
 
 ### Caso 2 — Clínica que crece, 3 años (escenario de referencia)
 

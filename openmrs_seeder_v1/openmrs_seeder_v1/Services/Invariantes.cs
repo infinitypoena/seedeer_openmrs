@@ -56,9 +56,14 @@ public static class Invariantes
     /// <summary>L8 — desviación tolerable de la meseta respecto al objetivo pedido.</summary>
     public const double ToleranciaObjetivo = 0.20;
 
-    /// <summary>Días de ventana por debajo de los cuales una corrida no puede juzgar la continuidad longitudinal.</summary>
-    private const int DiasParaJuzgarCronicos = 90;
-    private const int DiasParaJuzgarVisitasPorPaciente = 365;
+    /// <summary>
+    /// Días de ventana por debajo de los cuales una corrida no puede juzgar la continuidad longitudinal
+    /// (L1: el crónico vuelve a su control; L7: un paciente no es un ticket). El control crónico se cita a
+    /// 30–120 días, así que un crónico necesita un ciclo completo para volver: medido en la MiniClinica, la
+    /// fracción de crónicos que vuelve cruza el 60 % alrededor del año (12 % a 90 d · 65 % a 365 d). Antes
+    /// L1 se juzgaba a los 90 días y toda corrida de 3 meses rompía la ley sin estar rota (falso positivo).
+    /// </summary>
+    private const int DiasParaJuzgarContinuidad = 365;
 
     /// <summary>
     /// Evalúa las leyes sobre lo que la corrida <b>realmente sembró</b> (RunStats) y sobre el pool de
@@ -80,7 +85,7 @@ public static class Invariantes
         var fraccionCronicos = cronicos == 0 ? 0 : (double)cronicosVuelven / cronicos;
         leyes.Add(new Ley(
             "L1", "El crónico vuelve a su control",
-            Aplica: cronicos > 0 && ventanaDias >= DiasParaJuzgarCronicos,
+            Aplica: cronicos > 0 && ventanaDias >= DiasParaJuzgarContinuidad,
             Cumple: fraccionCronicos >= MinCronicosQueVuelven,
             Medido: $"{Pct(fraccionCronicos)} de {cronicos} crónicos volvió al menos una vez " +
                     $"(umbral: ≥ {Pct(MinCronicosQueVuelven)})",
@@ -166,7 +171,7 @@ public static class Invariantes
         // estudio longitudinal pueda explotar.
         leyes.Add(new Ley(
             "L7", "Un paciente no es un ticket",
-            Aplica: ventanaDias >= DiasParaJuzgarVisitasPorPaciente && stats.PacientesUnicos > 0,
+            Aplica: ventanaDias >= DiasParaJuzgarContinuidad && stats.PacientesUnicos > 0,
             Cumple: stats.VisitasPorPaciente >= MinVisitasPorPaciente,
             Medido: $"{stats.VisitasPorPaciente:0.00} visitas por paciente · " +
                     $"{Pct(FraccionQueVolvio(stats))} volvió alguna vez " +

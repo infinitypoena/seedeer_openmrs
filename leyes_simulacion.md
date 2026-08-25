@@ -121,8 +121,8 @@ refiere (es otro episodio) y no cuenta contra la ley.
 
 ### "No procede" no es un aprobado
 Una ley que la corrida no puede juzgar se marca `—` y **no cuenta**. Una ventana de una semana no puede
-decir nada sobre el control trimestral de un hipertenso (L1 necesita ≥ 90 días; L7, ≥ 365; L4, dos años
-naturales distintos).
+decir nada sobre el control trimestral de un hipertenso (L1 y L7 necesitan ≥ 365 días — un año; L4, dos
+años naturales distintos).
 
 ---
 
