@@ -59,17 +59,32 @@ Si reaparece en una corrida limpia, investigar antes de proseguir.
 
 ---
 
-## Fase A — Homologar L1
+## Fase A — Homologar L1 — `[x]` DONE (commit 967e679)
 
 **Objetivo**: que la ley mida "el crónico vuelve a su control" y no "la ventana es lo bastante larga".
 
-1. `Services/Invariantes.cs`: subir `DiasParaJuzgarCronicos` de 90 a `Recurrence.MaxDiasCronico + margen`
-   (~180–210 d). Opción más rigurosa (preferida): medir solo **crónicos elegibles** — diagnosticados al
-   menos `MaxDiasCronico` días antes del fin de ventana, para que su control quepa.
-2. `leyes_simulacion.md`: actualizar el umbral de "cuándo se juzgan" (L1 ya no se pronuncia en corridas
-   de 3 meses) y el racional (30–120 d de recurrencia crónica).
-3. Tests: `InvariantesTests` con el caso "3 meses = no procede" (hoy daría rojo) y "18 meses = juzga".
-4. Corroborar que L2/L3/L9 siguen pronunciándose en cortas (son tripwires que no dependen de la ventana).
+**Lo que se hizo (distinto de lo estimado aquí):** medido empíricamente con la MiniClinica, la fracción de
+crónicos que vuelve cruza el 60 % **alrededor del año**, no a los ~180-210 d estimados:
+
+| Ventana | % crónicos que vuelven |
+|---|---|
+| 90 d | 12 % |
+| 180 d | 39 % |
+| 270 d | 52 % |
+| **365 d** | **65 %** ✓ |
+| 540 d | 72 % |
+
+Así que el umbral de L1 se subió de 90 d a **365 d** (misma constante `DiasParaJuzgarContinuidad` que L7),
+no se derivó de `MaxDiasCronico` ni se midieron "crónicos elegibles" (haría falta trackear la fecha de la
+primera crónica, más invasivo y sin ganancia objetiva).
+
+1. `[x]` `Services/Invariantes.cs`: `DiasParaJuzgarCronicos` (90) y `DiasParaJuzgarVisitasPorPaciente`
+   (365) unificados en `DiasParaJuzgarContinuidad = 365`.
+2. `[x]` `leyes_simulacion.md` + `manual_usuario.md`: "L1 y L7 necesitan ≥365 días".
+3. `[x]` Tests: `VentanasCortasTests` — 120 d ⇒ L1 "no procede"; 365 d ⇒ L1 se juzga y cumple (~65 %).
+4. `[x]` L2/L3/L9 siguen pronunciándose en cortas (tripwires por conteo, no por ventana) — ya verificado
+   en corridas reales cortas.
+5. `[x]` Suite completa: 524 tests en verde.
 
 ## Fase B — De-parametrizar `appsettings.json`
 
