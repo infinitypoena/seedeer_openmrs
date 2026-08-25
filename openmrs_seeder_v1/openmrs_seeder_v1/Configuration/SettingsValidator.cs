@@ -52,8 +52,8 @@ public static class SettingsValidator
                 $"EndDate ({sim.EndDate:yyyy-MM-dd}) debe ser anterior a hoy ({hoyVentana:yyyy-MM-dd}): " +
                 "OpenMRS rechaza encuentros con fecha futura (Encounter.datetimeShouldBeBeforeCurrent) y " +
                 "toda la cola de la corrida se perdería en silencio");
-        if (sim.PacientesPorDiaMedio <= 0)
-            violaciones.Add($"PacientesPorDiaMedio debe ser mayor que 0 (valor: {sim.PacientesPorDiaMedio})");
+        if (sim.AltasPorDiaArranque <= 0)
+            violaciones.Add($"AltasPorDiaArranque debe ser mayor que 0 (valor: {sim.AltasPorDiaArranque})");
 
         // Probabilidades simples
         Prob(sim.SeguimientoCronicoProb, "SeguimientoCronicoProb");
@@ -148,11 +148,9 @@ public static class SettingsValidator
         NoNegativo(sa.BonusCitaCumplida, "Satisfaccion.BonusCitaCumplida");
         NoNegativo(sa.PenalizacionCuadroGrave, "Satisfaccion.PenalizacionCuadroGrave");
         NoNegativo(sa.PenalizacionSaturacion, "Satisfaccion.PenalizacionSaturacion");
-        if (sa.CapacidadComodaPorDia < 1)
-            violaciones.Add($"Satisfaccion.CapacidadComodaPorDia debe ser al menos 1 (valor: {sa.CapacidadComodaPorDia})");
 
         // Crecimiento (difusión de Bass). Los tres mandos de la curva: dónde arranca
-        // (PacientesPorDiaMedio), dónde acaba (PacientesPorDiaObjetivo) y cuánto tarda
+        // (AltasPorDiaArranque), dónde acaba (VisitasPorDiaMeseta) y cuánto tarda
         // (VentanaActividadDias). El techo es solo una red de seguridad y debe quedar por encima de ambos.
         var cr = sim.Crecimiento;
         if (cr.PoblacionCaptacion < 1)
@@ -165,37 +163,28 @@ public static class SettingsValidator
             violaciones.Add($"Crecimiento.MinVisitasRecurrente debe ser al menos 1 (valor: {cr.MinVisitasRecurrente})");
         if (cr.VentanaActividadDias < 1)
             violaciones.Add($"Crecimiento.VentanaActividadDias debe ser al menos 1 (valor: {cr.VentanaActividadDias})");
-        if (cr.PacientesPorDiaObjetivo < 1)
-            violaciones.Add($"Crecimiento.PacientesPorDiaObjetivo debe ser al menos 1 (valor: {cr.PacientesPorDiaObjetivo})");
-        if (cr.PacientesPorDiaMax < sim.PacientesPorDiaMedio)
+        if (cr.VisitasPorDiaMeseta < 1)
+            violaciones.Add($"Crecimiento.VisitasPorDiaMeseta debe ser al menos 1 (valor: {cr.VisitasPorDiaMeseta})");
+        if (cr.PacientesPorDiaMax < sim.AltasPorDiaArranque)
             violaciones.Add(
                 $"Crecimiento.PacientesPorDiaMax ({cr.PacientesPorDiaMax}) no puede ser menor que " +
-                $"PacientesPorDiaMedio ({sim.PacientesPorDiaMedio}): el techo dejaría a la clínica por debajo de su volumen de arranque");
-        if (cr.PacientesPorDiaMax < cr.PacientesPorDiaObjetivo)
+                $"AltasPorDiaArranque ({sim.AltasPorDiaArranque}): el techo dejaría a la clínica por debajo de su volumen de arranque");
+        if (cr.PacientesPorDiaMax < cr.VisitasPorDiaMeseta)
             violaciones.Add(
                 $"Crecimiento.PacientesPorDiaMax ({cr.PacientesPorDiaMax}) no puede ser menor que " +
-                $"PacientesPorDiaObjetivo ({cr.PacientesPorDiaObjetivo}): el techo impediría alcanzar el objetivo");
+                $"VisitasPorDiaMeseta ({cr.VisitasPorDiaMeseta}): el techo impediría alcanzar el objetivo");
         // El objetivo ES el aforo de la consulta, y PacientesPorDiaMax solo una red de seguridad POR ENCIMA.
         // Si van pegados, quien gobierna la clínica acaba siendo el techo (33 de los 42 meses de la corrida
         // de 3,5 años se pasaron clavados en él) y la ley L5 no tiene margen para distinguirlo.
-        if (cr.Enabled && cr.PacientesPorDiaMax < cr.PacientesPorDiaObjetivo * 1.3)
+        if (cr.Enabled && cr.PacientesPorDiaMax < cr.VisitasPorDiaMeseta * 1.3)
             violaciones.Add(
                 $"Crecimiento.PacientesPorDiaMax ({cr.PacientesPorDiaMax}) debe quedar holgado por encima de " +
-                $"PacientesPorDiaObjetivo ({cr.PacientesPorDiaObjetivo}, al menos ×1,3 = " +
-                $"{(int)Math.Ceiling(cr.PacientesPorDiaObjetivo * 1.3)}): el techo es una red de seguridad, no el aforo");
-        // El aforo (el objetivo) y la capacidad cómoda tienen que ser el mismo número: si la clínica trabaja
-        // sistemáticamente por encima de lo que puede atender con holgura, las notas se hunden por diseño y
-        // el churn se dispara sin que eso signifique nada.
-        if (cr.Enabled && sim.Satisfaccion.Enabled &&
-            sim.Satisfaccion.CapacidadComodaPorDia < cr.PacientesPorDiaObjetivo)
-            violaciones.Add(
-                $"Satisfaccion.CapacidadComodaPorDia ({sim.Satisfaccion.CapacidadComodaPorDia}) no puede ser menor que " +
-                $"Crecimiento.PacientesPorDiaObjetivo ({cr.PacientesPorDiaObjetivo}): la clínica viviría saturada en su " +
-                "propia meseta y las calificaciones se hundirían por construcción");
+                $"VisitasPorDiaMeseta ({cr.VisitasPorDiaMeseta}, al menos ×1,3 = " +
+                $"{(int)Math.Ceiling(cr.VisitasPorDiaMeseta * 1.3)}): el techo es una red de seguridad, no el aforo");
         Prob(cr.AsistenciaProbInsatisfecho, "Crecimiento.AsistenciaProbInsatisfecho");
-        // El coeficiente de innovación se deriva (p = PacientesPorDiaMedio / M): si el mercado es más
+        // El coeficiente de innovación se deriva (p = AltasPorDiaArranque / M): si el mercado es más
         // pequeño que las altas de un solo día, p > 1 y el modelo pierde sentido.
-        if (cr.Enabled && cr.PoblacionCaptacion >= 1 && sim.PacientesPorDiaMedio > cr.PoblacionCaptacion)
+        if (cr.Enabled && cr.PoblacionCaptacion >= 1 && sim.AltasPorDiaArranque > cr.PoblacionCaptacion)
             violaciones.Add(
                 $"Crecimiento.PoblacionCaptacion ({cr.PoblacionCaptacion}) es menor que las altas de un solo día: " +
                 "el área de influencia se agotaría el primer día");

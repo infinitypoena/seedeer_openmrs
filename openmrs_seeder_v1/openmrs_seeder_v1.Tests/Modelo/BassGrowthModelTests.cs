@@ -41,7 +41,7 @@ public class BassGrowthModelTests
     {
         // La propiedad que hace que activar el crecimiento no cambie el punto de partida: con S=0 y A=0
         // (y por tanto SIN ningún retorno posible), λ = p·M = los pacientes del día base — todos altas.
-        var p = BassGrowthModel.CoeficienteInnovacion(pacientesPorDiaMedio: 15, poblacionCaptacion: 20000);
+        var p = BassGrowthModel.CoeficienteInnovacion(altasPorDiaArranque: 15, poblacionCaptacion: 20000);
 
         var lambda = BassGrowthModel.Lambda(p, q: 0.04, poblacionCaptacion: 20000, activos: 0, satisfechos: 0);
 
@@ -405,11 +405,11 @@ public class BassGrowthModelTests
         {
             StartDate = new DateTime(2023, 1, 1),
             EndDate   = new DateTime(2024, 12, 31),
-            PacientesPorDiaMedio = 15
+            AltasPorDiaArranque = 15
         };
         sim.Crecimiento.PoblacionCaptacion          = poblacion;
         sim.Crecimiento.RecurrentesPorPacienteExtra = recurrentesPorExtra;   // override manual
-        sim.Crecimiento.PacientesPorDiaObjetivo     = 40;
+        sim.Crecimiento.VisitasPorDiaMeseta     = 40;
         sim.Crecimiento.PacientesPorDiaMax          = 80;
         return sim;
     }
@@ -423,13 +423,12 @@ public class BassGrowthModelTests
         {
             StartDate = new DateTime(2023, 1, 1),
             EndDate   = new DateTime(2025, 12, 31),
-            PacientesPorDiaMedio = 6
+            AltasPorDiaArranque = 6
         };
-        sim.Crecimiento.PacientesPorDiaObjetivo     = objetivo;
+        sim.Crecimiento.VisitasPorDiaMeseta     = objetivo;
         sim.Crecimiento.RecurrentesPorPacienteExtra = 0;   // 0 = derivar del objetivo
         sim.Crecimiento.PoblacionCaptacion          = 60000;
         sim.Crecimiento.PacientesPorDiaMax          = Math.Max(45, (int)(objetivo * 1.8));
-        sim.Satisfaccion.CapacidadComodaPorDia      = objetivo;
         return sim;
     }
 
@@ -451,7 +450,7 @@ public class BassGrowthModelTests
     [Fact]
     public void ObjetivoPorDebajoDeLoQueElPanelProduceSolo_NoNecesitaBocaABoca()
     {
-        // El "suelo" ya no es PacientesPorDiaMedio: el panel devuelve a cada paciente varias veces, así que
+        // El "suelo" ya no es AltasPorDiaArranque: el panel devuelve a cada paciente varias veces, así que
         // 6 altas/día ya producen ~6 × 1/(1−k) visitas/día sin ninguna recomendación. Pedir menos que eso
         // no es un objetivo de crecimiento.
         var sim  = SimObjetivo(objetivo: 8);
@@ -518,7 +517,7 @@ public class BassGrowthModelTests
         var meseta = BassGrowthModel.MesetaProyectada(plan, sim, q);
 
         Assert.True(q > 0);                                              // lo intentó con todo
-        Assert.True(meseta < sim.Crecimiento.PacientesPorDiaObjetivo);   // y aun así se queda corta
+        Assert.True(meseta < sim.Crecimiento.VisitasPorDiaMeseta);   // y aun así se queda corta
     }
 
     [Fact]

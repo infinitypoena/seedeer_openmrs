@@ -30,7 +30,7 @@ public class DailyScheduleGenerator
             }
             else
             {
-                var mean = _settings.PacientesPorDiaMedio * weight;
+                var mean = _settings.AltasPorDiaArranque * weight;
                 count = Math.Max(0, (int)Math.Round(SampleNormal(mean, mean * 0.20)));
             }
 

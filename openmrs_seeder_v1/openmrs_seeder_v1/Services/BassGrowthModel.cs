@@ -38,7 +38,7 @@ public readonly record struct ProyeccionDia(
 /// <list type="bullet">
 /// <item><b>p · M</b> — los que llegan solos, sin que nadie se la recomiende. Es el suelo, y <c>p</c> se
 /// <b>deriva</b> para que el día 0 (pool vacío, todo el mundo es nuevo) la clínica atienda exactamente sus
-/// <c>PacientesPorDiaMedio</c> de siempre. Ver <see cref="CoeficienteInnovacion"/>.</item>
+/// <c>AltasPorDiaArranque</c> de siempre. Ver <see cref="CoeficienteInnovacion"/>.</item>
 /// <item><b>q · S(d)</b> — el boca a boca. <c>q</c> tampoco se configura: se <b>deriva del objetivo</b> por
 /// bisección (<see cref="CalibrarImitacion"/>), porque es un coeficiente de un lazo de realimentación
 /// positiva y nadie puede apuntar con él a ojo.</item>
@@ -58,17 +58,17 @@ public static class BassGrowthModel
     /// <summary>
     /// <c>p</c> — coeficiente de innovación. No se configura: se deriva de la media diaria de arranque, de
     /// modo que con el pool vacío (S=0, A=0, y por tanto <b>sin ningún retorno posible</b>) la fórmula
-    /// devuelve <c>p·M = PacientesPorDiaMedio</c>. Activar el crecimiento no cambia el punto de partida,
+    /// devuelve <c>p·M = AltasPorDiaArranque</c>. Activar el crecimiento no cambia el punto de partida,
     /// solo su evolución.
     ///
     /// <para>Antes se multiplicaba por <c>(1 − PorcentajeRecurrentes/100)</c>, lo cual era ruido: el día 0
     /// no existe ningún paciente al que pueda tocarle un control, así que los pacientes del arranque son
     /// <b>todos</b> nuevos por definición.</para>
     /// </summary>
-    public static double CoeficienteInnovacion(int pacientesPorDiaMedio, int poblacionCaptacion)
+    public static double CoeficienteInnovacion(int altasPorDiaArranque, int poblacionCaptacion)
     {
         if (poblacionCaptacion <= 0) return 0;
-        return Math.Max(0, pacientesPorDiaMedio) / (double)poblacionCaptacion;
+        return Math.Max(0, altasPorDiaArranque) / (double)poblacionCaptacion;
     }
 
     /// <summary>
@@ -133,8 +133,8 @@ public static class BassGrowthModel
 
     /// <summary>
     /// <b>El aforo de la consulta</b> ese día. Con el crecimiento activo la clínica trabaja a su
-    /// <c>PacientesPorDiaObjetivo</c>: el objetivo <b>es</b> su capacidad de trabajo, no una casualidad
-    /// (por eso <c>Satisfaccion.CapacidadComodaPorDia</c> vale lo mismo).
+    /// <c>VisitasPorDiaMeseta</c>: el objetivo <b>es</b> su capacidad de trabajo, no una casualidad
+    /// (es también con lo que <c>SatisfaccionPolicy</c> mide la saturación).
     /// <c>PacientesPorDiaMax</c> queda de red de seguridad por encima.
     ///
     /// <para>El peso del día lo escala <b>relativo al peso medio de apertura</b>: en un lunes (1,2) cabe más
@@ -152,7 +152,7 @@ public static class BassGrowthModel
 
         var cr = sim.Crecimiento;
         var tope = cr.Enabled
-            ? Math.Min(cr.PacientesPorDiaObjetivo, cr.PacientesPorDiaMax)
+            ? Math.Min(cr.VisitasPorDiaMeseta, cr.PacientesPorDiaMax)
             : cr.PacientesPorDiaMax;
 
         var pesoMedio = DailyScheduleGenerator.PesoMedioDeApertura(sim.WeekdayWeights);
@@ -294,7 +294,7 @@ public static class BassGrowthModel
         IReadOnlyList<DailySchedule> plan, SimulationSettings sim, double q, bool aplicarAforo = true)
     {
         var cr = sim.Crecimiento;
-        var p  = CoeficienteInnovacion(sim.PacientesPorDiaMedio, cr.PoblacionCaptacion);
+        var p  = CoeficienteInnovacion(sim.AltasPorDiaArranque, cr.PoblacionCaptacion);
 
         var k                  = ProbabilidadDeRetorno(sim);
         var visitasPorPaciente = VisitasPorPaciente(k);
@@ -409,7 +409,7 @@ public static class BassGrowthModel
 
             if (total > 0)
                 saturacionPrevia = SatisfaccionPolicy.Saturacion(
-                    (int)Math.Round(total), sim.Satisfaccion.CapacidadComodaPorDia);
+                    (int)Math.Round(total), cr.VisitasPorDiaMeseta);
 
             resultado.Add(new ProyeccionDia(
                 dia.Date, lambda,
@@ -455,7 +455,7 @@ public static class BassGrowthModel
             .Where(d => DailyScheduleGenerator.PesoDelDia(d.Fecha.DayOfWeek, sim.WeekdayWeights) > 0)
             .Select(d => (double)d.Total)
             .ToList();
-        if (abiertos.Count == 0) return (sim.PacientesPorDiaMedio, sim.PacientesPorDiaMedio);
+        if (abiertos.Count == 0) return (sim.AltasPorDiaArranque, sim.AltasPorDiaArranque);
 
         var ventana = Math.Min(RunStats.VentanaMediaMovil, abiertos.Count);
         var medias = Enumerable.Range(0, abiertos.Count - ventana + 1)
@@ -467,7 +467,7 @@ public static class BassGrowthModel
 
     /// <summary>
     /// Deriva <c>q</c> (la fuerza del boca a boca) de <b>dónde quiere el usuario que acabe la clínica</b>
-    /// (<c>PacientesPorDiaObjetivo</c>, en <b>visitas totales</b>/día), por bisección sobre la proyección.
+    /// (<c>VisitasPorDiaMeseta</c>, en <b>visitas totales</b>/día), por bisección sobre la proyección.
     ///
     /// <para>⚠️ <b>Por qué esto no es un lujo.</b> El crecimiento es un lazo de realimentación positiva cuyo
     /// punto fijo vale <c>1/(1 − ganancia)</c> — y eso <b>explota</b> cuando la ganancia se acerca a 1.
@@ -476,7 +476,7 @@ public static class BassGrowthModel
     /// boca a boca que lo produce — igual que <c>p</c> se deriva del <b>arranque</b>.</para>
     ///
     /// <para>Devuelve <b>0</b> si el objetivo ya se alcanza <b>sin nada de boca a boca</b>: el panel por sí
-    /// solo produce <c>PacientesPorDiaMedio × 1/(1−k)</c> visitas al día, y si eso ya cubre el objetivo, la
+    /// solo produce <c>AltasPorDiaArranque × 1/(1−k)</c> visitas al día, y si eso ya cubre el objetivo, la
     /// clínica no necesita crecer. Si el objetivo es inalcanzable (el área o el techo muerden antes),
     /// devuelve el <c>q</c> máximo probado y el informe previo avisa de que la meseta se queda corta.</para>
     ///
@@ -489,7 +489,7 @@ public static class BassGrowthModel
     /// </summary>
     public static double CalibrarImitacion(IReadOnlyList<DailySchedule> plan, SimulationSettings sim)
     {
-        var objetivo = sim.Crecimiento.PacientesPorDiaObjetivo;
+        var objetivo = sim.Crecimiento.VisitasPorDiaMeseta;
 
         // El panel solo (sin recomendaciones) ya llega al objetivo → no hay nada que hacer crecer.
         if (MesetaProyectada(plan, sim, 0) >= objetivo) return 0;

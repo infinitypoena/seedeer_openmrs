@@ -36,14 +36,12 @@ public static class Escenarios
         int seed = 42)
     {
         var sim = Sim(fin: new DateTime(2023, 1, 1).AddYears(anios), seed: seed);
-        sim.PacientesPorDiaMedio                = arranque;
+        sim.AltasPorDiaArranque                = arranque;
         sim.Crecimiento.Enabled                 = true;
-        sim.Crecimiento.PacientesPorDiaObjetivo = objetivo;
+        sim.Crecimiento.VisitasPorDiaMeseta = objetivo;
         sim.Crecimiento.PacientesPorDiaMax      = max;
         sim.Crecimiento.PoblacionCaptacion      = poblacion;
         sim.Crecimiento.VentanaActividadDias    = ventanaDias;
-        // El aforo cómodo ES el objetivo (lo exige SettingsValidator y lo asume CapacidadDelDia).
-        sim.Satisfaccion.CapacidadComodaPorDia  = objetivo;
         return sim;
     }
 

@@ -117,7 +117,7 @@ public static class MiniClinica
         var rngLlegadas = new Random(sim.RandomSeed + 20);
         var rngDx       = new Random(sim.RandomSeed + 30);
 
-        var p = BassGrowthModel.CoeficienteInnovacion(sim.PacientesPorDiaMedio, cr.PoblacionCaptacion);
+        var p = BassGrowthModel.CoeficienteInnovacion(sim.AltasPorDiaArranque, cr.PoblacionCaptacion);
         var q = BassGrowthModel.CoeficienteImitacion(plan, sim);
         var probRetornoEspontaneo = RecurrentSelector.ProbRetornoEspontaneoDiaria(re);
 
@@ -225,7 +225,8 @@ public static class MiniClinica
                 AtendidoPorCabecera: !esNuevo && rngSat.NextDouble() < op.ProbCabecera,
                 AcudioACita:         acudioACita,
                 CuadroGrave:         dx.Severidad.Equals("grave", StringComparison.OrdinalIgnoreCase),
-                PacientesDelDia:     pacientesDelDia);
+                PacientesDelDia:     pacientesDelDia,
+                CapacidadComoda:     sim.Crecimiento.VisitasPorDiaMeseta);
             var nota = SatisfaccionPolicy.Calificar(ctx, sim.Satisfaccion, rngSat);
             poolPatient.Calificaciones.Add(nota);
             poolPatient.Insatisfecho = SatisfaccionPolicy.EsInsatisfecho(

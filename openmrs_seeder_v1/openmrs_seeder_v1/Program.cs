@@ -375,7 +375,7 @@ async Task<int> EjecutarSimulacionAsync()
             "{PctMercado:0.0} % de un área de {M} | {S} recurrentes satisfechos activos (el boca a boca " +
             "que la sostiene) | {Rechazados} altas no captadas por consulta llena",
             stats.MediaDiariaInicial, stats.MediaDiariaMaxima, stats.MediaDiariaFinal,
-            cr.Enabled ? cr.PacientesPorDiaObjetivo.ToString() : "—",
+            cr.Enabled ? cr.VisitasPorDiaMeseta.ToString() : "—",
             stats.PacientesUnicos, stats.PacientesActivosFinal, pctMercado,
             cr.PoblacionCaptacion, stats.RecurrentesSatisfechosFinal, stats.NuevosRechazadosPorAforo);
 
@@ -591,7 +591,7 @@ void ReportarPlan(IReadOnlyList<DailySchedule> plan)
         "El panel genera su propia consulta: {K:P0} de las visitas dejan otra visita del mismo paciente " +
         "(cita de control + retorno espontáneo) → cada paciente vuelve {V:0.0} veces, y esa misma fracción " +
         "es la de recurrentes en régimen. Las altas ({Medio}/día al arrancar) son solo la puerta de entrada.",
-        k, BassGrowthModel.VisitasPorPaciente(k), simSettings.PacientesPorDiaMedio);
+        k, BassGrowthModel.VisitasPorPaciente(k), simSettings.AltasPorDiaArranque);
 
     if (cr.Enabled)
     {
@@ -605,7 +605,7 @@ void ReportarPlan(IReadOnlyList<DailySchedule> plan)
             "{Suelo:0.0}/día solo con su panel | boca a boca {Origen}: 1 alta más al día por cada {Q:0.0} " +
             "recurrentes satisfechos | la rampa dura lo que la memoria del boca a boca ({Ventana} días) | " +
             "área de {M} personas, techo de seguridad {Max}/día",
-            simSettings.PacientesPorDiaMedio, cr.PacientesPorDiaObjetivo, suelo,
+            simSettings.AltasPorDiaArranque, cr.VisitasPorDiaMeseta, suelo,
             cr.RecurrentesPorPacienteExtra > 0 ? "fijado a mano" : "derivado del objetivo",
             qBocaABoca > 0 ? 1 / qBocaABoca : 0,
             cr.VentanaActividadDias, cr.PoblacionCaptacion, cr.PacientesPorDiaMax);
@@ -620,17 +620,17 @@ void ReportarPlan(IReadOnlyList<DailySchedule> plan)
             cr.PoblacionCaptacion == 0 ? 0 : 100.0 * ultimo.Activos / cr.PoblacionCaptacion,
             ultimo.Satisfechos);
 
-        if (suelo >= cr.PacientesPorDiaObjetivo)
+        if (suelo >= cr.VisitasPorDiaMeseta)
             logger.LogWarning(
                 "El objetivo ({Objetivo}/día) NO supera lo que el panel produce solo ({Suelo:0.0}/día): la " +
                 "clínica no necesita boca a boca para llegar y la curva no crecerá. Sube el objetivo o baja " +
                 "Recurrence.VisitasEspontaneasPorPacienteAno.",
-                cr.PacientesPorDiaObjetivo, suelo);
-        else if (cr.RecurrentesPorPacienteExtra == 0 && meseta < cr.PacientesPorDiaObjetivo * 0.95)
+                cr.VisitasPorDiaMeseta, suelo);
+        else if (cr.RecurrentesPorPacienteExtra == 0 && meseta < cr.VisitasPorDiaMeseta * 0.95)
             logger.LogWarning(
                 "La clínica NO llega al objetivo de {Objetivo}/día: se queda en {Meseta:0.0}/día. El freno lo " +
                 "pone el área de captación ({M} personas) — súbela, o baja el objetivo.",
-                cr.PacientesPorDiaObjetivo, meseta, cr.PoblacionCaptacion);
+                cr.VisitasPorDiaMeseta, meseta, cr.PoblacionCaptacion);
 
         // La clínica llega a su meseta y luego SE DESINFLA: ha captado a tanta gente del área que ya no le
         // queda a quién captar. Es un síntoma de que el área se le queda pequeña, no del modelo.
@@ -655,7 +655,7 @@ void ReportarPlan(IReadOnlyList<DailySchedule> plan)
             "{Medio} altas/día configuradas | crecimiento DESACTIVADO (las altas salen del plan fijo; los " +
             "controles los sigue poniendo el panel)",
             total, nuevos, recurrentes,
-            (double)total / dias.Count, simSettings.PacientesPorDiaMedio);
+            (double)total / dias.Count, simSettings.AltasPorDiaArranque);
     }
 
     if (dias.Count <= 31)

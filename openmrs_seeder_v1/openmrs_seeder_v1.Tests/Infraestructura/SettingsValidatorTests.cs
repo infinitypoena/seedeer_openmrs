@@ -149,7 +149,7 @@ public class SettingsValidatorTests
     {
         var sim = SimValida();
         sim.SeguimientoCronicoProb = -0.1;
-        sim.PacientesPorDiaMedio = 0;
+        sim.AltasPorDiaArranque = 0;
         sim.Recurrence.MinDiasAgudo = 30;
         sim.Recurrence.MaxDiasAgudo = 7;
         var omrs = new OpenMrsSettings(); // BaseUrl vacío
@@ -158,7 +158,7 @@ public class SettingsValidatorTests
 
         Assert.Equal(4, violaciones.Count);
         Assert.Contains(violaciones, v => v.Contains("SeguimientoCronicoProb"));
-        Assert.Contains(violaciones, v => v.Contains("PacientesPorDiaMedio"));
+        Assert.Contains(violaciones, v => v.Contains("AltasPorDiaArranque"));
         Assert.Contains(violaciones, v => v.Contains("Recurrence.MinDiasAgudo"));
         Assert.Contains(violaciones, v => v.Contains("BaseUrl"));
     }
@@ -188,7 +188,7 @@ public class SettingsValidatorTests
         // El caso real que motivó la feature: AllergyOnNew quedó huérfana al moverse a la sección Allergy.
         var section = SeccionSimulation(new()
         {
-            ["Simulation:PacientesPorDiaMedio"] = "15",
+            ["Simulation:AltasPorDiaArranque"] = "15",
             ["Simulation:ReferralProbabilities:LabOrder"] = "0.4",
             ["Simulation:ReferralProbabilities:AllergyOnNew"] = "0.15"
         });

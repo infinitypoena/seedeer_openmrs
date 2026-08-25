@@ -39,14 +39,13 @@ public class ConfiguracionRealTests
     }
 
     [Fact]
-    public void ElAforoYElObjetivo_SonElMismoNumero()
+    public void ElTechoDuro_QuedaPorEncimaDelObjetivo()
     {
-        // El contrato documentado: PacientesPorDiaObjetivo ES la capacidad de trabajo, por eso
-        // CapacidadComodaPorDia vale lo mismo y el techo duro queda ≥1,3× por encima (es una red de
-        // seguridad, no el aforo). SettingsValidator lo exige; el example debe cumplirlo.
+        // El contrato documentado: VisitasPorDiaMeseta ES la capacidad de trabajo (el aforo), y el
+        // techo duro queda ≥1,3× por encima (es una red de seguridad, no el aforo). SettingsValidator lo
+        // exige; el example debe cumplirlo.
         var (sim, _) = Escenarios.DesdeExampleJson();
 
-        Assert.Equal(sim.Crecimiento.PacientesPorDiaObjetivo, sim.Satisfaccion.CapacidadComodaPorDia);
-        Assert.True(sim.Crecimiento.PacientesPorDiaMax >= sim.Crecimiento.PacientesPorDiaObjetivo * 1.3);
+        Assert.True(sim.Crecimiento.PacientesPorDiaMax >= sim.Crecimiento.VisitasPorDiaMeseta * 1.3);
     }
 }

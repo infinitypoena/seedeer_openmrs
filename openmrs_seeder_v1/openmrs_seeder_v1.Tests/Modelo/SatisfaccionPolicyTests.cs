@@ -10,8 +10,9 @@ public class SatisfaccionPolicyTests
     private static SatisfaccionSettings SinRuido() => new() { Desviacion = 0 };
 
     private static ContextoVisita Visita(
-        bool cabecera = false, bool cita = false, bool grave = false, int pacientesDelDia = 0) =>
-        new(cabecera, cita, grave, pacientesDelDia);
+        bool cabecera = false, bool cita = false, bool grave = false, int pacientesDelDia = 0,
+        int capacidadComoda = 25) =>
+        new(cabecera, cita, grave, pacientesDelDia, capacidadComoda);
 
     // ── Saturación: cuánto se pasa la clínica de lo que puede atender con holgura ──────────────────
 
@@ -177,14 +178,16 @@ public class SatisfaccionPolicyTests
     {
         var s = new SatisfaccionSettings();
         const double sat = 0.6;
+        const int capacidadComoda = 25;
         // La clínica atiende un 60 % por encima de su capacidad cómoda.
-        var pacientes = (int)Math.Round(s.CapacidadComodaPorDia * (1 + sat));
+        var pacientes = (int)Math.Round(capacidadComoda * (1 + sat));
 
         var teorica = SatisfaccionPolicy.FraccionSatisfechaTeorica(s, sat);
 
         var rng = new Random(31);
         var real = Enumerable.Range(0, 20_000)
-            .Count(_ => SatisfaccionPolicy.Calificar(Visita(pacientesDelDia: pacientes), s, rng)
+            .Count(_ => SatisfaccionPolicy.Calificar(
+                        Visita(pacientesDelDia: pacientes, capacidadComoda: capacidadComoda), s, rng)
                         > s.UmbralSatisfaccion) / 20_000.0;
 
         Assert.InRange(teorica, real - 0.03, real + 0.03);

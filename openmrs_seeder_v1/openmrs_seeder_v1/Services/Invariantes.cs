@@ -177,7 +177,7 @@ public static class Invariantes
         // ⚠️ Solo se juzga si la corrida da tiempo a que la clínica LLEGUE: la rampa dura lo que la memoria
         // del boca a boca (`VentanaActividadDias`, 365 d por defecto). Exigirle a una corrida de 3 meses
         // que esté ya en su meseta de 25/día es un falso positivo — está creciendo, que es lo que se le pide.
-        var objetivo = cr.PacientesPorDiaObjetivo;
+        var objetivo = cr.VisitasPorDiaMeseta;
         var desvio   = objetivo <= 0 ? 0 : Math.Abs(stats.MediaDiariaMaxima - objetivo) / objetivo;
         leyes.Add(new Ley(
             "L8", "La clínica llega a donde se le pidió (y no más)",
@@ -227,7 +227,7 @@ public static class Invariantes
             Cumple: fraccionTecho <= MaxDiasEnElTecho,
             Medido: $"{Pct(fraccionTecho)} de los días proyectados toparía con el techo duro de " +
                     $"{cr.PacientesPorDiaMax}/día (umbral: ≤ {Pct(MaxDiasEnElTecho)})",
-            Pista:  "Baja PacientesPorDiaObjetivo o sube PacientesPorDiaMax: tal como está, quien gobierna " +
+            Pista:  "Baja VisitasPorDiaMeseta o sube PacientesPorDiaMax: tal como está, quien gobierna " +
                     "la clínica es el techo de seguridad."));
 
         var captados    = curva[^1].CaptadosTotal;

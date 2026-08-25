@@ -11,11 +11,13 @@ namespace OpenmrsSeeder.Services;
 /// <param name="AcudioACita">Vino a una cita de control agendada, no de improviso.</param>
 /// <param name="CuadroGrave">Alguno de sus diagnósticos es de severidad grave.</param>
 /// <param name="PacientesDelDia">Pacientes atendidos ese día (para medir la saturación de la clínica).</param>
+/// <param name="CapacidadComoda">Pacientes que la clínica atiende sin que se note la espera (el aforo: <c>Crecimiento.VisitasPorDiaMeseta</c>).</param>
 public readonly record struct ContextoVisita(
     bool AtendidoPorCabecera,
     bool AcudioACita,
     bool CuadroGrave,
-    int PacientesDelDia);
+    int PacientesDelDia,
+    int CapacidadComoda);
 
 /// <summary>
 /// La nota (1-5) que el paciente le pone a la visita. Seam estático puro (RNG inyectado), sin red:
@@ -53,7 +55,7 @@ public static class SatisfaccionPolicy
         if (ctx.AcudioACita)         nota += s.BonusCitaCumplida;
         if (ctx.CuadroGrave)         nota -= s.PenalizacionCuadroGrave;
 
-        nota -= s.PenalizacionSaturacion * Saturacion(ctx.PacientesDelDia, s.CapacidadComodaPorDia);
+        nota -= s.PenalizacionSaturacion * Saturacion(ctx.PacientesDelDia, ctx.CapacidadComoda);
         nota += RuidoNormal(rng) * s.Desviacion;
 
         return Math.Clamp((int)Math.Round(nota, MidpointRounding.AwayFromZero), NotaMinima, NotaMaxima);

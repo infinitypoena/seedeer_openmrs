@@ -16,7 +16,7 @@ public class SimulationSettings
     /// <c>RecurrentSelector</c> sobre el pool de verdad y su fracción <b>emerge</b> y crece con el panel.
     /// Ver <c>leyes_simulacion.md</c>.</para>
     /// </summary>
-    public int PacientesPorDiaMedio { get; set; } = 6;
+    public int AltasPorDiaArranque { get; set; } = 6;
     /// <summary>
     /// Banda para el factor inicial de selección. Cada corrida sortea su probabilidad de "común"
     /// uniformemente en [CommonProbMin, CommonProbMax], así la proporción VARÍA entre corridas pero
@@ -109,13 +109,6 @@ public class SatisfaccionSettings
     /// </summary>
     public double PenalizacionSaturacion { get; set; } = 1.2;
     /// <summary>
-    /// Pacientes que la clínica atiende en un día sin que se note la espera. A partir de aquí la
-    /// saturación crece y las notas bajan. Ponerlo ≈ <c>Crecimiento.PacientesPorDiaObjetivo</c>: así, en la
-    /// meseta la consulta va cómoda y solo los días punta pasan factura. Muy por debajo del objetivo, la
-    /// clínica vive saturada, las notas se hunden y el churn se dispara.
-    /// </summary>
-    public int CapacidadComodaPorDia { get; set; } = 25;
-    /// <summary>
     /// Promedio de calificaciones por encima del cual el paciente se considera satisfecho (estricto).
     /// El insatisfecho deja de recomendar la clínica y casi deja de acudir a sus citas.
     /// </summary>
@@ -138,8 +131,8 @@ public class SatisfaccionSettings
 ///
 /// <b>La curva se gobierna con tres mandos, y significan exactamente lo que dicen:</b>
 /// <list type="bullet">
-/// <item><c>PacientesPorDiaMedio</c> — <b>dónde arranca</b> la clínica. De ahí se deriva <c>p</c>.</item>
-/// <item><see cref="PacientesPorDiaObjetivo"/> — <b>dónde se estabiliza</b>. De ahí se deriva <c>q</c>.</item>
+/// <item><c>AltasPorDiaArranque</c> — <b>dónde arranca</b> la clínica. De ahí se deriva <c>p</c>.</item>
+/// <item><see cref="VisitasPorDiaMeseta"/> — <b>dónde se estabiliza</b>. De ahí se deriva <c>q</c>.</item>
 /// <item><see cref="VentanaActividadDias"/> — <b>cuánto tarda</b> en llegar.</item>
 /// </list>
 /// </summary>
@@ -150,9 +143,9 @@ public class CrecimientoSettings
     /// <summary>
     /// <b>Dónde se estabiliza la clínica</b>, en <b>visitas totales</b>/día (altas + controles) — que es lo
     /// mismo que decir <b>su capacidad de trabajo</b>: el simulador lo usa también como <b>aforo</b>
-    /// (<c>BassGrowthModel.CapacidadDelDia</c>). Por eso <c>Satisfaccion.CapacidadComodaPorDia</c> debe
-    /// valer lo mismo. De aquí se deriva la fuerza del boca a boca por bisección
-    /// (<c>BassGrowthModel.CalibrarImitacion</c>), igual que <c>PacientesPorDiaMedio</c> fija el arranque.
+    /// (<c>BassGrowthModel.CapacidadDelDia</c>), y también la capacidad cómoda con la que mide la
+    /// saturación <c>SatisfaccionPolicy</c>. De aquí se deriva la fuerza del boca a boca por bisección
+    /// (<c>BassGrowthModel.CalibrarImitacion</c>), igual que <c>AltasPorDiaArranque</c> fija el arranque.
     ///
     /// <para>Cuando la demanda del día lo supera, <b>lo que se recorta son las altas</b>: una consulta llena
     /// deja de captar gente nueva, no le da plantón al crónico que tenía cita. Ese recorte es, además, el
@@ -163,11 +156,11 @@ public class CrecimientoSettings
     /// (un factor 3) el resultado saltaba de crecer un 60 % a estrellarse contra el techo en 12 meses.
     /// Nadie puede apuntar con eso. Ahora se apunta al destino y el modelo calcula el resto.</para>
     ///
-    /// <para>⚠️ El <b>suelo</b> no es <c>PacientesPorDiaMedio</c>: el panel por sí solo ya produce
-    /// <c>PacientesPorDiaMedio × 1/(1−k)</c> visitas al día (cada paciente vuelve varias veces). Si el
+    /// <para>⚠️ El <b>suelo</b> no es <c>AltasPorDiaArranque</c>: el panel por sí solo ya produce
+    /// <c>AltasPorDiaArranque × 1/(1−k)</c> visitas al día (cada paciente vuelve varias veces). Si el
     /// objetivo no supera ese suelo, la clínica no necesita boca a boca y <c>q</c> se deriva a 0.</para>
     /// </summary>
-    public int PacientesPorDiaObjetivo { get; set; } = 25;
+    public int VisitasPorDiaMeseta { get; set; } = 25;
     /// <summary>
     /// <b>Cuánto tarda</b> la clínica en llegar a su meseta: son los días que un paciente sigue contando
     /// como clientela activa (y por tanto sigue recomendándola) desde su última visita. Es la memoria del
@@ -193,7 +186,7 @@ public class CrecimientoSettings
     /// <summary>
     /// <b>Override avanzado.</b> Fija a mano los recurrentes satisfechos que hacen falta para traer +1
     /// paciente nuevo al día (el inverso del coeficiente de imitación: 25 → <c>q = 0,04</c>). Gana sobre
-    /// <see cref="PacientesPorDiaObjetivo"/>.
+    /// <see cref="VisitasPorDiaMeseta"/>.
     ///
     /// <para><b>0 (por defecto) = derivar del objetivo</b>, que es lo que quieres el 99 % de las veces:
     /// este número es inestable y no se puede apuntar a ojo.</para>

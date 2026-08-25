@@ -114,15 +114,15 @@ public class SeedOrchestrator
         var rngChequeo  = new Random(_settings.RandomSeed + 21);
 
         // Difusión de Bass. Los dos coeficientes se DERIVAN de los extremos de la curva, que son los dos
-        // números que el usuario sí entiende: p del arranque (PacientesPorDiaMedio → el día 0, con el pool
+        // números que el usuario sí entiende: p del arranque (AltasPorDiaArranque → el día 0, con el pool
         // vacío, la clínica atiende exactamente su volumen base de siempre) y q del destino
-        // (PacientesPorDiaObjetivo → dónde se estabiliza). Ver BassGrowthModel.CalibrarImitacion.
+        // (VisitasPorDiaMeseta → dónde se estabiliza). Ver BassGrowthModel.CalibrarImitacion.
         //
         // ⚠️ Bass gobierna LAS ALTAS y nada más. Los retornos los pone el panel (RecurrentSelector) y el
         // volumen del día es la SUMA de ambos. Antes el total se derivaba de las altas
         // (total = nuevos / (1 − PorcentajeRecurrentes)) y los recurrentes eran un residuo fijo del 30 %:
         // la mitad de las citas de control vencían sin que nadie las atendiera. Ver leyes_simulacion.md.
-        var p = BassGrowthModel.CoeficienteInnovacion(_settings.PacientesPorDiaMedio, cr.PoblacionCaptacion);
+        var p = BassGrowthModel.CoeficienteInnovacion(_settings.AltasPorDiaArranque, cr.PoblacionCaptacion);
         var q = BassGrowthModel.CoeficienteImitacion(days, _settings);
 
         // Con qué probabilidad vuelve por su cuenta, cada día, un paciente activo del pool que ya cumplió
@@ -151,7 +151,7 @@ public class SeedOrchestrator
             "crecimiento: {Crecimiento}",
             runId, diasConPacientes, runCommonP,
             cr.Enabled
-                ? $"Bass — arranca en {_settings.PacientesPorDiaMedio}/día y apunta a {cr.PacientesPorDiaObjetivo}/día " +
+                ? $"Bass — arranca en {_settings.AltasPorDiaArranque}/día y apunta a {cr.VisitasPorDiaMeseta}/día " +
                   $"(boca a boca derivado: 1 paciente nuevo por cada {(q > 0 ? 1 / q : 0):0.0} satisfechos)"
                 : "desactivado (volumen fijo)");
 
@@ -207,7 +207,7 @@ public class SeedOrchestrator
                 // Saturación de la consulta: cuánto se pasa hoy la clínica de lo que puede atender con
                 // holgura. Es lo que degrada las calificaciones (y con ellas, el boca a boca).
                 var saturacion = SatisfaccionPolicy.Saturacion(
-                    totalDelDia, _settings.Satisfaccion.CapacidadComodaPorDia);
+                    totalDelDia, cr.VisitasPorDiaMeseta);
 
                 _stats.RecurrentesSatisfechosFinal = satisfechos;
                 _stats.PacientesActivosFinal       = activos;
@@ -582,7 +582,8 @@ public class SeedOrchestrator
             AcudioACita:     acudioACita,
             CuadroGrave:     visitPatient.TodosDiagnosticos.Any(
                                  d => d.Severidad.Equals("grave", StringComparison.OrdinalIgnoreCase)),
-            PacientesDelDia: pacientesDelDia);
+            PacientesDelDia: pacientesDelDia,
+            CapacidadComoda: _settings.Crecimiento.VisitasPorDiaMeseta);
 
         var nota = SatisfaccionPolicy.Calificar(ctx, _settings.Satisfaccion, rngSat);
         poolPatient.Calificaciones.Add(nota);

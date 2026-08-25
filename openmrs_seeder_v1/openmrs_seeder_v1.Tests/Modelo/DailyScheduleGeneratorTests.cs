@@ -14,7 +14,7 @@ public class DailyScheduleGeneratorTests
     {
         StartDate            = DateTime.Parse(start),
         EndDate              = DateTime.Parse(end),
-        PacientesPorDiaMedio = medio,
+        AltasPorDiaArranque = medio,
         RandomSeed           = seed
     };
 
