@@ -50,7 +50,7 @@ día.
 | **L5** | **La curva es una curva, no una pared** | ≤ 10 % de los días topando en `PacientesPorDiaMax` | 79 % ❌ |
 | **L6** | **No se capta a más gente de la que vive en el área** | captados ≤ 50 % de `PoblacionCaptacion` | 105 % ❌ |
 | **L7** | **Un paciente no es un ticket** | media ≥ 2,0 visitas/paciente | 1,45 ❌ |
-| **L8** | **La clínica llega a donde se le pidió (y no más)** | meseta a ±20 % de `PacientesPorDiaObjetivo` | 45 contra 25 ❌ |
+| **L8** | **La clínica llega a donde se le pidió (y no más)** | meseta a ±20 % de `VisitasPorDiaMeseta` | 45 contra 25 ❌ |
 | **L9** | **La referencia se resuelve** | `RemisionesEnControl` = 0 | 6,8 remisiones/referido (bucle jul-2026) ❌ |
 
 ### L1 · El crónico vuelve a su control
@@ -77,7 +77,7 @@ está gobernando el panel — lo está gobernando una fórmula.
 ### L5 · La curva es una curva, no una pared
 `PacientesPorDiaMax` es una **red de seguridad**. Si la clínica vive pegada a ella, no la gobierna el
 objetivo: la gobierna el techo, y la "curva de crecimiento" es una rampa contra un muro. El validador de
-configuración exige además `PacientesPorDiaMax ≥ 1,3 × PacientesPorDiaObjetivo`, para que la ley tenga
+configuración exige además `PacientesPorDiaMax ≥ 1,3 × VisitasPorDiaMeseta`, para que la ley tenga
 margen donde distinguir una cosa de la otra.
 
 ### L6 · No se capta a más gente de la que vive en el área
@@ -89,7 +89,7 @@ Si la media de visitas por paciente ronda 1, no hay evolución, ni control, ni c
 ETL o un estudio longitudinal pueda explotar. Es el síntoma agregado de L1.
 
 ### L8 · La clínica llega a donde se le pidió (y no más)
-`PacientesPorDiaObjetivo` es una petición que el modelo tiene que **cumplir**. Terminar en 45 cuando se
+`VisitasPorDiaMeseta` es una petición que el modelo tiene que **cumplir**. Terminar en 45 cuando se
 pidieron 25 significa que la calibración del boca a boca no aterriza — y que el usuario no tiene ningún
 mando real sobre el tamaño de su clínica.
 

@@ -36,7 +36,7 @@ Todo el comportamiento del simulador se controla desde aquí.
   "Simulation": {
     "StartDate": "2023-01-01",
     "EndDate": "2024-12-31",
-    "PacientesPorDiaMedio": 6,
+    "AltasPorDiaArranque": 6,
     "Locale": "es",
     "RandomSeed": 42,
     "HorarioAtencion": {
@@ -87,7 +87,7 @@ Todo el comportamiento del simulador se controla desde aquí.
 | Parámetro | Tipo | Descripción |
 |-----------|------|-------------|
 | `StartDate` / `EndDate` | date | Rango temporal de la simulación. |
-| `PacientesPorDiaMedio` | int | **Altas** (pacientes nuevos) por día hábil con las que ARRANCA la clínica. El día 0 el pool está vacío, así que son todas las visitas de ese día. ⚠️ **No** es el volumen de la clínica madura: el panel devuelve a cada paciente ~3,3 veces (ver §14). |
+| `AltasPorDiaArranque` | int | **Altas** (pacientes nuevos) por día hábil con las que ARRANCA la clínica. El día 0 el pool está vacío, así que son todas las visitas de ese día. ⚠️ **No** es el volumen de la clínica madura: el panel devuelve a cada paciente ~3,3 veces (ver §14). |
 | ~~`PorcentajeRecurrentes`~~ | — | **ELIMINADO.** Forzaba un cupo fijo de recurrentes y estranguló la agenda: media agenda perdida, el 65 % de los crónicos sin volver jamás a un control. La fracción de recurrentes **emerge** del panel. Ver §14 y `leyes_simulacion.md`. |
 | `SeguimientoCronicoProb` | float (0-1) | Continuidad longitudinal: prob. (def. 0.70) de que una visita recurrente de un paciente con condición crónica conocida sea un **control de esa misma condición** en vez de un motivo agudo nuevo. Solo aplica si el paciente arrastra ≥1 dx crónico. |
 | `SeguimientoAgudoProb` | float (0-1) | Espejo agudo: prob. (def. 0.70) de que un recurrente NO crónico que vuelve dentro de la ventana de su episodio agudo regrese por el **mismo dx** (control/mejoría) en vez de una enfermedad aleatoria. El control cierra el episodio. |
@@ -343,10 +343,9 @@ guía aplicable y la instancia OpenMRS.
 Extraído de la tabla `drug` de OpenMRS + columnas booleanas por categoría diagnóstica.
 
 ```csv
-drug_uuid,nombre_generico,strength,via_uuid,aplica_respiratorio,aplica_cardiovascular,aplica_diabetes,aplica_digestivo,aplica_osteomuscular,aplica_urologico,aplica_infeccioso,aplica_endocrino
-SAMPLE_amoxicilina,Amoxicilina,500mg,SAMPLE_oral,true,false,false,false,false,false,true,false
-SAMPLE_enalapril,Enalapril,10mg,SAMPLE_oral,false,true,false,false,false,false,false,false
-SAMPLE_metformina,Metformina,850mg,SAMPLE_oral,false,false,true,false,false,false,false,false
+drug_uuid,concept_uuid,nombre_generico,strength,via_uuid,aplica_respiratorio,aplica_cardiovascular,aplica_diabetes,...,dosis,unidad_dosis_uuid,frecuencia_uuid,dias_tratamiento,grupo_terapeutico,requiere_contexto
+9e99eb20-5172-433a-ba7e-669b0f2af50b,71160AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Amoxicilina,400mg/5ml,160240AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,true,false,false,...,,,,antibiotico_beta_lactamico,true
+a80acf74-a85c-4fef-8dc4-d763e364663f,79651AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,Metformina,850mg,160240AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA,false,false,true,...,,,,antidiabetico_biguanida,true
 ```
 
 | Columna | Descripción |
@@ -365,7 +364,7 @@ SAMPLE_metformina,Metformina,850mg,SAMPLE_oral,false,false,true,false,false,fals
 
 > **Posología opcional**: las cuatro últimas columnas son opcionales (el loader tolera su ausencia → comportamiento histórico: 1 tableta / una vez al día). Para usarlas hay que **verificar los UUID contra la instancia** (`GET /ws/rest/v1/orderfrequency`, `GET /ws/rest/v1/concept?q=`); un UUID inexistente rompería esa orden, así que ante la duda dejar la celda vacía.
 >
-> **Nota**: Los valores actuales usan prefijo `SAMPLE_` en los UUIDs. Deben reemplazarse con UUIDs reales extraídos de la DB OpenMRS (Query 2 en `fases_implementacion.md`).
+> **Nota**: Los UUID de `drug_uuid`/`concept_uuid`/`via_uuid`/`unidad_dosis_uuid`/`frecuencia_uuid` ya son reales y están verificados contra la instancia (ver `scripts/verificar_uuids.ps1`). Ante la duda dejar la celda vacía para usar el fallback (1 tableta / una vez al día).
 
 ---
 
@@ -667,7 +666,7 @@ respiratorio,infeccioso
 ```
 appsettings.json
   └── Simulation.DemographicProfile  ──► edad/género del paciente generado (PatientProfileGenerator)
-  └── Simulation.PacientesPorDiaMedio ──► cuántos pacientes por día (DailyScheduleGenerator × WeekdayWeight × Normal)
+  └── Simulation.AltasPorDiaArranque ──► cuántos pacientes por día (DailyScheduleGenerator × WeekdayWeight × Normal)
   └── Simulation.ReferralProbabilities ─► probabilidades base de cada acción clínica
 
 AL CREAR PACIENTE NUEVO:
@@ -802,9 +801,9 @@ si visitas(d) > aforo(d):  se recortan LAS ALTAS
 | `M` | Población del área de influencia de la clínica | `Crecimiento.PoblacionCaptacion` |
 | `A(d)` | **Clientela actual**: pacientes que han venido dentro de `VentanaActividadDias` | Se mide del pool |
 | `S(d)` | Recurrentes **activos y satisfechos** — los que hablan bien de la clínica | Se mide del pool |
-| `p` | Coeficiente de **innovación** (llegan solos) | **Derivado** de `PacientesPorDiaMedio` |
-| `q` | Coeficiente de **imitación** (boca a boca) | **Derivado** de `PacientesPorDiaObjetivo` |
-| `aforo(d)` | Lo que cabe hoy en la consulta | `PacientesPorDiaObjetivo` × peso del día / peso medio |
+| `p` | Coeficiente de **innovación** (llegan solos) | **Derivado** de `AltasPorDiaArranque` |
+| `q` | Coeficiente de **imitación** (boca a boca) | **Derivado** de `VisitasPorDiaMeseta` |
+| `aforo(d)` | Lo que cabe hoy en la consulta | `VisitasPorDiaMeseta` × peso del día / peso medio |
 
 ### ⚠️ El error que había aquí, y lo que costó
 
@@ -829,8 +828,8 @@ los tres números que sí significan algo:
 
 | Mando | Parámetro | Qué hace |
 |-------|-----------|----------|
-| **Dónde arranca** | `PacientesPorDiaMedio` | **Altas**/día del primer día (el pool está vacío: no hay a quién controlar). De aquí sale `p`. |
-| **Dónde acaba** | `Crecimiento.PacientesPorDiaObjetivo` | **Visitas totales**/día (altas + controles) en las que se estabiliza. Es **también el aforo** de la consulta. De aquí sale `q`. |
+| **Dónde arranca** | `AltasPorDiaArranque` | **Altas**/día del primer día (el pool está vacío: no hay a quién controlar). De aquí sale `p`. |
+| **Dónde acaba** | `Crecimiento.VisitasPorDiaMeseta` | **Visitas totales**/día (altas + controles) en las que se estabiliza. Es **también el aforo** de la consulta. De aquí sale `q`. |
 | **Cuánto tarda** | `Crecimiento.VentanaActividadDias` | Cuánto tiempo un paciente sigue siendo cliente (y recomendando la clínica). Estira o comprime la rampa. |
 
 Con los valores por defecto (arranca en 6 altas/día, apunta a 25 visitas/día, ventana de 365 días) la
@@ -846,7 +845,7 @@ curva sale así — y fíjate en la **columna del mix**, que es la que dice si e
   dic 2025  25,2   █████████████████████████ 60 %   ← meseta: la clínica vive de su panel
 ```
 
-> **El suelo NO es `PacientesPorDiaMedio`.** Cada paciente captado vuelve ~3,3 veces, así que 6 altas/día
+> **El suelo NO es `AltasPorDiaArranque`.** Cada paciente captado vuelve ~3,3 veces, así que 6 altas/día
 > ya producen ~14 visitas/día **sin nada de boca a boca**. Si pones un objetivo por debajo de ese suelo, la
 > clínica no necesita crecer y el simulador te lo dice en la etapa 2/5.
 
@@ -883,11 +882,11 @@ alcance un **equilibrio** (altas = bajas) en vez de agotar el área y quedarse s
 
 | Parámetro | Descripción |
 |-----------|-------------|
-| `Enabled` | `false` = el volumen diario vuelve a ser fijo (`PacientesPorDiaMedio`), como antes de esta feature. |
-| **`PacientesPorDiaObjetivo`** | **Dónde se estabiliza la clínica.** De aquí se deriva el boca a boca. ≤ `PacientesPorDiaMedio` = no crece. |
+| `Enabled` | `false` = el volumen diario vuelve a ser fijo (`AltasPorDiaArranque`), como antes de esta feature. |
+| **`VisitasPorDiaMeseta`** | **Dónde se estabiliza la clínica.** De aquí se deriva el boca a boca. ≤ `AltasPorDiaArranque` = no crece. |
 | **`VentanaActividadDias`** | **Cuánto tarda la rampa.** Días que un paciente sigue contando como clientela activa (y recomendando). 90 → meseta en 1 año; 365 (def.) → crecimiento repartido por 3 años. |
 | `PoblacionCaptacion` | `M`: habitantes del área. Debe ir **holgado**: si la clínica acaba registrando más gente de la que vive en el barrio, el área se agota y la curva se desinfla (el informe avisa). |
-| `PacientesPorDiaMax` | Tope absoluto de pacientes en un día (red de seguridad). Debe ser ≥ `PacientesPorDiaObjetivo`. |
+| `PacientesPorDiaMax` | Tope absoluto de pacientes en un día (red de seguridad). Debe ser ≥ `VisitasPorDiaMeseta`. |
 | `RecurrentesPorPacienteExtra` | **Override avanzado**: fija el boca a boca a mano en vez de derivarlo. **0 (def.) = derivar del objetivo**, que es lo que quieres casi siempre. |
 | `MinVisitasRecurrente` | Visitas mínimas para contar como "recurrente" (2 = ya volvió una vez). |
 | `AsistenciaProbInsatisfecho` | Prob. de que un paciente descontento acuda a su cita (0,20 frente al 0,75 de los contentos). |
@@ -996,8 +995,8 @@ timestamp,componente,evento,tipo,mensaje
 | Quiero cambiar... | Editar |
 |-------------------|--------|
 | Período de simulación | `appsettings.json` → `StartDate/EndDate` |
-| **Dónde ARRANCA la clínica** (pac/día el primer día) | `appsettings.json` → `PacientesPorDiaMedio` |
-| **Dónde ACABA** (pac/día en los que se estabiliza) | `appsettings.json` → `Crecimiento.PacientesPorDiaObjetivo` |
+| **Dónde ARRANCA la clínica** (pac/día el primer día) | `appsettings.json` → `AltasPorDiaArranque` |
+| **Dónde ACABA** (pac/día en los que se estabiliza) | `appsettings.json` → `Crecimiento.VisitasPorDiaMeseta` |
 | **Cuánto TARDA en llegar** (duración de la rampa) | `appsettings.json` → `Crecimiento.VentanaActividadDias` (365 = repartido en 3 años; 90 = meseta en 1 año) |
 | Que la clínica NO crezca (volumen fijo, como antes) | `appsettings.json` → `Crecimiento.Enabled: false` |
 | Lo contentos que salen los pacientes | `appsettings.json` → `Satisfaccion.MediaBase` / `Desviacion` |

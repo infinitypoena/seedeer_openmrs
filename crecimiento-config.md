@@ -27,7 +27,7 @@ si visitas > aforo → se recortan LAS ALTAS   (jamás los retornos: ley L3)
 | Parámetro | Valor actual | Significado |
 |---|---|---|
 | `StartDate` / `EndDate` | `2023-01-01` → `2023-12-31` | **12 meses**. ⚠️ Con menos de 18 meses las leyes L1/L4/L7 **no se pronuncian** ("no procede"): esta ventana sirve para sembrar/probar, pero no juzga del todo el modelo de crecimiento. Para una corrida "de verdad", ≥18 meses. |
-| `PacientesPorDiaMedio` | `5` | **Altas/día con las que ARRANCA la clínica** (día 0, pool vacío). No es el volumen total: es el suelo de captación. De aquí se deriva `p` (ver §3). |
+| `AltasPorDiaArranque` | `5` | **Altas/día con las que ARRANCA la clínica** (día 0, pool vacío). No es el volumen total: es el suelo de captación. De aquí se deriva `p` (ver §3). |
 | `WeekdayWeights` | L-M 1.20, X-J 1.00, V 0.90, S 0.50, D 0.00 | Forma semanal del volumen. El domingo la clínica cierra. Escala tanto λ (las altas) como el aforo del día. |
 
 ## 3. El bloque `Crecimiento`
@@ -36,7 +36,7 @@ si visitas > aforo → se recortan LAS ALTAS   (jamás los retornos: ley L3)
 "Crecimiento": {
   "Enabled": true,
   "PoblacionCaptacion": 60000,
-  "PacientesPorDiaObjetivo": 25,
+  "VisitasPorDiaMeseta": 25,
   "VentanaActividadDias": 365,
   "RecurrentesPorPacienteExtra": 0,
   "PacientesPorDiaMax": 45,
@@ -49,7 +49,7 @@ si visitas > aforo → se recortan LAS ALTAS   (jamás los retornos: ley L3)
 |---|---|---|
 | `Enabled` | `true` | Modo producción: la clínica arranca en 5 altas/día y **crece** por difusión de Bass hacia el objetivo. Con `false`, las altas salen del plan estático (media fija + pesos + normal), pero **los retornos los sigue poniendo el panel** — hay un solo modelo de recurrencia, no dos. |
 | `PoblacionCaptacion` (`M`) | `60000` | El mercado: cuánta gente vive en el área de captación. Es el techo `(M − A(d))` de λ — con `A` = **pacientes ACTIVOS** (visitaron dentro de la ventana), no captados-desde-siempre, para que el área no "se agote". Vigilado por la ley **L6**: captados ≤ 50 % de `M`. |
-| `PacientesPorDiaObjetivo` | `25` | **VISITAS TOTALES/día en la meseta** (altas + controles) — y es a la vez el **aforo** de la consulta, escalado por el peso del día. Cuando la demanda lo supera, la clínica **deja de captar** (recorta altas); nunca da plantón a una cita (L3). Debe valer lo mismo que `Satisfaccion.CapacidadComodaPorDia` (lo exige `SettingsValidator`). Ley **L8**: la meseta debe quedar a ±20 % de este valor. |
+| `VisitasPorDiaMeseta` | `25` | **VISITAS TOTALES/día en la meseta** (altas + controles) — y es a la vez el **aforo** de la consulta, escalado por el peso del día. Cuando la demanda lo supera, la clínica **deja de captar** (recorta altas); nunca da plantón a una cita (L3). Debe valer lo mismo que `Satisfaccion.CapacidadComodaPorDia` (lo exige `SettingsValidator`). Ley **L8**: la meseta debe quedar a ±20 % de este valor. |
 | `VentanaActividadDias` | `365` | Qué es un paciente "activo": última visita dentro de esta ventana. Define `A(d)` (el techo), `S(d)` (el boca a boca) y la elegibilidad del retorno espontáneo. |
 | `RecurrentesPorPacienteExtra` | `0` | Sin efecto adicional (parámetro de reserva). |
 | `PacientesPorDiaMax` | `45` | **Red de seguridad por ENCIMA del aforo**, no el aforo (el validador exige ≥1,3× el objetivo; 45 = 1,8×25). En la corrida rota histórica era este tope quien gobernaba la clínica 33 de 42 meses — hoy solo debería tocarse en picos raros. Ley **L5**: ≤10 % de los días pueden chocar con él. |
@@ -58,7 +58,7 @@ si visitas > aforo → se recortan LAS ALTAS   (jamás los retornos: ley L3)
 
 ### Los dos coeficientes de Bass NO se configuran — se derivan
 
-- **`p` (innovación, el suelo)**: `CoeficienteInnovacion(PacientesPorDiaMedio=5, M=60000)` lo
+- **`p` (innovación, el suelo)**: `CoeficienteInnovacion(AltasPorDiaArranque=5, M=60000)` lo
   fija para que el **día 0** (pool vacío → cero retornos posibles) la clínica atienda
   exactamente sus 5 altas/día.
 - **`q` (imitación, el boca a boca)**: lo calibra por **bisección** `CalibrarImitacion` para
@@ -149,5 +149,5 @@ L1/L4/L7 no se pronuncian. Si el objetivo es validar el crecimiento completo, ex
 2. Si un cambio no lo protege ninguna ley, **falta una ley: escribirla primero**.
 3. No dar una corrida por buena porque compile y pasen los tests — correr ≥18 meses y
    mirar que `pct_recurrentes` suba.
-4. `PacientesPorDiaObjetivo` = `CapacidadComodaPorDia`, y `PacientesPorDiaMax` ≥ 1,3× el
+4. `VisitasPorDiaMeseta` = `CapacidadComodaPorDia`, y `PacientesPorDiaMax` ≥ 1,3× el
    objetivo (los exige el validador de arranque).

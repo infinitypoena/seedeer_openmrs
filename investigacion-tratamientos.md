@@ -79,9 +79,9 @@ defecto disfrazado de tratamiento real.
 
 ## Estado de esta investigación
 
-- `medicamentos.csv`: 34 productos, todos con `drug_uuid`, `concept_uuid`, grupo terapéutico y contexto requerido; cuatro presentaciones adicionales fueron verificadas contra OpenMRS.
-- `tratamientos.csv`: 617 reglas, una por cada diagnóstico actual más 13 fallbacks de categoría.
-- Reglas farmacológicas específicas actuales: 24 diagnósticos con producto válido y fuente explícita; incluyen influenza sintomática, hipertensión, diabetes tipo 2, asma, ERGE, tiñas, parasitosis, herpes, hipotiroidismo, dislipidemia, ITS y cuadros bacterianos condicionados.
+- `medicamentos.csv`: 67 productos, todos con `drug_uuid`, `concept_uuid`, `grupo_terapeutico`, `requiere_contexto` y posología opcional; verificados contra OpenMRS.
+- `tratamientos.csv`: 617 reglas, una por cada diagnóstico actual (604) más 13 fallbacks de categoría.
+- Reglas farmacológicas específicas actuales: 118 reglas con producto válido y fuente explícita (81 `tratamiento_especifico` + 37 `manejo_sintomatico`); incluyen influenza sintomática, hipertensión, diabetes tipo 2, asma, ERGE, tiñas, parasitosis, herpes, hipotiroidismo, dislipidemia, ITS y cuadros bacterianos condicionados.
 - Diagnósticos restantes: clasificación explícita sin receta automática, seguimiento o referencia.
 - Referencias cruzadas: 0 UUIDs de diagnóstico o medicamento huérfanos.
 - Prueba de tres meses: pendiente de autorización del usuario; todavía no se ejecutó `dotnet test` después de esta ampliación ni la simulación.

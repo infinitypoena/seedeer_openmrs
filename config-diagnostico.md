@@ -93,7 +93,7 @@ el selector).
 **Regla práctica.** ¿Querés que gripe/EDA/lumbalgia **se repitan más** (clínica realista saturada de
 lo banal)? → **bajá** el damping (`0.05`–`0.10`). ¿Querés **historias más variadas** para
 demostraciones/ETL? → **subilo** (`0.25`–`0.40`). En la validación, bajarlo de `0.25→0.10` puso los
-cuadros comunes al tope del ranking conservando 262 dx distintos de 407.
+cuadros comunes al tope del ranking conservando 262 dx distintos de 604.
 
 ---
 
@@ -197,7 +197,7 @@ de 2.3 % a 64.2 %.
 ## Cómo verificar un cambio (corrida corta, no destructiva)
 
 1. Poné una ventana corta en `appsettings.json` (1 mes basta) — p.ej. `StartDate`/`EndDate` de un
-   mes, `Crecimiento.Enabled: false` y `PacientesPorDiaMedio` alto (~20) para una muestra robusta.
+   mes, `Crecimiento.Enabled: false` y `AltasPorDiaArranque` alto (~20) para una muestra robusta.
    **El volumen no afecta la mezcla de dx**, solo el tamaño de la muestra.
 2. Corré el seeder redirigiendo la salida a un log (⚠️ nunca cortar la tubería del proceso;
    `< /dev/null` evita que espere una tecla):
@@ -213,7 +213,7 @@ de 2.3 % a 64.2 %.
    # Ranking de diagnósticos primarios
    grep -oE "Dx: [^|]+\|" corrida.log | sed -E 's/^Dx: //; s/ *\|$//' | sort | uniq -c | sort -rn | head -20
    ```
-5. **Revertí la ventana** (y `Crecimiento`/`PacientesPorDiaMedio`) al terminar. La corrida deja
+5. **Revertí la ventana** (y `Crecimiento`/`AltasPorDiaArranque`) al terminar. La corrida deja
    pacientes `SIM-` en la instancia: `dotnet run -- clear` los limpia.
 
 > El resumen y el log son **por corrida** (en memoria), así que el análisis no se contamina con datos
@@ -224,5 +224,5 @@ de 2.3 % a 64.2 %.
 ## Referencias
 
 - `parametrizacion_archivos.md` — referencia completa de parámetros y esquemas de los CSV
-- `leyes_simulacion.md` — las 8 leyes (antes de tocar volumen/recurrencia/crecimiento)
+- `leyes_simulacion.md` — las 9 leyes (antes de tocar volumen/recurrencia/crecimiento)
 - `CLAUDE.md` — bullets *Diagnosis variety*, *Two-stage diagnosis selection*, *Rebalanceo de frecuencia*

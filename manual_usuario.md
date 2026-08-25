@@ -54,7 +54,7 @@ Esta sección muestra **qué produce el simulador en la práctica**. Cada capaci
 
 ### 2.1 Volumen diario realista
 
-No genera "N pacientes fijos por día": parte de un promedio (`PacientesPorDiaMedio`), lo multiplica por el peso del día de la semana y le aplica variación aleatoria normal.
+No genera "N pacientes fijos por día": parte de un promedio (`AltasPorDiaArranque`), lo multiplica por el peso del día de la semana y le aplica variación aleatoria normal.
 
 > **Ejemplo** (promedio 15): lunes ~18 pacientes, miércoles ~15, sábado ~7, domingo 0 (clínica cerrada). Ningún día es idéntico a otro, igual que en la realidad.
 
@@ -125,7 +125,7 @@ Las órdenes de laboratorio no quedan "huérfanas": ~90% recibe el mismo día un
 
 ### 2.8 Prescripciones coherentes
 
-Los fármacos (catálogo de ~30 productos reales del formulario de la instancia) se filtran por las categorías del paciente: amoxicilina para respiratorio/infeccioso, enalapril para cardiovascular, metformina para diabetes. Dosis, frecuencia ("una vez al día"), vía oral y duración (7/14/30 días) completan la orden.
+Los fármacos (catálogo de 67 productos reales del formulario de la instancia, seleccionados por reglas de `tratamientos.csv`) se filtran por las categorías del paciente: amoxicilina para respiratorio/infeccioso, enalapril para cardiovascular, metformina para diabetes. Dosis, frecuencia ("una vez al día"), vía oral y duración (7/14/30 días) completan la orden.
 
 ### 2.9 Alergias con prevalencia realista
 
@@ -319,8 +319,8 @@ Claves importantes y cómo verificarlas:
 | Parámetro | Por defecto | Qué controla |
 |-----------|-------------|--------------|
 | `StartDate` / `EndDate` | — | Período histórico simulado |
-| `PacientesPorDiaMedio` | 5–15 | **Altas** (pacientes nuevos)/día con las que arranca la clínica |
-| `Crecimiento.PacientesPorDiaObjetivo` | 25 | **Visitas totales**/día en la meseta. Es también el **aforo** de la consulta |
+| `AltasPorDiaArranque` | 5–15 | **Altas** (pacientes nuevos)/día con las que arranca la clínica |
+| `Crecimiento.VisitasPorDiaMeseta` | 25 | **Visitas totales**/día en la meseta. Es también el **aforo** de la consulta |
 | `Recurrence.VisitasEspontaneasPorPacienteAno` | 0.5 | Veces al año que un paciente del panel vuelve **por su cuenta** (sin cita). Fija cuánta consulta genera el panel solo |
 | ~~`PorcentajeRecurrentes`~~ | — | **ELIMINADO** (jul 2026). El % de recurrentes **ya no se configura: emerge** del panel y crece con los años. Forzarlo estranguló la agenda — ver `leyes_simulacion.md` |
 | `CommonProbMin/Max` | 0.75–0.95 | Banda del sesgo a enfermedades comunes (se sortea por corrida) |
@@ -504,16 +504,18 @@ Los catálogos viven en `openmrs_seeder_v1/openmrs_seeder_v1/catalogs/` y son **
 | Archivo | Filas | Estado | Para qué sirve |
 |---------|:-----:|--------|----------------|
 | `epidemiology-profile.csv` | 73 | Completo | Peso de cada categoría diagnóstica por edad/género |
-| `diagnosticos.csv` | ~948 | Completo | Diagnósticos CIEL: categoría, severidad, edades, pesos M/F, `sexo`, `clima`, `cronica`, `comun`, `requiere_lab/rx`, y los overrides de vitales `vital_fiebre`, `vital_imc`, `vital_pa`, `vital_fc`, `vital_spo2` |
-| `medicamentos.csv` | ~30 | Completo | Fármacos reales del formulario, con columnas `aplica_<categoría>` y posología opcional (`dosis`, `unidad_dosis_uuid`, `frecuencia_uuid`, `dias_tratamiento`) |
+| `diagnosticos.csv` | 604 | Completo | Diagnósticos CIEL: categoría, severidad, edades, pesos M/F, `sexo`, `clima`, `cronica`, `comun`, `ambito`, y los overrides de vitales `vital_fiebre`, `vital_imc`, `vital_pa`, `vital_fc`, `vital_spo2` |
+| `tratamientos.csv` | 617 | Completo | Reglas diagnóstico→terapia (13 políticas de categoría + 604 reglas por dx) — ver `Services/TreatmentSelector` |
+| `medicamentos.csv` | 67 | Completo | Fármacos reales del formulario, con `grupo_terapeutico`, `requiere_contexto` y posología opcional (`dosis`, `unidad_dosis_uuid`, `frecuencia_uuid`, `dias_tratamiento`) |
 | `laboratorios.csv` | 27 | Completo | Pruebas + **columnas de resultado** (bandas normal/anormal, triggers por categoría o dx) |
-| `paneles.csv` | 4 | Opcional | Componentes de los paneles (hoy el hemograma: Hb, Hto, leucocitos, plaquetas); panel sin filas = la orden queda sin resultado |
-| `alergenos.csv` | 21 | Completo | Alérgenos DRUG/FOOD/ENVIRONMENT verificados |
-| `motivos_consulta.csv` | 86 | Completo | Frases de motivo de consulta en español por categoría |
-| `nombres.csv` / `apellidos.csv` | ~155 / ~200 | Completo | Nombres y apellidos centroamericanos (2+2 por paciente) |
-| `direcciones.csv` | ~142 | Opcional | Colonias/barrios/cantones de los 14 departamentos de El Salvador, con peso (captación de la clínica); ausente = direcciones genéricas |
-| `consultorios.csv` | 3-4 | Opcional | Consultorios + médico; vacío = un solo médico/locación por defecto |
+| `paneles.csv` | 9 | Opcional | Componentes de los paneles (hoy el hemograma: Hb, Hto, leucocitos, plaquetas); panel sin filas = la orden queda sin resultado |
+| `alergenos.csv` | 29 | Completo | Alérgenos DRUG/FOOD/ENVIRONMENT verificados |
+| `motivos_consulta.csv` | 151 | Completo | Frases de motivo de consulta en español por categoría |
+| `nombres.csv` / `apellidos.csv` | 332 / 379 | Completo | Nombres y apellidos centroamericanos (2+2 por paciente) |
+| `direcciones.csv` | 142 | Opcional | Colonias/barrios/cantones de los 14 departamentos de El Salvador, con peso (captación de la clínica); ausente = direcciones genéricas |
+| `consultorios.csv` | 3 | Opcional | Consultorios + médico; vacío = un solo médico/locación por defecto |
 | `programas.csv` | 2 | Opcional | Programas de atención y sus disparadores (dx o categoría) |
+| `personal_laboratorio.csv` | 3 | Opcional | Técnicos (toman la muestra) y responsable (valida); vacío = firma el médico |
 | `clima.csv` | 53 | Opcional | Estación por semana ISO; ausente = sin estacionalidad |
 | `comorbilidad_afinidades.csv` | 13 | Opcional | Qué categorías "atraen" a cuáles como comorbilidad |
 | `examenes_clinicos.csv` | 10 | Completo | Exámenes en consultorio (Glasgow, dolor, flujo pico, PHQ-4, FC fetal, altura uterina, reflejos, agudeza visual, monofilamento, edema) — UUIDs verificados con datatype+clase |
@@ -555,7 +557,7 @@ Agregar una categoría (p. ej. `oftalmologico`) requiere tocar código además d
 ```json
 "StartDate": "2024-01-02",
 "EndDate":   "2024-01-08",
-"PacientesPorDiaMedio": 5,
+"AltasPorDiaArranque": 5,
 "Crecimiento": { "Enabled": false }
 ```
 
@@ -568,8 +570,8 @@ Agregar una categoría (p. ej. `oftalmologico`) requiere tocar código además d
 ```json
 "StartDate": "2023-01-01",
 "EndDate":   "2025-12-31",
-"PacientesPorDiaMedio": 6,
-"Crecimiento": { "Enabled": true, "PacientesPorDiaObjetivo": 25 }
+"AltasPorDiaArranque": 6,
+"Crecimiento": { "Enabled": true, "VisitasPorDiaMeseta": 25 }
 ```
 
 La clínica **arranca** en 6 altas/día y **crece** hasta 25 visitas/día: 6,2/día en enero de 2023 → 17,9 en diciembre → 23,8 al segundo año → meseta en 25. Y su panel **madura**: la fracción de visitas recurrentes sube del **4 % al 60 %** — al final la clínica vive de sus propios pacientes, como una de verdad. Duración: varias horas.
@@ -590,7 +592,7 @@ Correr ≥3 meses. Buscar un paciente con HTA o diabetes en su problem list: sus
 
 ```json
 "StartDate": "2024-01-01", "EndDate": "2024-06-30",
-"PacientesPorDiaMedio": 30, "RandomSeed": 777
+"AltasPorDiaArranque": 30, "RandomSeed": 777
 ```
 
 Misma seed + misma config = mismo dataset exacto. Limpiar con `dotnet run -- clear` y volver a correr para regenerarlo idéntico.
@@ -620,7 +622,7 @@ El simulador itera fechas históricas sin relación con el reloj del servidor: `
 ### 10.2 Volumen diario (Box-Muller)
 
 ```
-μ = PacientesPorDiaMedio × WeekdayWeight[díaSemana]
+μ = AltasPorDiaArranque × WeekdayWeight[díaSemana]
 σ = μ × 0.20
 PacientesDelDía = max(0, round(Normal(μ, σ)))
 ```
@@ -641,7 +643,7 @@ Los retornos son los pacientes a los que hoy les toca, por dos vías:
 1. **Su cita de control** (±3 días de tolerancia): acude con probabilidad `Appointments.AsistenciaProb` (0,75). **Se atienden todos los que acuden** — la agenda no compite con nada. El que no acude es un no-show de verdad y su cita se marca `Missed`.
 2. **Vuelve por su cuenta**: un paciente **activo** (vino en el último año) que ya cumplió su intervalo mínimo (7–21 d si fue algo agudo, 30–120 d si es crónico) reaparece con algo nuevo, a la tasa de `Recurrence.VisitasEspontaneasPorPacienteAno` (0,5 → una visita espontánea cada dos años).
 
-Si la demanda del día supera el **aforo** (`Crecimiento.PacientesPorDiaObjetivo`), **lo que se recorta son las altas**: la consulta llena deja de captar gente nueva, pero jamás le da plantón al crónico que tenía cita.
+Si la demanda del día supera el **aforo** (`Crecimiento.VisitasPorDiaMeseta`), **lo que se recorta son las altas**: la consulta llena deja de captar gente nueva, pero jamás le da plantón al crónico que tenía cita.
 
 **Consecuencia:** la fracción de recurrentes **crece sola con los años** (≈4 % el primer mes → ≈60 % al tercer año), porque el panel de pacientes va creciendo y generando su propia consulta. Eso es lo que hace una clínica de verdad. ⚠️ El viejo `PorcentajeRecurrentes` forzaba un 30 % fijo para siempre y **estranguló la agenda** (media agenda perdida, el 65 % de los crónicos sin volver jamás a un control) — se eliminó. Ver `leyes_simulacion.md`.
 
@@ -845,7 +847,7 @@ Para quien quiera extender el simulador sin romper su coherencia:
 
 **Catálogos CSV, no código.** Cualquier persona puede ampliar el conocimiento clínico (diagnósticos, pesos, fármacos, programas) editando CSVs, sin tocar C#. La contracara: los UUIDs de los CSV son de **una instancia concreta** y deben verificarse al migrar a otra.
 
-**Seams puros y testeables.** Toda decisión probabilística o de clasificación (selección de diagnóstico, comorbilidades, vitales, resultados de lab, clasificación de citas, probabilidad de seguimiento, selección de recurrentes por cita, vigencia de órdenes, grupo de edad, roster de médicos) está aislada en funciones puras con RNG inyectado, cubiertas por la suite de tests (`dotnet test`, 448 tests). Las llamadas HTTP quedan en la cáscara de los seeders.
+**Seams puros y testeables.** Toda decisión probabilística o de clasificación (selección de diagnóstico, comorbilidades, vitales, resultados de lab, clasificación de citas, probabilidad de seguimiento, selección de recurrentes por cita, vigencia de órdenes, grupo de edad, roster de médicos) está aislada en funciones puras con RNG inyectado, cubiertas por la suite de tests (`dotnet test`, ~523 tests). Las llamadas HTTP quedan en la cáscara de los seeders.
 
 **Estado compartido del paciente en el pool.** Las colecciones y rasgos del paciente (problem list, programas, citas pendientes, crónicas activas, vigencia de órdenes, talla e IMC basal) se comparten/heredan entre la copia del pool y la copia de cada visita recurrente — así la historia del paciente es acumulativa y físicamente coherente a lo largo de la simulación.
 
