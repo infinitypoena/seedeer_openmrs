@@ -86,10 +86,26 @@ primera crónica, más invasivo y sin ganancia objetiva).
    en corridas reales cortas.
 5. `[x]` Suite completa: 524 tests en verde.
 
-## Fase B — De-parametrizar `appsettings.json`
+## Fase B — De-parametrizar `appsettings.json` — `[~]` EN CURSO
 
 **Objetivo**: núcleo esencial en JSON + un puñado de **diales clínicos** configurables; el resto, constantes
 internas con los valores actuales. Nivel elegido: **"Núcleo + diales clínicos"**.
+
+**Progreso:**
+- `[x]` B1 (commit d7b993e): `appsettings.example.json` reducido al núcleo; `parametrizacion_archivos.md`
+  documenta los 3 niveles. El `appsettings.json` local del usuario ya estaba reducido (lo hizo a mano).
+- `[x]` B2 (commit 0a20573): `Climate.Enabled` eliminado — la presencia de `clima.csv` es el interruptor
+  (ausente = neutro). Verificado con `dotnet run`: clima resuelto por catálogo, exit 0.
+- `[ ]` B3: quitar `PediatricMinAgeMonths` (solo con `PediatricClinic`; inline el valor 1).
+
+**Decisión (corrige el diagnóstico §E):** `RecurrentesPorPacienteExtra` **NO se elimina** — es un override
+funcional (fija `q` a mano) con tests dedicados en `BassGrowthModelTests`. Se queda como dial avanzado.
+
+> **Nota de implementación:** "constantes internas" NO significa eliminar las propiedades del POCO: los
+> seams puros (`SatisfaccionPolicy`, `EpidemiologySelector`…) reciben los `*Settings` para ser testeables.
+> La de-parametrización es **hacia el JSON** (el usuario ya no configura esas claves; valen los defaults
+> del POCO, que son el estándar). Eliminar las propiedades sería un refactor invasivo sin beneficio para
+> el usuario.
 
 ### Núcleo (queda en JSON — imprescindible / instance-specific)
 - `OpenMRS.RestApi.*` (BaseUrl, Username, Password)
@@ -121,8 +137,9 @@ internas con los valores actuales. Nivel elegido: **"Núcleo + diales clínicos"
   `AsistenciaProbInsatisfecho`
 
 ### Limpieza
-- Eliminar `Crecimiento.RecurrentesPorPacienteExtra` y `DemographicProfile.PediatricMinAgeMonths`.
-- Quitar `Climate.Enabled` (pasa a Fase C).
+- `[ ]` Eliminar `DemographicProfile.PediatricMinAgeMonths` (inline `1` en `PatientProfileGenerator`).
+- `[x]` Quitar `Climate.Enabled` (la presencia del archivo es el interruptor).
+- ~~Eliminar `Crecimiento.RecurrentesPorPacienteExtra`~~ → se conserva (override funcional, ver nota arriba).
 - Mantener `SettingsValidator.FindUnknownKeys` para avisar de claves JSON huérfanas tras cada recorte.
 
 ## Fase C — Catálogos obligatorios vs opcionales
