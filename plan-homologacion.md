@@ -154,13 +154,14 @@ funcional (fija `q` a mano) con tests dedicados en `BassGrowthModelTests`. Se qu
 4. `[x]` Test `TratamientosVacio_EsError` + fixture actualizada; 524 tests en verde; `dotnet run` de
    humo exit 0 con "tratamientos.csv 617 filas".
 
-## Fase D — Sincronizar documentación
+## Fase D — Sincronizar documentación — `[x]` DONE
 
-- `CLAUDE.md`: quitar la mención a `Satisfaccion.CapacidadComodaPorDia`; actualizar el bloque
-  `appsettings.json` de ejemplo y la lista de catálogos (oblig/opc); reflejar el nuevo umbral de L1.
-- `crecimiento-config.md` y `parametrizacion_archivos.md`: lo mismo (aforo = `VisitasPorDiaMeseta` directo;
-  sin toggles `Enabled` de catálogo).
-- `manual_usuario.md` §5/§8: configuración reducida + contrato obligatorio/opcional.
+- `[x]` `CLAUDE.md`: bloque `appsettings.json` reducido a núcleo; quitadas las menciones a
+  `Satisfaccion.CapacidadComodaPorDia` (deriva de `VisitasPorDiaMeseta`); reflejado el umbral de L1.
+- `[x]` `crecimiento-config.md` y `parametrizacion_archivos.md`: `CapacidadComodaPorDia` marcado
+  ELIMINADO; saturación = `VisitasPorDiaMeseta`.
+- `[x]` `manual_usuario.md` §5: nota de "solo el núcleo se configura" + `Climate` sin `Enabled` +
+  `RepeticionDamping` corregido a 0.10.
 
 ---
 

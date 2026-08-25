@@ -316,6 +316,11 @@ Claves importantes y cómo verificarlas:
 
 ### 5.3 Sección `Simulation` — parámetros principales
 
+> **Solo el núcleo se configura.** De todo lo que hay en `Simulation`, lo que va en `appsettings.json` es
+> la ventana (`StartDate`/`EndDate`), `AltasPorDiaArranque`, `UtcOffset`, `HorarioAtencion` y el bloque
+> `Crecimiento`. El resto son **diales clínicos opcionales** (se pueden añadir para ajustar, con default) o
+> **constantes internas** (no se configuran). Referencia completa en `parametrizacion_archivos.md` §1.
+
 | Parámetro | Por defecto | Qué controla |
 |-----------|-------------|--------------|
 | `StartDate` / `EndDate` | — | Período histórico simulado |
@@ -330,13 +335,13 @@ Claves importantes y cómo verificarlas:
 | `MinMedicosPorDia` / `MaxMedicosPorDia` | 2 / 3 | Cuántos médicos del pool abren consultorio cada día |
 | `ReferralProbabilities` | ver abajo | Probabilidades de derivación |
 | `Comorbidity` | — | Prob. base, escalado por edad y boost de afinidad |
-| `Climate` | Enabled=true | Boost estacional y efecto en temperatura |
+| `Climate` | SeasonalBoost 2,5 | Boost estacional y efecto en temperatura (interruptor: presencia de `clima.csv`) |
 | `Allergy` | 0.15–0.25 | Banda de prevalencia (sorteada por corrida) + decaída del nº |
 | `Recurrence` | 7–21 / 30–120 | Días mínimos entre visitas = fecha de la cita de control (agudo / crónico) |
 | `Appointments.ToleranciaDias` | 3 | Margen para marcar una cita como cumplida y para atender al que vuelve a su cita |
 | `Appointments.AsistenciaProb` | 0.75 | Prob. de que un paciente con cita para hoy efectivamente asista (resto = no-show → Missed) |
 | `Orders.LabVigenciaDias` | 7 | Días que una orden de lab sigue activa (`autoExpireDate`) antes de poder re-ordenarse |
-| `Variedad.RepeticionDamping` | 0.25 | Amortiguación anti-repetición: baja el peso efectivo de un dx cada vez que sale (0 = off) |
+| `Variedad.RepeticionDamping` | 0.10 | Amortiguación anti-repetición: baja el peso efectivo de un dx cada vez que sale (0 = off) |
 | `RandomSeed` | 42 | Reproducibilidad |
 
 **Probabilidades de derivación** (`ReferralProbabilities`):

@@ -180,13 +180,13 @@ Key architectural decisions:
   - **`q·S(d)` — el boca a boca**. Con `A ≪ M` vale literalmente **"+1 alta/día por cada `1/q` recurrentes satisfechos"**. `S(d)` = pacientes con ≥`MinVisitasRecurrente` (2) **visitas** (⚠️ `p.Visitas`, no `Calificaciones.Count`: con la satisfacción apagada este último es 0 y el boca a boca no arrancaba nunca), promedio > `UmbralSatisfaccion` y última visita dentro de `VentanaActividadDias`. `q` **tampoco se configura**: se deriva del objetivo por bisección (`CalibrarImitacion`).
   - **`(M − A(d))` — el techo de mercado**. ⚠️ `A(d)` son los **ACTIVOS** (visitaron dentro de la ventana), no los captados desde siempre: con el conteo acumulado el área "se agotaba", λ→0 y la clínica se vaciaba. Cazado por `Proyeccion_LaClinicaNoSeVaciaAunqueSeLlenaraElArea`.
 
-  **⚠️ El aforo (`CapacidadDelDia`) es el freno más directo, y el más honesto.** `VisitasPorDiaMeseta` **es la capacidad de trabajo** de la consulta (por eso `Satisfaccion.CapacidadComodaPorDia` vale lo mismo), escalada por `peso_dia / pesoMedioDeApertura` — dividir por el peso medio no es cosmético: sin él "25/día" acabaría siendo 24,2 de media y el objetivo no diría lo que dice. Cuando la demanda lo supera, **la consulta llena deja de CAPTAR**; jamás le da plantón a quien tenía cita (ley **L3**, con contador-tripwire en `RunStats.RetornosDesplazadosPorAforo`, que debe ser 0). `PacientesPorDiaMax` es solo la red de seguridad **por encima** (el validador exige ≥1,3× el objetivo): en la corrida rota era ÉL quien gobernaba la clínica, 33 de 42 meses.
+  **⚠️ El aforo (`CapacidadDelDia`) es el freno más directo, y el más honesto.** `VisitasPorDiaMeseta` **es la capacidad de trabajo** de la consulta (la saturación se mide contra ese mismo número), escalada por `peso_dia / pesoMedioDeApertura` — dividir por el peso medio no es cosmético: sin él "25/día" acabaría siendo 24,2 de media y el objetivo no diría lo que dice. Cuando la demanda lo supera, **la consulta llena deja de CAPTAR**; jamás le da plantón a quien tenía cita (ley **L3**, con contador-tripwire en `RunStats.RetornosDesplazadosPorAforo`, que debe ser 0). `PacientesPorDiaMax` es solo la red de seguridad **por encima** (el validador exige ≥1,3× el objetivo): en la corrida rota era ÉL quien gobernaba la clínica, 33 de 42 meses.
 
   **El suelo NO es `AltasPorDiaArranque`.** El panel devuelve a cada paciente `1/(1−k)` veces (`ProbabilidadDeRetorno`, k≈0,70 → **3,3 visitas por paciente**), así que 6 altas/día ya producen ~14 visitas/día **sin nada de boca a boca**. Si el objetivo no supera ese suelo, `CalibrarImitacion` devuelve `q=0` y la etapa 2/5 avisa.
 
   **⚠️ La calibración se hace sobre el MISMO modelo que se ejecuta.** `Proyectar` es ahora una **proyección de cohortes** (cada visita genera, con probabilidad `k`, otra visita del mismo paciente repartida por la banda de recurrencia; la clientela activa sale de la **ley de Little**). Antes era *un modelo distinto*: estimaba 8,2 visitas por paciente y año cuando la corrida real daba **1,45 en tres años y medio** → subestimaba `S`, la bisección elegía una `q` **3× mayor de la cuenta**, λ se disparaba a **101 altas/día** contra un objetivo de 25 y la clínica pasaba 33 meses contra el techo. Calibrar sobre un modelo que no es el que corre **es no calibrar nada**. ⚠️ La meseta se mide como **media móvil de 30 días abiertos** (`MediasProyectadas`), la misma magnitud que juzga la ley L8 — **no** normalizando cada día por su peso: los retornos **no** escalan con el peso del día (a un paciente le toca su control el sábado igual que el lunes), y ese cociente disparaba el "pico" en los sábados, dando el objetivo por alcanzado con `q≈0` (la clínica se quedaba en 15,7/día pidiéndole 25). ⚠️ Se calibra contra el **pico**, no el último día (si el área se agota la curva decae y la bisección sobreexcitaría toda la corrida).
 
-  **Segundo freno, independiente: la satisfacción** (`Services/SatisfaccionPolicy.cs`, seam puro). Nota entera 1-5 = `MediaBase` + `BonusMedicoCabecera` + `BonusCitaCumplida` − `PenalizacionCuadroGrave` − `PenalizacionSaturacion × Saturacion(visitasDelDia, CapacidadComodaPorDia)` + ruido `N(0, Desviacion)`, acotada a [1,5]. ⚠️ **La calificación NO se escribe en OpenMRS** (no hay concepto de encuesta y no se inventa uno): es estado de simulación (`SimulatedPatient.Calificaciones`/`Insatisfecho`/`UltimaVisita`/`Visitas`) y se persiste en los CSV.
+  **Segundo freno, independiente: la satisfacción** (`Services/SatisfaccionPolicy.cs`, seam puro). Nota entera 1-5 = `MediaBase` + `BonusMedicoCabecera` + `BonusCitaCumplida` − `PenalizacionCuadroGrave` − `PenalizacionSaturacion × Saturacion(visitasDelDia, VisitasPorDiaMeseta)` + ruido `N(0, Desviacion)`, acotada a [1,5]. ⚠️ **La calificación NO se escribe en OpenMRS** (no hay concepto de encuesta y no se inventa uno): es estado de simulación (`SimulatedPatient.Calificaciones`/`Insatisfecho`/`UltimaVisita`/`Visitas`) y se persiste en los CSV.
 
   **Cableado** (`SeedOrchestrator.RunAsync`): RNG propios `RandomSeed + 19` (satisfacción) y `+20` (llegadas Poisson) — no reutilizar el `+10` de la recurrencia. **Los retornos se eligen ANTES de crear las altas** (así el pool no contiene aún a los nuevos del día → dedup por construcción), y el total del día alimenta la saturación. `RegistrarCalificacion` **solo puntúa si la visita se creó** (`VisitUuid` no vacío), igual que `Visitas`/`UltimaVisita`. Con `Crecimiento.Enabled=false` las altas salen del plan estático pero **los retornos los sigue poniendo el panel** (un solo modelo de recurrencia, no dos). Curva proyectada real (6 altas/día → objetivo 25, 3 años): **6,2/día en ene-2023 → 17,9 en dic-2023 → 23,8 en dic-2024 → 25,2 al cierre**, con el mix de recurrentes **4 % → 56 % → 59 % → 60 %**. Tested in `BassGrowthModelTests`, `SatisfaccionPolicyTests`, `InvariantesTests`.
 - **Archivos de salida (`output/`) — la evidencia de la corrida**: el **único** código del proyecto que escribe ficheros (todo lo demás lee catálogos y habla REST). Carpeta en `Simulation.Salida.Carpeta` (relativa → cuelga de `AppContext.BaseDirectory`; vacía = todo off).
@@ -212,57 +212,37 @@ Key architectural decisions:
 
 ## Configuration
 
-See `parametrizacion_archivos.md` for full parameter reference. Key sections in `appsettings.json`:
+See `parametrizacion_archivos.md` for full parameter reference. Key sections in `appsettings.json` (el resto
+tiene **defaults internos**: solo el núcleo se configura):
 
 ```json
 {
   "OpenMRS": {
-    "RestApi": { "BaseUrl": "http://localhost/openmrs/ws/rest/v1", "Username": "admin", "Password": "Prueba01$$xD" }
+    "RestApi": { "BaseUrl": "http://localhost/openmrs/ws/rest/v1", "Username": "admin", "Password": "…" },
+    "Database": { "CorregirFechas": false, "ConnectionString": "…", "PrefijoPaciente": "SIM-", "TamanoLote": 20000, "PedirConfirmacion": true },
+    "Defaults": { "…los ~19 UUIDs de la instancia…" }
   },
   "Simulation": {
     "StartDate": "2023-01-01",
     "EndDate": "2024-12-31",
     "AltasPorDiaArranque": 6,
-    "SeguimientoCronicoProb": 0.70,
-    "ReferralProbabilities": {
-      "LabOrder": 0.40, "ClinicalExam": 0.35, "DrugOrder": 0.65,
-      "Urgent": 0.20, "FollowUp": 0.30
-    },
-    "Laboratorio": {
-      "ProbRechazo": 0.04, "ProbResultadoLlega": 0.95,
-      "MinutosHastaTomaMin": 20, "MinutosHastaTomaMax": 90
-    },
-    "MinMedicosPorDia": 2, "MaxMedicosPorDia": 3,
-    "Allergy": {
-      "BaseProbabilityMin": 0.15, "BaseProbabilityMax": 0.25,
-      "SecondAllergyProbability": 0.30, "ThirdAllergyProbability": 0.25, "MaxAllergies": 3
-    },
-    "Comorbidity": {
-      "BaseProbability": 0.20, "MaxAdditional": 2, "SecondExtraProbability": 0.25, "AffinityBoost": 4.0,
-      "AgeScaling": { "0-14": 0.3, "15-29": 0.5, "30-44": 0.8, "45-64": 1.3, "65+": 1.8 }
-    },
-    "Climate": { "SeasonalBoost": 2.5, "ComfortTempC": 24.0, "TempVitalsFactorC": 0.04, "TempVitalsMaxC": 0.5 },
-    "Recurrence": {
-      "MinDiasAgudo": 7, "MaxDiasAgudo": 21, "MinDiasCronico": 30, "MaxDiasCronico": 120,
-      "VisitasEspontaneasPorPacienteAno": 0.5
-    },
-    "Satisfaccion": {
-      "Enabled": true, "MediaBase": 4.0, "Desviacion": 0.8,
-      "BonusMedicoCabecera": 0.4, "BonusCitaCumplida": 0.2, "PenalizacionCuadroGrave": 0.3,
-      "PenalizacionSaturacion": 1.2, "CapacidadComodaPorDia": 25, "UmbralSatisfaccion": 3.0
+    "UtcOffset": "-06:00",
+    "HorarioAtencion": {
+      "PicoAM": { "Inicio": "08:00", "Fin": "10:00", "Peso": 40 },
+      "PicoPM": { "Inicio": "14:00", "Fin": "16:00", "Peso": 30 }
     },
     "Crecimiento": {
-      "Enabled": true, "VisitasPorDiaMeseta": 25, "VentanaActividadDias": 365,
-      "PoblacionCaptacion": 60000, "RecurrentesPorPacienteExtra": 0,
-      "PacientesPorDiaMax": 45, "MinVisitasRecurrente": 2,
-      "AsistenciaProbInsatisfecho": 0.20
+      "VisitasPorDiaMeseta": 25,
+      "PoblacionCaptacion": 60000,
+      "PacientesPorDiaMax": 45,
+      "MinVisitasRecurrente": 2
     },
-    "Salida": { "Carpeta": "output", "ArchivoLog": true, "ArchivoErrores": true }
+    "Salida": { "Carpeta": "output" }
   }
 }
 ```
 
-⚠️ **`VisitasPorDiaMeseta` son VISITAS TOTALES/día** (altas + controles) en la meseta, y **es también el aforo** de la consulta — por eso `Satisfaccion.CapacidadComodaPorDia` debe valer lo mismo (lo exige `SettingsValidator`), y `PacientesPorDiaMax` debe quedar ≥1,3× por encima (es una red de seguridad, no el aforo). `AltasPorDiaArranque` son **altas/día al arrancar**.
+⚠️ **`VisitasPorDiaMeseta` son VISITAS TOTALES/día** (altas + controles) en la meseta, y **es también el aforo** de la consulta — la saturación se mide contra ese mismo número (ya no existe `Satisfaccion.CapacidadComodaPorDia`), y `PacientesPorDiaMax` debe quedar ≥1,3× por encima (es una red de seguridad, no el aforo). `AltasPorDiaArranque` son **altas/día al arrancar**.
 
 **Validation mode** (1 semana, poco volumen): `EndDate: "2023-01-08"`, `Crecimiento.Enabled: false`. ⚠️ Con menos de 18 meses, las leyes L1/L4/L7 **no se pronuncian** ("no procede") y un cambio en el modelo de volumen pasaría sin ser juzgado.  
 **Production mode**: la clínica **arranca** en 6 altas/día y **crece** hasta 25 visitas/día. Curva proyectada (etapa 2/5, ventana de 3 años): **6,2/día en ene-2023 → 17,9 en dic-2023 → 23,8 en dic-2024 → 25,2 al cierre**, con el mix de recurrentes subiendo del **4 % al 60 %**.

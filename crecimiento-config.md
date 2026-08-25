@@ -49,7 +49,7 @@ si visitas > aforo → se recortan LAS ALTAS   (jamás los retornos: ley L3)
 |---|---|---|
 | `Enabled` | `true` | Modo producción: la clínica arranca en 5 altas/día y **crece** por difusión de Bass hacia el objetivo. Con `false`, las altas salen del plan estático (media fija + pesos + normal), pero **los retornos los sigue poniendo el panel** — hay un solo modelo de recurrencia, no dos. |
 | `PoblacionCaptacion` (`M`) | `60000` | El mercado: cuánta gente vive en el área de captación. Es el techo `(M − A(d))` de λ — con `A` = **pacientes ACTIVOS** (visitaron dentro de la ventana), no captados-desde-siempre, para que el área no "se agote". Vigilado por la ley **L6**: captados ≤ 50 % de `M`. |
-| `VisitasPorDiaMeseta` | `25` | **VISITAS TOTALES/día en la meseta** (altas + controles) — y es a la vez el **aforo** de la consulta, escalado por el peso del día. Cuando la demanda lo supera, la clínica **deja de captar** (recorta altas); nunca da plantón a una cita (L3). Debe valer lo mismo que `Satisfaccion.CapacidadComodaPorDia` (lo exige `SettingsValidator`). Ley **L8**: la meseta debe quedar a ±20 % de este valor. |
+| `VisitasPorDiaMeseta` | `25` | **VISITAS TOTALES/día en la meseta** (altas + controles) — y es a la vez el **aforo** de la consulta, escalado por el peso del día. Cuando la demanda lo supera, la clínica **deja de captar** (recorta altas); nunca da plantón a una cita (L3). La saturación se mide contra ese mismo número (ya no existe `Satisfaccion.CapacidadComodaPorDia`). Ley **L8**: la meseta debe quedar a ±20 % de este valor. |
 | `VentanaActividadDias` | `365` | Qué es un paciente "activo": última visita dentro de esta ventana. Define `A(d)` (el techo), `S(d)` (el boca a boca) y la elegibilidad del retorno espontáneo. |
 | `RecurrentesPorPacienteExtra` | `0` | Sin efecto adicional (parámetro de reserva). |
 | `PacientesPorDiaMax` | `45` | **Red de seguridad por ENCIMA del aforo**, no el aforo (el validador exige ≥1,3× el objetivo; 45 = 1,8×25). En la corrida rota histórica era este tope quien gobernaba la clínica 33 de 42 meses — hoy solo debería tocarse en picos raros. Ley **L5**: ≤10 % de los días pueden chocar con él. |
@@ -100,7 +100,7 @@ borró; el volumen es suma, nunca cociente.
 ```json
 "Satisfaccion": { "Enabled": true, "MediaBase": 4.0, "Desviacion": 0.8,
   "BonusMedicoCabecera": 0.4, "BonusCitaCumplida": 0.2, "PenalizacionCuadroGrave": 0.3,
-  "PenalizacionSaturacion": 1.2, "CapacidadComodaPorDia": 25, "UmbralSatisfaccion": 3.0 }
+  "PenalizacionSaturacion": 1.2, "UmbralSatisfaccion": 3.0 }
 ```
 
 Cada visita creada recibe una nota entera 1–5 (`SatisfaccionPolicy`, seam puro):
@@ -111,7 +111,7 @@ Cada visita creada recibe una nota entera 1–5 (`SatisfaccionPolicy`, seam puro
 - La media de satisfechos activos con ≥2 visitas es `S(d)` — **el combustible del boca a
   boca**: clínica saturada → notas bajas → menos `S` → menos altas. Un lazo de
   retroalimentación negativo que estabiliza la meseta.
-- `CapacidadComodaPorDia` **= 25 = el objetivo/aforo** (obligatorio: mismo número).
+- La capacidad cómoda **ES** el objetivo/aforo (`VisitasPorDiaMeseta` = 25): se miden contra el mismo número.
 - La nota **no se escribe en OpenMRS** (no existe concepto de encuesta): es estado de
   simulación y se persiste en los CSV de salida.
 
@@ -149,5 +149,5 @@ L1/L4/L7 no se pronuncian. Si el objetivo es validar el crecimiento completo, ex
 2. Si un cambio no lo protege ninguna ley, **falta una ley: escribirla primero**.
 3. No dar una corrida por buena porque compile y pasen los tests — correr ≥18 meses y
    mirar que `pct_recurrentes` suba.
-4. `VisitasPorDiaMeseta` = `CapacidadComodaPorDia`, y `PacientesPorDiaMax` ≥ 1,3× el
+4. `VisitasPorDiaMeseta` es el aforo (ya no existe `CapacidadComodaPorDia`), y `PacientesPorDiaMax` ≥ 1,3× el
    objetivo (los exige el validador de arranque).

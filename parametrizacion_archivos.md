@@ -896,7 +896,7 @@ nota = MediaBase
      − PenalizacionSaturacion × saturacion(d)
      + ruido N(0, Desviacion)
 
-saturacion(d) = max(0, (pacientes del día − CapacidadComodaPorDia) / CapacidadComodaPorDia)
+saturacion(d) = max(0, (pacientes del día − VisitasPorDiaMeseta) / VisitasPorDiaMeseta)
 calificación  = redondear(nota), acotada a [1, 5]
 ```
 
@@ -921,7 +921,7 @@ ella: es lo esperado, no un fallo.
 | `BonusCitaCumplida` | Cuánto suma venir a una cita agendada en vez de llegar de improviso. |
 | `PenalizacionCuadroGrave` | Cuánto resta consultar por algo serio. |
 | `PenalizacionSaturacion` | Cuánto resta una saturación de 1,0 (el doble de pacientes que la capacidad cómoda). |
-| `CapacidadComodaPorDia` | Pacientes que la clínica atiende sin que se note la espera. Por encima, las notas bajan. |
+| ~~`CapacidadComodaPorDia`~~ | — | **ELIMINADO.** La capacidad cómoda es `Crecimiento.VisitasPorDiaMeseta` (el aforo); la saturación se mide contra ese número. |
 | `UmbralSatisfaccion` | Promedio **estricto** por encima del cual el paciente está contento (def. 3,0: empatar a 3 no basta). |
 
 ---
@@ -989,7 +989,7 @@ timestamp,componente,evento,tipo,mensaje
 | **Cuánto TARDA en llegar** (duración de la rampa) | `appsettings.json` → `Crecimiento.VentanaActividadDias` (365 = repartido en 3 años; 90 = meseta en 1 año) |
 | Que la clínica NO crezca (volumen fijo, como antes) | `appsettings.json` → `Crecimiento.Enabled: false` |
 | Lo contentos que salen los pacientes | `appsettings.json` → `Satisfaccion.MediaBase` / `Desviacion` |
-| A partir de cuántos pacientes/día se resiente la atención | `appsettings.json` → `Satisfaccion.CapacidadComodaPorDia` (ponlo ≈ el objetivo) |
+| A partir de cuántos pacientes/día se resiente la atención | `appsettings.json` → `Crecimiento.VisitasPorDiaMeseta` (la capacidad cómoda ES el objetivo/aforo) |
 | Cuántos pacientes abandonan la clínica descontentos | `appsettings.json` → `Satisfaccion.UmbralSatisfaccion` / `Crecimiento.AsistenciaProbInsatisfecho` |
 | Dónde se escriben los CSV de la corrida | `appsettings.json` → `Salida.Carpeta` (vacío = no escribir) |
 | Apagar el CSV de errores / el log en fichero | `appsettings.json` → `Salida.ArchivoErrores` / `Salida.ArchivoLog` |
