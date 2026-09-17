@@ -49,9 +49,12 @@ public class PrescriptionSeeder
             return;
         }
 
-        var debeRx = patient.TodosDiagnosticos.Any(d => d.RequiereRx)
-            ? _rng.NextDouble() < 0.90
-            : _rng.NextDouble() < _drugOrderProb;
+        // Decision de la fase de cobertura de medicación (plan-farmacia-catalogos.md): la regla del
+        // dx manda — el TreatmentSelector solo devuelve candidatos de la regla investigada y, sin
+        // candidatos, no se receta nada. Ya no hay tirada previa: si el dx tiene tratamiento,
+        // la visita lo lleva. (Un referido no receta: arriba.) La probabilidad en config
+        // (ReferralProbabilities.DrugOrder) queda obsoleta para el caso común.
+        var debeRx = true;
 
         if (!debeRx) return;
 
@@ -101,7 +104,7 @@ public class PrescriptionSeeder
             careSetting   = _settings.Defaults.OutpatientCareSettingUuid,
             dose,
             doseUnits,
-            route         = med.ViaUuid,
+            route         = string.IsNullOrWhiteSpace(med.ViaUuid) ? null : med.ViaUuid,
             frequency,
             numRefills    = 0,
             quantity      = (double)duracion,
