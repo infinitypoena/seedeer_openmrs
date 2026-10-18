@@ -83,6 +83,30 @@ public class SettingsValidatorTests
     }
 
     [Fact]
+    public void Validate_DireccionesShareInvalida_ReportaViolacion()
+    {
+        var sim = SimValida();
+        sim.Direcciones.Share = 1.5;
+
+        var violaciones = SettingsValidator.Validate(sim, OmrsValido());
+
+        var v = Assert.Single(violaciones);
+        Assert.Contains("Direcciones.Share", v);
+    }
+
+    [Fact]
+    public void Validate_DireccionesProbabilidadFueraDeRango_ReportaViolacion()
+    {
+        var sim = SimValida();
+        sim.Direcciones.ProbabilidadBoostDia = 1.5;
+
+        var violaciones = SettingsValidator.Validate(sim, OmrsValido());
+
+        var v = Assert.Single(violaciones);
+        Assert.Contains("Direcciones.ProbabilidadBoostDia", v);
+    }
+
+    [Fact]
     public void Validate_StartDatePosteriorAEndDate_ReportaViolacion()
     {
         var sim = SimValida();

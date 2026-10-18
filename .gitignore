@@ -25,6 +25,9 @@ Thumbs.db
 # ── Respaldos de la BD (scripts/backup_openmrs.ps1) ───────────────────────────
 backups/
 
+# ── Logs de corrida sueltos en la raíz (los de output/ ya cuelgan de bin/) ─────
+*.log
+
 # ── Publicación y NuGet ───────────────────────────────────────────────────────
 publish/
 *.nupkg

@@ -1,5 +1,6 @@
 using Bogus;
 using OpenmrsSeeder.Configuration;
+using OpenmrsSeeder.Models.Catalogs;
 using OpenmrsSeeder.Models.Simulation;
 
 namespace OpenmrsSeeder.Services;
@@ -15,6 +16,10 @@ public class PatientProfileGenerator
     private List<string>? _nombresM;
     private List<string>? _nombresF;
     private List<string>? _apellidos;
+
+    // Boost diario de departamento no principal (diversidad de direcciones): memoizado por fecha para
+    // que todos los pacientes del mismo día compartan el mismo departamento potenciado.
+    private readonly Dictionary<DateOnly, (string? departamento, double share)> _boostPorDia = new();
 
     public PatientProfileGenerator(SimulationSettings settings, CatalogLoader catalogs)
     {
@@ -35,7 +40,7 @@ public class PatientProfileGenerator
         var gender   = PickGender();
         var ageGroup = PickAgeGroup();
         var (given, secondGiven, family, secondFamily) = GenerateName(gender);
-        var (address1, city, departamento, pais) = GenerateAddress();
+        var (address1, city, departamento, pais) = GenerateAddress(refDate);
         var birthDate = GenerateBirthDate(ageGroup, refDate);
         var edad      = EdadEnAnios(birthDate, refDate);
 
@@ -141,22 +146,27 @@ public class PatientProfileGenerator
     /// <summary>
     /// Dirección salvadoreña coherente desde <c>direcciones.csv</c>: zona (colonia/barrio/cantón)
     /// elegida por peso — la mayoría cerca de la clínica (área metropolitana), cola de municipios
-    /// lejanos — con detalle de casa/pasaje para las zonas urbanas. Catálogo vacío = fallback Bogus
-    /// (comportamiento histórico, país vacío → "España" en PatientSeeder).
+    /// lejanos — con detalle de casa/pasaje para las zonas urbanas. Algunos días (boost diario) un
+    /// departamento que no es el dominante capta una cuota fija del volumen del día, así ese día llegan
+    /// más pacientes de una zona no principal. Catálogo vacío = fallback Bogus (comportamiento
+    /// histórico, país vacío → "España" en PatientSeeder).
     /// </summary>
-    private (string address1, string city, string departamento, string pais) GenerateAddress()
+    private (string address1, string city, string departamento, string pais) GenerateAddress(DateOnly refDate)
     {
         var direcciones = _catalogs.Direcciones;
         if (direcciones.Count == 0)
             return (_faker.Address.StreetAddress(), _faker.Address.City(), "", "");
 
-        var total = direcciones.Sum(d => d.Peso);
+        var (depBoost, share) = BoostDelDia(refDate);
+        var multiplicador = DireccionBoost.MultiplicadorBoost(direcciones, depBoost, share);
+
+        var total = direcciones.Sum(d => PesoEfectivo(d, depBoost, multiplicador));
         var pick = _rng.NextDouble() * total;
         double acumulado = 0;
         var elegida = direcciones[^1];
         foreach (var d in direcciones)
         {
-            acumulado += d.Peso;
+            acumulado += PesoEfectivo(d, depBoost, multiplicador);
             if (pick <= acumulado) { elegida = d; break; }
         }
 
@@ -169,6 +179,22 @@ public class PatientProfileGenerator
 
         return (address1, elegida.Municipio, elegida.Departamento, "El Salvador");
     }
+
+    /// <summary>Departamento potenciado el día <paramref name="fecha"/> (null = sin boost), memoizado.</summary>
+    private (string? departamento, double share) BoostDelDia(DateOnly fecha)
+    {
+        if (!_boostPorDia.TryGetValue(fecha, out var boost))
+        {
+            boost = DireccionBoost.ElegirDepartamentoBoost(
+                _catalogs.Direcciones, _settings.Direcciones, _settings.RandomSeed, fecha);
+            _boostPorDia[fecha] = boost;
+        }
+        return boost;
+    }
+
+    /// <summary>Peso efectivo de una fila: reescalado por el multiplicador si su departamento es el potenciado.</summary>
+    private static double PesoEfectivo(DireccionEntry d, string? depBoost, double multiplicador) =>
+        string.Equals(d.Departamento, depBoost, StringComparison.OrdinalIgnoreCase) ? d.Peso * multiplicador : d.Peso;
 
     /// <summary>
     /// Genera un nombre completo (primer + segundo nombre, primer + segundo apellido) a partir de los

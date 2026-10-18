@@ -127,6 +127,13 @@ public static class SettingsValidator
         // Variedad
         NoNegativo(sim.Variedad.RepeticionDamping, "Variedad.RepeticionDamping");
 
+        // Direcciones (boost diario de un departamento no principal)
+        Prob(sim.Direcciones.ProbabilidadBoostDia, "Direcciones.ProbabilidadBoostDia");
+        if (sim.Direcciones.Share is <= 0 or >= 1)
+            violaciones.Add(
+                $"Direcciones.Share debe estar entre 0 y 1 (exclusivo) (valor: {sim.Direcciones.Share}): " +
+                "es la fracción del día que capta el departamento potenciado");
+
         // Chequeo voluntario (paciente que pide exámenes por su cuenta)
         var ch = sim.Chequeo;
         Prob(ch.ProbabilidadAlta, "Chequeo.ProbabilidadAlta");

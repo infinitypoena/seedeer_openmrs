@@ -75,6 +75,7 @@ public class SimulationSettings
     public LaboratorioSettings Laboratorio { get; set; } = new();
     public SatisfaccionSettings Satisfaccion { get; set; } = new();
     public ChequeoSettings Chequeo { get; set; } = new();
+    public DireccionesSettings Direcciones { get; set; } = new();
     public CrecimientoSettings Crecimiento { get; set; } = new();
     public SalidaSettings Salida { get; set; } = new();
 }
@@ -371,6 +372,28 @@ public class ChequeoSettings
     /// <summary>Cuántos labs del pool <c>chequeo=true</c> ordena la visita de chequeo (banda inclusiva).</summary>
     public int MinLabs { get; set; } = 2;
     public int MaxLabs { get; set; } = 4;
+}
+
+/// <summary>
+/// Diversidad temporal de direcciones: algunos días de la corrida se elige determinísticamente un
+/// departamento que NO es el dominante (el de mayor peso total en <c>direcciones.csv</c>) y se le
+/// asigna una <see cref="Share"/> del volumen de ese día (su peso se reescala para captar esa cuota),
+/// así ese día llegan más pacientes de una zona no principal. No toca volumen/recurrencia/crecimiento
+/// (es mezcla de direcciones, no cuántas visitas ni quién vuelve) → ninguna ley lo protege ni lo
+/// amenaza. Con <see cref="Enabled"/> en false no se consume ningún RNG extra y el flujo histórico
+/// queda bit a bit intacto.
+/// </summary>
+public class DireccionesSettings
+{
+    /// <summary>Interruptor de la feature. false = sin boost y flujo histórico intacto.</summary>
+    public bool Enabled { get; set; } = true;
+    /// <summary>Prob. de que un día tenga un departamento potenciado (≈2 días de cada 14 con el default).</summary>
+    public double ProbabilidadBoostDia { get; set; } = 0.15;
+    /// <summary>
+    /// Cuota (fracción 0–1) del volumen de ese día que capta el departamento potenciado, sin importar su
+    /// tamaño: un interior de peso 2 y otro de 60 alcanzan la MISMA cuota. Def. 0.30 (≈30 % del día).
+    /// </summary>
+    public double Share { get; set; } = 0.30;
 }
 
 public class AllergySettings

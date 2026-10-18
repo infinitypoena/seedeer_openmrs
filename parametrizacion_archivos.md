@@ -608,6 +608,23 @@ El `address1` final añade detalle urbano ("Colonia Zacamil, pasaje C, casa #8")
 | 2 | Resto del AMSS + metro La Libertad (Apopa, Ilopango, Santa Tecla, Antiguo Cuscatlán…) | ~18 % | 2–6 |
 | 3 | Interior del país (viaje de 1–3 h — caso ocasional) | ~9 % | 1 (2 en cabeceras con hospital de referencia: Santa Ana, San Miguel, Cojutepeque, Zacatecoluca) |
 
+**Boost diario de un departamento no principal (diversidad temporal).** Además del peso fijo, algunos
+días de la corrida se elige **determinísticamente** un departamento que **no es el dominante** (el de
+mayor peso total) y se le asigna una **cuota** del volumen de ese día (su peso se reescala para captarla),
+de modo que ese día llegan más pacientes de una zona no principal. Config en `Simulation:Direcciones`:
+
+| Clave | Default | Significado |
+|-------|---------|-------------|
+| `Enabled` | `true` | Interruptor. `false` = sin boost y flujo histórico bit a bit intacto (no se consume RNG extra). |
+| `ProbabilidadBoostDia` | `0.15` | Prob. de que un día tenga un departamento potenciado (≈2 días de cada 14). |
+| `Share` | `0.30` | Fracción (0–1) del día que capta el departamento potenciado. Independiente del tamaño: un interior de peso 2 y otro de 60 alcanzan la MISMA cuota. |
+
+La elección es **reproducible**: semilla `RandomSeed + 25 + fecha.DayNumber`, memoizada por día (todos
+los pacientes del mismo día comparten el mismo departamento potenciado). No toca volumen/recurrencia/
+crecimiento (es mezcla de direcciones, no cuántas visitas) → ninguna ley de la simulación lo protege ni
+lo amenaza. Seam puro `Services/DireccionBoost.ElegirDepartamentoBoost` (+ `MultiplicadorBoost`); ver
+`plan-boost-direcciones.md`.
+
 Si el escenario "muda" la clínica a otra ciudad, basta reponderar el CSV con este mismo criterio
 (mayor peso = más cerca de la clínica); no hay que tocar código.
 

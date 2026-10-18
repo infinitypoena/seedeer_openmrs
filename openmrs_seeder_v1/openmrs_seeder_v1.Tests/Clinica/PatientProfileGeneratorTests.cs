@@ -255,6 +255,59 @@ public class PatientProfileGeneratorTests
     }
 
     [Fact]
+    public void GenerateNew_ConBoostActivo_ElDepartamentoNoDominanteApareceMasEseDia()
+    {
+        var gen = GenConDireccionesBoost(enabled: true, share: 0.9);
+        var fecha = new DateOnly(2026, 10, 5);
+
+        int noDominantes = 0;
+        const int n = 200;
+        for (int i = 0; i < n; i++)
+            if (gen.GenerateNew(fecha).StateProvince != "San Salvador") noDominantes++;
+
+        Assert.True(noDominantes > n * 0.8,
+            $"Con boost debería dominar el no-principal; salió {noDominantes}/{n}");
+    }
+
+    [Fact]
+    public void GenerateNew_ConBoostDeshabilitado_ElDominanteSigueDominando()
+    {
+        var gen = GenConDireccionesBoost(enabled: false, share: 0.9);
+        var fecha = new DateOnly(2026, 10, 5);
+
+        int dominantes = 0;
+        const int n = 200;
+        for (int i = 0; i < n; i++)
+            if (gen.GenerateNew(fecha).StateProvince == "San Salvador") dominantes++;
+
+        Assert.True(dominantes > n * 0.7,
+            $"Sin boost debería dominar San Salvador; salió {dominantes}/{n}");
+    }
+
+    private static PatientProfileGenerator GenConDireccionesBoost(bool enabled, double share)
+    {
+        var direcciones = new[]
+        {
+            new DireccionEntry { Departamento = "San Salvador", Municipio = "San Salvador", Zona = "Colonia A", Peso = 20 },
+            new DireccionEntry { Departamento = "La Libertad",  Municipio = "Santa Tecla",  Zona = "Colonia B", Peso = 5  },
+            new DireccionEntry { Departamento = "Morazán",      Municipio = "Perquín",      Zona = "Barrio C",  Peso = 1  },
+        };
+        var settings = new SimulationSettings
+        {
+            RandomSeed = 42,
+            Direcciones = new DireccionesSettings
+            {
+                Enabled = enabled,
+                ProbabilidadBoostDia = 1.0,
+                Share = share
+            }
+        };
+        var c = new CatalogLoader();
+        c.LoadFromLists([], [], [], [], [], [], [], direcciones: direcciones);
+        return new PatientProfileGenerator(settings, c);
+    }
+
+    [Fact]
     public void GenerateNew_CatalogoConDuplicados_NoSeCuelga()
     {
         // Antes, un pool con >1 elementos todos idénticos colgaba PickDistinctPair (do/while infinito)
