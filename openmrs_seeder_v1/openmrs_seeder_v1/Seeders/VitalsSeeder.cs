@@ -192,8 +192,11 @@ public class VitalsSeeder
 
     private const double TallaAdultoHombreMedia = 170.0;
     private const double TallaAdultoMujerMedia = 158.0;
-    private const double TallaAdultoHombreSigma = 6.5;
-    private const double TallaAdultoMujerSigma = 6.0;
+    // σ amplia a propósito: 200 cm (2 m) queda a +3.75σ del hombre, alcanzable pero raro (~1 de cada
+    // 11.000); con la σ histórica de 6.5 era +4.6σ y jamás salía (máx observado 188). La mujer queda a
+    // +4.6σ de su tope de 190 (rarísimo), manteniendo la dispersión femenina algo menor que la masculina.
+    private const double TallaAdultoHombreSigma = 8.0;
+    private const double TallaAdultoMujerSigma = 7.0;
 
     /// <summary>
     /// Mediana teórica de talla (cm): WHO talla-para-edad por sexo para 0–14 años; media poblacional
@@ -292,7 +295,8 @@ public class VitalsSeeder
         // ── Talla (primero; el peso depende de ella) ──
         // Fijada (visitas siguientes) → constante. Si no: normal sobre la mediana teórica (WHO talla-para-edad
         // por sexo en pediatría; media poblacional por sexo en adultos), con σ por edad y decremento senil en
-        // adultos mayores. Sustituye a las bandas uniformes históricas 160-185/150-172/90-160.
+        // adultos mayores. Siempre a 1 decimal (como se registra en clínica): así los bebés no se amontonan en
+        // enteros (70, 77, 78…) y un hombre puede llegar a los 2 m (σ=8 → 200 cm = +3.75σ, raro pero posible).
         double height;
         if (tallaFijaCm is double tf)
         {
@@ -302,21 +306,21 @@ public class VitalsSeeder
         {
             var mediana = TallaTeoricaMedianaCm(gender, em);
             var sigma   = SigmaTallaCm(gender, em);
-            height = Math.Round(Math.Clamp(Normal(rng, mediana, sigma), 45, 190));
+            height = Math.Round(Math.Clamp(Normal(rng, mediana, sigma), 45, 190), 1);
         }
         else if (esNino)
         {
             // Fallback 0-14 sin edad en meses (no ocurre en producción: BuildVitalsObs siempre la calcula).
-            height = Math.Round(Rand(90, 160));
+            height = Math.Round(Rand(90, 160), 1);
         }
         else
         {
             var mediana = TallaTeoricaMedianaCm(gender, null);
             var sigma   = SigmaTallaCm(gender, null);
             var (min, max) = gender == "M" ? (150.0, 200.0) : (140.0, 190.0);
-            height = Math.Round(Math.Clamp(Normal(rng, mediana, sigma), min, max));
+            height = Math.Round(Math.Clamp(Normal(rng, mediana, sigma), min, max), 1);
             if (edadMeses is int emAdulta)
-                height -= Math.Round(DecrementoTallaSenilCm(emAdulta), 1);
+                height = Math.Round(height - DecrementoTallaSenilCm(emAdulta), 1);
         }
 
         // ── Peso vía IMC objetivo (coherente con talla) ──

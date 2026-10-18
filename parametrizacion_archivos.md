@@ -756,14 +756,19 @@ los overrides opcionales por enfermedad (`vital_fiebre`, `vital_imc`, `vital_pa`
 > siempre son coherentes (no más IMC de 50 en pacientes de consulta externa).
 
 Talla (de ahí sale el peso vía IMC), modelada con **distribución normal** sobre la mediana teórica
-— no bandas uniformes — para que haya personas altas, bajas y una campana realista:
+— no bandas uniformes — para que haya personas altas, bajas y una campana realista. Siempre a **1
+decimal** (como se registra en clínica): los bebés no se amontonan en enteros (70, 77, 78…).
 
 | Talla | Mediana (μ) | σ | Clamp | Unidad |
 |---|---|---|---|---|
-| Hombre adulto | 170 | 6.5 | 150-200 | cm |
-| Mujer adulta | 158 | 6.0 | 140-190 | cm |
+| Hombre adulto | 170 | 8.0 | 150-200 | cm |
+| Mujer adulta | 158 | 7.0 | 140-190 | cm |
 | 0-14 (WHO talla-para-edad, por sexo) | mediana WHO por mes | 2.0→7.0 (crece con la edad) | 45-190 | cm |
 | Adulto 50+ (envejecimiento) | −(edad−50)·0.05, tope −3 | — | — | cm |
+
+> **σ ampliada para que 2 m sea alcanzable**: con σ=8.0 el hombre de 200 cm queda a +3.75σ (raro, ~1 de
+> cada 11.000); la σ histórica de 6.5 lo dejaba a +4.6σ y jamás salía (máx observado 188). La mujer, con
+> σ=7.0, mantiene su tope de 190 a +4.6σ (rarísimo) y una dispersión algo menor que la masculina.
 
 > **Referencia pediátrica**: estándares de crecimiento OMS (talla-para-edad, percentil 50), con anclas por
 > sexo en 0/6/12/24/36/60/120/168 meses e interpolación lineal entre ellas; la desviación crece de ~2 cm al

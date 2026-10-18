@@ -120,7 +120,7 @@ public class VitalsSeederTests
     [Fact]
     public void Adulto_TallaConCampanaNormalSinTechoUniforme()
     {
-        // Antes la banda uniforme 160-185 (M) impedía personas altas y bajas. Ahora la normal (μ=170, σ=6.5)
+        // Antes la banda uniforme 160-185 (M) impedía personas altas y bajas. Ahora la normal (μ=170, σ=8.0)
         // produce una campana: en N muestras hay hombres >185 y hombres <160.
         var rng = new Random(31);
         double max = 0, min = double.MaxValue;
@@ -149,6 +149,46 @@ public class VitalsSeederTests
             return suma / n;
         }
         Assert.True(Media("65+", 41) < Media("30-44", 41));
+    }
+
+    [Fact]
+    public void Adulto_SigmaAmpliada_UnHombrePuedeAlcanzarLosDosMetros()
+    {
+        // Con σ=8.0, 200 cm queda a +3.75σ: alcanzable pero raro. Semilla fija → determinista.
+        var rng = new Random(77);
+        double max = 0;
+        const int n = 20000;
+        for (int i = 0; i < n; i++)
+        {
+            var v = VitalsSeeder.ComputeVitals(["osteomuscular"], 1, "M", "30-44", false, null, null, NoClima, rng);
+            max = Math.Max(max, v.HeightCm);
+        }
+        Assert.True(max >= 195, $"se esperaba algún hombre cerca de los 2 m; max={max}");
+    }
+
+    [Fact]
+    public void SigmaTallaAdulta_AmpliadaParaQueDosMetrosSeaAlcanzable()
+    {
+        Assert.Equal(8.0, VitalsSeeder.SigmaTallaCm("M", null));
+        Assert.Equal(7.0, VitalsSeeder.SigmaTallaCm("F", null));
+        Assert.Equal(170.0, VitalsSeeder.TallaTeoricaMedianaCm("M", null));
+        Assert.Equal(158.0, VitalsSeeder.TallaTeoricaMedianaCm("F", null));
+    }
+
+    [Fact]
+    public void Pediatrico_AlturaConDecimal_NoTodoEntero()
+    {
+        // Antes la talla pediátrica se redondeaba a entero y los bebés se amontonaban en 70, 77, 78…
+        // Ahora va a 1 decimal (como se registra en clínica).
+        var rng = new Random(52);
+        bool hayDecimal = false;
+        for (int i = 0; i < 300; i++)
+        {
+            var v = VitalsSeeder.ComputeVitals(["respiratorio"], 1, "M", "0-14", false, null, null, NoClima, rng,
+                null, null, null, null, null, edadMeses: 6 + (i % 120));
+            if (Math.Abs(v.HeightCm - Math.Round(v.HeightCm)) > 0.01) { hayDecimal = true; break; }
+        }
+        Assert.True(hayDecimal, "la talla pediátrica debería salir con decimales (no todo en enteros)");
     }
 
     // ── Overrides por enfermedad: vital_pa / vital_fc / vital_spo2 ────────────
