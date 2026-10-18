@@ -117,6 +117,40 @@ public class VitalsSeederTests
         });
     }
 
+    [Fact]
+    public void Adulto_TallaConCampanaNormalSinTechoUniforme()
+    {
+        // Antes la banda uniforme 160-185 (M) impedía personas altas y bajas. Ahora la normal (μ=170, σ=6.5)
+        // produce una campana: en N muestras hay hombres >185 y hombres <160.
+        var rng = new Random(31);
+        double max = 0, min = double.MaxValue;
+        for (int i = 0; i < 4000; i++)
+        {
+            var v = VitalsSeeder.ComputeVitals(["osteomuscular"], 1, "M", "30-44", false, null, null, NoClima, rng);
+            max = Math.Max(max, v.HeightCm);
+            min = Math.Min(min, v.HeightCm);
+        }
+        Assert.True(max > 185, $"nadie alto en la muestra: max={max}");
+        Assert.True(min < 160, $"sin personas bajas en la muestra: min={min}");
+    }
+
+    [Fact]
+    public void AdultoMayor_PierdeTallaRespectoAlJoven()
+    {
+        // Misma semilla: el grupo 65+ (edad ≈ 75 a) sale más bajo que el 30-44 en media.
+        double Media(string ageGroup, int seed)
+        {
+            var rng = new Random(seed);
+            double suma = 0;
+            const int n = 2000;
+            for (int i = 0; i < n; i++)
+                suma += VitalsSeeder.ComputeVitals(["osteomuscular"], 1, "M", ageGroup, false, null, null, NoClima, rng,
+                    edadMeses: ageGroup == "65+" ? 75 * 12 : null).HeightCm;
+            return suma / n;
+        }
+        Assert.True(Media("65+", 41) < Media("30-44", 41));
+    }
+
     // ── Overrides por enfermedad: vital_pa / vital_fc / vital_spo2 ────────────
 
     [Fact]

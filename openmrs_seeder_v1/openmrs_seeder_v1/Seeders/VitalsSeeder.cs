@@ -165,16 +165,100 @@ public class VitalsSeeder
         _          => 1
     };
 
-    /// <summary>
-    /// Talla (cm) aproximada por edad en meses (0–14 años): curva monótona simple ~50 cm al nacer,
-    /// ~74 al año, ~98 a los 3, luego ~6 cm/año. Evita que un lactante salga con talla de adolescente.
-    /// </summary>
-    public static double TallaPediatricaCm(int edadMeses)
+    // Mediana WHO de talla para la edad (0–14 años), por sexo: anclas en meses → cm.
+    // Fuente: estándares de crecimiento OMS (talla-para-edad, percentil 50), redondeados a 1 decimal.
+    private static readonly (int Meses, double Nino, double Nina)[] AnclasWhoTalla = new[]
     {
-        var m = Math.Clamp(edadMeses, 0, 14 * 12);
-        return m <= 12 ? 50 + 2.0 * m
-             : m <= 36 ? 74 + 1.0 * (m - 12)
-             :           98 + 0.5 * (m - 36);
+        (0,   49.9,  49.1),
+        (6,   67.6,  65.7),
+        (12,  75.7,  74.0),
+        (24,  87.1,  85.7),
+        (36,  96.1,  95.1),
+        (60,  110.0, 109.4),
+        (120, 137.8, 138.6),
+        (168, 163.2, 159.4)
+    };
+
+    // Desviación típica pediátrica (cm) que crece con la edad: ~2 cm al nacer → ~7 cm en la pubertad.
+    private static readonly (int Meses, double Sigma)[] SigmaPediatricaTalla = new[]
+    {
+        (0,   2.0),
+        (12,  2.8),
+        (36,  3.8),
+        (60,  4.5),
+        (120, 5.5),
+        (168, 7.0)
+    };
+
+    private const double TallaAdultoHombreMedia = 170.0;
+    private const double TallaAdultoMujerMedia = 158.0;
+    private const double TallaAdultoHombreSigma = 6.5;
+    private const double TallaAdultoMujerSigma = 6.0;
+
+    /// <summary>
+    /// Mediana teórica de talla (cm): WHO talla-para-edad por sexo para 0–14 años; media poblacional
+    /// adulta por sexo fuera de esa franja. Sustituye a la antigua curva lineal sin distinción de sexo.
+    /// </summary>
+    public static double TallaTeoricaMedianaCm(string genero, int? edadMeses)
+    {
+        if (edadMeses is int m && m <= 14 * 12)
+            return InterpolarWhoTalla(m, genero == "M");
+        return genero == "M" ? TallaAdultoHombreMedia : TallaAdultoMujerMedia;
+    }
+
+    /// <summary>Desviación típica de la talla (cm) por edad/sexo: crece con la edad en pediatría.</summary>
+    public static double SigmaTallaCm(string genero, int? edadMeses)
+    {
+        if (edadMeses is int m && m <= 14 * 12)
+            return Interpolar(m, SigmaPediatricaTalla);
+        return genero == "M" ? TallaAdultoHombreSigma : TallaAdultoMujerSigma;
+    }
+
+    /// <summary>
+    /// Pérdida de talla por envejecimiento (cm): 0 hasta los 50 años, luego ~0,5 cm por década, tope 3 cm.
+    /// </summary>
+    public static double DecrementoTallaSenilCm(int edadMeses)
+    {
+        var edad = edadMeses / 12.0;
+        return Math.Clamp((edad - 50.0) * 0.05, 0.0, 3.0);
+    }
+
+    private static double InterpolarWhoTalla(int meses, bool nino)
+    {
+        if (meses <= AnclasWhoTalla[0].Meses) return Val(AnclasWhoTalla[0]);
+        for (int i = 1; i < AnclasWhoTalla.Length; i++)
+        {
+            if (meses <= AnclasWhoTalla[i].Meses)
+            {
+                var t = (meses - AnclasWhoTalla[i - 1].Meses) / (double)(AnclasWhoTalla[i].Meses - AnclasWhoTalla[i - 1].Meses);
+                return Val(AnclasWhoTalla[i - 1]) + t * (Val(AnclasWhoTalla[i]) - Val(AnclasWhoTalla[i - 1]));
+            }
+        }
+        return Val(AnclasWhoTalla[^1]);
+
+        double Val((int Meses, double Nino, double Nina) a) => nino ? a.Nino : a.Nina;
+    }
+
+    private static double Interpolar(int x, (int Meses, double Sigma)[] tabla)
+    {
+        if (x <= tabla[0].Meses) return tabla[0].Sigma;
+        for (int i = 1; i < tabla.Length; i++)
+        {
+            if (x <= tabla[i].Meses)
+            {
+                var t = (x - tabla[i - 1].Meses) / (double)(tabla[i].Meses - tabla[i - 1].Meses);
+                return tabla[i - 1].Sigma + t * (tabla[i].Sigma - tabla[i - 1].Sigma);
+            }
+        }
+        return tabla[^1].Sigma;
+    }
+
+    /// <summary>Normal (media, σ) por Box-Muller, mismo método que SatisfaccionPolicy/DailyScheduleGenerator.</summary>
+    private static double Normal(Random rng, double media, double sigma)
+    {
+        var u1 = 1.0 - rng.NextDouble();
+        var u2 = 1.0 - rng.NextDouble();
+        return media + sigma * Math.Sqrt(-2.0 * Math.Log(u1)) * Math.Sin(2.0 * Math.PI * u2);
     }
 
     /// <summary>
@@ -206,17 +290,34 @@ public class VitalsSeeder
         double Rand(double min, double max) => rng.NextDouble() * (max - min) + min;
 
         // ── Talla (primero; el peso depende de ella) ──
-        // Si ya está fijada (visitas siguientes): constante. Si no: adultos por banda de sexo; niños por
-        // su edad en meses (curva simple) cuando se conoce, o la banda histórica 90–160 como fallback.
+        // Fijada (visitas siguientes) → constante. Si no: normal sobre la mediana teórica (WHO talla-para-edad
+        // por sexo en pediatría; media poblacional por sexo en adultos), con σ por edad y decremento senil en
+        // adultos mayores. Sustituye a las bandas uniformes históricas 160-185/150-172/90-160.
         double height;
         if (tallaFijaCm is double tf)
+        {
             height = tf;
+        }
+        else if (esNino && edadMeses is int em)
+        {
+            var mediana = TallaTeoricaMedianaCm(gender, em);
+            var sigma   = SigmaTallaCm(gender, em);
+            height = Math.Round(Math.Clamp(Normal(rng, mediana, sigma), 45, 190));
+        }
         else if (esNino)
-            height = edadMeses is int em
-                ? Math.Round(Math.Clamp(TallaPediatricaCm(em) + Rand(-2.5, 2.5), 45, 175))
-                : Math.Round(Rand(90, 160));
+        {
+            // Fallback 0-14 sin edad en meses (no ocurre en producción: BuildVitalsObs siempre la calcula).
+            height = Math.Round(Rand(90, 160));
+        }
         else
-            height = Math.Round(gender == "M" ? Rand(160, 185) : Rand(150, 172));
+        {
+            var mediana = TallaTeoricaMedianaCm(gender, null);
+            var sigma   = SigmaTallaCm(gender, null);
+            var (min, max) = gender == "M" ? (150.0, 200.0) : (140.0, 190.0);
+            height = Math.Round(Math.Clamp(Normal(rng, mediana, sigma), min, max));
+            if (edadMeses is int emAdulta)
+                height -= Math.Round(DecrementoTallaSenilCm(emAdulta), 1);
+        }
 
         // ── Peso vía IMC objetivo (coherente con talla) ──
         // El override por enfermedad (vital_imc) tiene prioridad sobre la categoría.

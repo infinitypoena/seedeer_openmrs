@@ -755,13 +755,23 @@ los overrides opcionales por enfermedad (`vital_fiebre`, `vital_imc`, `vital_pa`
 > objetivo (según la tabla) y se calcula `peso = IMC × (talla/100)²`, de modo que peso y talla
 > siempre son coherentes (no más IMC de 50 en pacientes de consulta externa).
 
-Rangos base de talla (de ahí sale el peso vía IMC):
+Talla (de ahí sale el peso vía IMC), modelada con **distribución normal** sobre la mediana teórica
+— no bandas uniformes — para que haya personas altas, bajas y una campana realista:
+
+| Talla | Mediana (μ) | σ | Clamp | Unidad |
+|---|---|---|---|---|
+| Hombre adulto | 170 | 6.5 | 150-200 | cm |
+| Mujer adulta | 158 | 6.0 | 140-190 | cm |
+| 0-14 (WHO talla-para-edad, por sexo) | mediana WHO por mes | 2.0→7.0 (crece con la edad) | 45-190 | cm |
+| Adulto 50+ (envejecimiento) | −(edad−50)·0.05, tope −3 | — | — | cm |
+
+> **Referencia pediátrica**: estándares de crecimiento OMS (talla-para-edad, percentil 50), con anclas por
+> sexo en 0/6/12/24/36/60/120/168 meses e interpolación lineal entre ellas; la desviación crece de ~2 cm al
+> nacer hasta ~7 cm en la pubertad (mayor dispersión con la edad, no un jitter plano de ±2.5). La talla se
+> separa por sexo también en pediatría (en la pubertad los niños superan a las niñas).
 
 | Signo vital | Rango | Unidad |
 |---|---|---|
-| Talla (hombre) | 160-185 | cm |
-| Talla (mujer) | 150-172 | cm |
-| Talla (0-14) | 90-160 | cm |
 | Temperatura (afebril) | 36.0-37.4 | °C |
 | Pulso (basal) | 60-100 | lpm |
 | Frecuencia respiratoria (basal) | 12-20 | rpm |
